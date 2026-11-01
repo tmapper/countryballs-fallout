@@ -1,0 +1,5 @@
+Bu klasöre şu iki dosyayı koy (isimler aynen böyle olmalı):
+  menu_bg.jpg  -> ana menü arka planı (2560x1440, JPG)
+  logo.png     -> oyun logosu (şeffaf arka planlı PNG)
+Yoksa menü kodla çizilen arka planı ve yazı logoyu kullanır.
+Promptlar: docs/GORSEL_PROMPTLARI.md

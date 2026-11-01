@@ -1,0 +1,131 @@
+// ============================================================
+// Sound.js - Ses efektleri ve müzik
+// ============================================================
+// Dosyalar: public/assets/sounds/<ad>.mp3 (tek HTML sürümünde gömülü gelir).
+//   sfx('kill')                 -> tek seferlik efekt
+//   playMusic('music_game')     -> döngülü müzik (eskisi yumuşakça kısılır)
+//   startLoop('geiger_loop') / stopLoop('geiger_loop') -> döngülü efekt
+//   toggleMute()                -> M tuşu: tüm sesleri aç/kapat (tercih hatırlanır)
+// Tarayıcılar ilk tıklama/tuşa kadar ses çalmaya izin vermez; müzik izin gelince başlar.
+import { assetUrl } from './Assets.js';
+
+const MUSIC_VOL = 0.35;
+const SFX_VOL = 0.8;
+// Bazı seslerin kendi ses seviyesi (1 = normal)
+const LEVEL = {
+  step: 0.3, ui_click: 0.5, geiger_loop: 0.55, alarm_loop: 0.16, oxygen_alert: 0.3, valve_turn: 0.7,
+  wire_connect: 0.8, lever: 0.8, dust_wipe: 0.7, door_seal: 0.5, power_down: 0.45, power_up: 0.5
+};
+const MUTE_KEY = 'cfs.muted';
+
+let muted = false;
+try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (e) { /* yoksay */ }
+
+let music = null;
+let musicName = null;
+const loops = {};
+
+const url = (name) => assetUrl(`assets/sounds/${name}.mp3`);
+const vol = (name, base, k = 1) => Math.max(0, Math.min(1, base * (LEVEL[name] ?? 1) * k));
+const tryPlay = (a) => { const p = a.play(); if (p && p.catch) p.catch(() => {}); };
+
+function fade(a, to, ms, then) {
+  const from = a.volume;
+  const t0 = performance.now();
+  const tick = () => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    a.volume = Math.max(0, Math.min(1, from + (to - from) * k));
+    if (k < 1) requestAnimationFrame(tick); else if (then) then();
+  };
+  requestAnimationFrame(tick);
+}
+
+// Her ses için küçük bir havuz: her çalışta yeni Audio oluşturmak (özellikle adım sesi) kasma yapıyordu
+const pools = {};
+export function sfx(name, k = 1) {
+  if (muted) return null;
+  const pool = pools[name] || (pools[name] = []);
+  let a = pool.find((x) => x.paused || x.ended);
+  if (!a) {
+    if (pool.length >= 4) a = pool[0];
+    else { a = new Audio(url(name)); a.preload = 'auto'; pool.push(a); }
+  }
+  a.currentTime = 0;
+  a.volume = vol(name, SFX_VOL, k);
+  tryPlay(a);
+  return a;
+}
+
+export function playMusic(name) {
+  if (musicName === name && music) {
+    if (music.paused && !muted) tryPlay(music);
+    return;
+  }
+  stopMusic();
+  const a = new Audio(url(name));
+  a.loop = true;
+  a.volume = 0;
+  music = a;
+  musicName = name;
+  if (!muted) tryPlay(a);
+  fade(a, MUSIC_VOL, 900);
+}
+
+export function stopMusic(ms = 600) {
+  const a = music;
+  music = null;
+  musicName = null;
+  if (a) fade(a, 0, ms, () => a.pause());
+}
+
+export function startLoop(name, k = 1) {
+  if (loops[name]) return;
+  const a = new Audio(url(name));
+  a.loop = true;
+  a.volume = vol(name, SFX_VOL, k);
+  loops[name] = a;
+  if (!muted) tryPlay(a);
+}
+
+export function stopLoop(name, ms = 250) {
+  const a = loops[name];
+  if (!a) return;
+  delete loops[name];
+  fade(a, 0, ms, () => a.pause());
+}
+
+export function stopAllLoops() {
+  Object.keys(loops).forEach((n) => stopLoop(n));
+}
+
+export const isMuted = () => muted;
+
+export function toggleMute() {
+  muted = !muted;
+  try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (e) { /* yoksay */ }
+  const all = [music, ...Object.values(loops)].filter(Boolean);
+  all.forEach((a) => (muted ? a.pause() : tryPlay(a)));
+  return muted;
+}
+
+// İlk tıklama/tuş: tarayıcı sese izin verir, bekleyen müziği başlat
+const unlock = () => {
+  if (muted) return;
+  if (music && music.paused) tryPlay(music);
+  Object.values(loops).forEach((a) => { if (a.paused) tryPlay(a); });
+};
+window.addEventListener('pointerdown', unlock, true);
+window.addEventListener('keydown', unlock, true);
+
+// Butonlara tıklama sesi
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.closest && e.target.closest('button')) sfx('ui_click');
+}, true);
+
+// M tuşu: sesi aç/kapat (yazı alanındayken değil)
+window.addEventListener('keydown', (e) => {
+  if (e.code !== 'KeyM' || e.repeat) return;
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  toggleMute();
+});
