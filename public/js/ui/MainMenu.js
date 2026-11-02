@@ -178,7 +178,7 @@ export class MainMenu {
     r.querySelector('.mm-id-name').textContent = a ? a.name : i18n.t('menu.guest');
     r.querySelector('.mm-id-photo').textContent = a ? a.name.slice(0, 1).toUpperCase() : '?';
     r.querySelector('.mm-id-title').textContent = a ? titleName(a.title) : '';
-    r.querySelector('.mm-id-level').textContent = a ? i18n.t('menu.level', { n: a.level }) : i18n.t('menu.guestHint');
+    r.querySelector('.mm-id-level').textContent = a ? `${i18n.t('menu.level', { n: a.level })} · 🪙 ${a.coins ?? 0}` : i18n.t('menu.guestHint');
     r.querySelector('.mm-id-xp i').style.width = xpPercent(a) + '%';
     r.querySelector('.mm-id-no').textContent = a ? '#' + String(Math.abs(a.created || 0) % 100000).padStart(5, '0') : '';
     const act = r.querySelector('.mm-id-actions');

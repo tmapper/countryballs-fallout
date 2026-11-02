@@ -155,7 +155,7 @@ export class RoomHud {
         </div>
 
       </div>
-      <div class="rh-bottom"><button class="rh-flagbtn hidden" type="button"><span>🇺🇳</span><b data-t="lobby.pickFlagBtn"></b></button><div class="rh-note"></div><button class="rh-start" type="button" data-t="online.start"></button></div>`;
+      <div class="rh-bottom"><button class="rh-flagbtn hidden" type="button"><span>🇺🇳</span><b data-t="lobby.pickFlagBtn"></b></button><button class="rh-flagbtn rh-hatbtn hidden" type="button"><span>🎩</span><b data-t="lobby.pickHatBtn"></b></button><div class="rh-note"></div><button class="rh-start" type="button" data-t="online.start"></button></div>`;
     document.body.appendChild(r);
     r.querySelector('.rh-leave').addEventListener('click', () => this.onLeave && this.onLeave());
     r.querySelector('.rh-start').addEventListener('click', () => this.onStart && this.onStart());
@@ -170,7 +170,8 @@ export class RoomHud {
       this.botCount = Math.max(1, Math.min(9, this.botCount + Number(b.dataset.d)));
       this.render();
     }));
-    r.querySelector('.rh-flagbtn').addEventListener('click', () => this.onFlag && this.onFlag());
+    r.querySelector('.rh-flagbtn:not(.rh-hatbtn)').addEventListener('click', () => this.onFlag && this.onFlag());
+    r.querySelector('.rh-hatbtn').addEventListener('click', () => this.onHat && this.onHat());
     i18n.onChange(() => this.root && this.render());
   }
 
@@ -206,11 +207,12 @@ export class RoomHud {
     r.querySelector('.rh-note').textContent = !host ? i18n.t('online.waitHost') : (!canStart ? i18n.t('online.needPlayers') : '');
   }
 
-  setFlagReady(on) { if (this.root) this.root.querySelector('.rh-flagbtn').classList.toggle('hidden', !on); }
+  setFlagReady(on) { if (this.root) this.root.querySelector('.rh-flagbtn:not(.rh-hatbtn)').classList.toggle('hidden', !on); }
+  setHatReady(on) { if (this.root) this.root.querySelector('.rh-hatbtn').classList.toggle('hidden', !on); }
 
-  show({ onLeave, onStart, onFlag }) {
+  show({ onLeave, onStart, onFlag, onHat }) {
     if (!this.root) this.build();
-    this.onLeave = onLeave; this.onStart = onStart; this.onFlag = onFlag;
+    this.onLeave = onLeave; this.onStart = onStart; this.onFlag = onFlag; this.onHat = onHat;
     this.root.classList.remove('hidden');
     this.render();
   }

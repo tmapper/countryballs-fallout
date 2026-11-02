@@ -9,8 +9,23 @@
 // Tarayıcılar ilk tıklama/tuşa kadar ses çalmaya izin vermez; müzik izin gelince başlar.
 import { assetUrl } from './Assets.js';
 
-const MUSIC_VOL = 0.35;
-const SFX_VOL = 0.8;
+// Ses seviyeleri (oyun içi Ayarlar'dan değişir, hatırlanır). 0..1
+const VOL_KEY = 'cfs.vol';
+let musicK = 1, sfxK = 1;
+try { const v = JSON.parse(localStorage.getItem(VOL_KEY) || '{}'); if (typeof v.m === 'number') musicK = v.m; if (typeof v.s === 'number') sfxK = v.s; } catch (e) { /* yoksay */ }
+const BASE_MUSIC = 0.35, BASE_SFX = 0.8;
+let MUSIC_VOL = BASE_MUSIC * musicK;
+let SFX_VOL = BASE_SFX * sfxK;
+const saveVol = () => { try { localStorage.setItem(VOL_KEY, JSON.stringify({ m: musicK, s: sfxK })); } catch (e) { /* yoksay */ } };
+export const getVolumes = () => ({ music: musicK, sfx: sfxK });
+export function setMusicVolume(k) {
+  musicK = Math.max(0, Math.min(1, k)); MUSIC_VOL = BASE_MUSIC * musicK; saveVol();
+  if (music) music.volume = MUSIC_VOL;
+}
+export function setSfxVolume(k) {
+  sfxK = Math.max(0, Math.min(1, k)); SFX_VOL = BASE_SFX * sfxK; saveVol();
+  Object.entries(loops).forEach(([n, a]) => { a.volume = vol(n, SFX_VOL); });
+}
 // Bazı seslerin kendi ses seviyesi (1 = normal)
 const LEVEL = {
   step: 0.3, ui_click: 0.5, geiger_loop: 0.55, alarm_loop: 0.16, oxygen_alert: 0.3, valve_turn: 0.7,

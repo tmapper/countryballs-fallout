@@ -5,6 +5,7 @@
 // tüm konumlar/boyutlar ekranın CSS pikseliyle yazılır (16px = telefonda 16px).
 // Yazılar resolution: RES.k ile çizilir ki bulanık olmasın.
 // GameScene her karede registry 'hud' = { action, ready, cooldown, tunnel } yazar.
+import { gameSettings } from '../ui/GameSettings.js';
 import { i18n } from '../systems/I18n.js';
 import { Joystick } from '../systems/Joystick.js';
 import { RES } from '../systems/Resolution.js';
@@ -51,7 +52,7 @@ export class UIScene extends Phaser.Scene {
     const btn = { ...style, strokeThickness: 0, backgroundColor: 'rgba(14,18,25,0.82)', padding: { x: 12, y: 8 } };
     this.lobbyBtn = this.add.text(0, 12, '', btn).setOrigin(1, 0).setInteractive({ useHandCursor: true });
     this.lobbyBtn.on('pointerdown', (pointer, lx, ly, event) => event.stopPropagation()); // joystick almasın
-    this.lobbyBtn.on('pointerup', () => backToLobby());
+    this.lobbyBtn.on('pointerup', () => gameSettings.open({ onLeave: () => backToLobby() }));
 
     this.rolesBtn = this.add.text(0, small ? 50 : 58, '', btn).setOrigin(1, 0).setInteractive({ useHandCursor: true });
     this.rolesBtn.on('pointerdown', (pointer, lx, ly, event) => {
@@ -302,7 +303,7 @@ export class UIScene extends Phaser.Scene {
     this.title.setText(i18n.t('game.title'));
     this.applyInfo();
     this.help.setText(this.isTouch ? i18n.t('ui.controlsMobile') : i18n.t('ui.controlsPc'));
-    this.lobbyBtn.setText('⟵ ' + i18n.t('ui.backToLobby'));
+    this.lobbyBtn.setText('⚙ ' + i18n.t('ui.settings'));
     this.rolesBtn.setText(`${i18n.t('ui.showRoles')}: ${this.registry.get('showRoles') ? i18n.t('ui.on') : i18n.t('ui.off')}`);
     const role = this.registry.get('role');
     const dead = !!this.registry.get('dead');

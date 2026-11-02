@@ -7,6 +7,7 @@
 //   showResults({ [id]: [voterFlag...] }, skipVoterFlags)   showEject(line1, line2, flag)   close()
 import { i18n } from '../systems/I18n.js';
 import { getFlagThumb } from '../systems/Flags.js';
+import { wireChatInput, releaseGameKeys } from './Chat.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
@@ -25,7 +26,7 @@ export class MeetingScreen {
         </div>
         <div class="mt-body">
           <div class="mt-grid"></div>
-          <div class="mt-chat"><div class="mt-chat-title"></div><div class="mt-chat-list"></div></div>
+          <div class="mt-chat"><div class="mt-chat-title"></div><div class="mt-chat-list"></div><div class="mt-chat-row"><input class="mt-chat-input" autocomplete="off" spellcheck="false" enterkeyhint="send"><button class="mt-chat-send" type="button">➤</button></div></div>
         </div>
         <div class="mt-foot">
           <button class="btn mt-skip" type="button"></button>
@@ -38,6 +39,10 @@ export class MeetingScreen {
     document.body.appendChild(r);
     r.querySelector('.mt-skip').addEventListener('click', () => this.vote('skip'));
     r.addEventListener('pointerdown', (e) => e.stopPropagation());
+    const inp = this.chatInput = r.querySelector('.mt-chat-input');
+    const send = (v) => { const now = performance.now(); if (now - (this.lastSend || 0) < 600) return; this.lastSend = now; if (this.opts && this.opts.onChat) this.opts.onChat(v); };
+    wireChatInput(inp, send);
+    r.querySelector('.mt-chat-send').addEventListener('click', () => { const v = inp.value.trim(); if (v) { send(v); inp.value = ''; } inp.focus(); });
   }
 
   open(opts) {
@@ -62,6 +67,11 @@ export class MeetingScreen {
     r.querySelector('.mt-reporter').src = getFlagThumb(opts.reporterFlag, 60, 40);
     r.querySelector('.mt-chat-title').textContent = i18n.t('meeting.chat');
     r.querySelector('.mt-chat-list').innerHTML = '';
+    this.chatInput.value = '';
+    this.chatInput.placeholder = i18n.t(opts.ghost ? 'chat.ghostPlaceholder' : 'chat.placeholder');
+    r.querySelector('.mt-chat-row').classList.toggle('hidden', !opts.onChat);
+    r.querySelector('.mt-chat').classList.toggle('ghost', !!opts.ghost);
+    releaseGameKeys();
     r.querySelector('.mt-skip').textContent = i18n.t('meeting.skip');
     r.querySelector('.mt-skipvotes').innerHTML = '';
     r.querySelector('.mt-note').textContent = opts.canVote ? '' : i18n.t('meeting.ghostNoVote');
@@ -103,12 +113,12 @@ export class MeetingScreen {
     if (b) b.classList.add('has-voted');
   }
 
-  addChat(flag, name, text) {
+  addChat(flag, name, text, opt = {}) {
     if (!this.root) return;
     const list = this.root.querySelector('.mt-chat-list');
     const d = document.createElement('div');
-    d.className = 'mt-msg';
-    d.innerHTML = `<img alt="" src="${getFlagThumb(flag, 30, 20)}"><div><b>${esc(name)}</b><span>${esc(text)}</span></div>`;
+    d.className = 'mt-msg' + (opt.ghost ? ' ghost' : '') + (opt.mine ? ' mine' : '');
+    d.innerHTML = `<img alt="" src="${getFlagThumb(flag, 30, 20)}"><div><b>${opt.ghost ? '👻 ' : ''}${esc(name)}</b><span>${esc(text)}</span></div>`;
     list.appendChild(d);
     list.scrollTop = list.scrollHeight;
   }
@@ -139,6 +149,7 @@ export class MeetingScreen {
   }
 
   close() {
+    if (this.chatInput) this.chatInput.blur();
     this.opts = null;
     this.phase = null;
     if (!this.root || this.root.classList.contains('hidden')) return;

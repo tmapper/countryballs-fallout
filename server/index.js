@@ -42,14 +42,63 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const ACC_FILE = path.join(DATA_DIR, 'accounts.json');
 let accounts = { users: {}, tokens: {} };
 try { accounts = JSON.parse(fs.readFileSync(ACC_FILE, 'utf8')); } catch (e) { /* ilk çalıştırma */ }
+// Bulut kaydı (önerilen, ücretsiz): Upstash Redis. Render ücretsiz planda disk silindiği için
+// hesaplar buraya da yazılır. Ortam değişkenleri: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN (README).
+const KV_URL = (process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/+$/, '');
+const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || '';
+const KV_KEY = process.env.KV_KEY || 'cfs:accounts';
+async function kv(cmd) {
+  const res = await fetch(KV_URL, { method: 'POST', headers: { Authorization: 'Bearer ' + KV_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(cmd) });
+  const j = await res.json();
+  if (j.error) throw new Error(j.error);
+  return j.result;
+}
+async function loadCloud() {
+  if (!KV_URL || !KV_TOKEN) { console.log('Hesaplar: yerel dosya (' + ACC_FILE + ')'); return; }
+  for (let i = 0; i < 5; i++) {
+    try {
+      const v = await kv(['GET', KV_KEY]);
+      if (v) accounts = JSON.parse(v);
+      console.log('Hesaplar: bulut (Upstash) -', Object.keys(accounts.users || {}).length, 'hesap');
+      return;
+    } catch (e) { console.error('Bulut okunamadı, tekrar deneniyor', e.message); await new Promise((r) => setTimeout(r, 1500)); }
+  }
+  console.error('UYARI: bulut kaydı okunamadı, yerel dosya kullanılıyor');
+}
+let cloudBusy = false, cloudAgain = false;
+async function saveCloud() {
+  if (!KV_URL || !KV_TOKEN) return;
+  if (cloudBusy) { cloudAgain = true; return; }
+  cloudBusy = true;
+  try { await kv(['SET', KV_KEY, JSON.stringify(accounts)]); }
+  catch (e) { console.error('Bulut kaydı başarısız', e.message); cloudAgain = true; }
+  cloudBusy = false;
+  if (cloudAgain) { cloudAgain = false; setTimeout(saveCloud, 1000); }
+}
 let saveT = null;
 function saveAccounts() {
   clearTimeout(saveT);
   saveT = setTimeout(() => {
+    saveT = null;
     try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(ACC_FILE + '.tmp', JSON.stringify(accounts)); fs.renameSync(ACC_FILE + '.tmp', ACC_FILE); }
     catch (e) { console.error('Hesaplar kaydedilemedi', e.message); }
+    saveCloud();
   }, 300);
 }
+// Sunucu kapanırken (Render yeniden başlatma) bekleyen kaydı bitir
+['SIGTERM', 'SIGINT'].forEach((sig) => process.on(sig, async () => {
+  if (saveT) { clearTimeout(saveT); saveT = null; try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(ACC_FILE, JSON.stringify(accounts)); } catch (e) { /* yoksay */ } }
+  try { await Promise.race([kv(['SET', KV_KEY, JSON.stringify(accounts)]), new Promise((r) => setTimeout(r, 3000))]); } catch (e) { /* yoksay */ }
+  process.exit(0);
+}));
+// ---------------- JETON (oyun içi para, gerçek para DEĞİL) ----------------
+// Maçlardan kazanılır, şapka almak için harcanır. Bakiye ve alınan şapkalar SUNUCUDA tutulur (hile ile artırılamaz).
+// Fiyatlar istemcideki systems/Looks.js HAT_PRICE ile aynı olmalı.
+const HAT_PRICE = {"none":0,"cap_red":0,"cap_blue":0,"beanie":0,"fedora":100,"party":100,"chef":100,"beret":100,"bowler":100,"army":100,"hardhat":100,"cowboy":250,"fez":250,"santa":250,"grad":250,"headphones":250,"flowers":250,"ushanka":250,"cat":250,"bunny":250,"tophat":500,"viking":500,"witch":500,"pirate":500,"propeller":500,"sombrero":500,"antenna":500,"gasmask":500,"crown":1000,"halo":1000};
+const START_COINS = 200;                                  // yeni hesaba hoş geldin jetonu
+const COIN = { played: 10, win: 25, task: 2, kill: 5 };
+function ensureWallet(u) { if (typeof u.coins !== 'number') u.coins = START_COINS; if (!Array.isArray(u.hats)) u.hats = []; return u; }
+const ownsHat = (u, h) => HAT_PRICE[h] === 0 || (u && Array.isArray(u.hats) && u.hats.includes(h));
 const NAME_RE = /^[A-Za-z0-9_ÇĞİÖŞÜçğıöşü]{3,16}$/;
 const hashPass = (pass, salt) => crypto.scryptSync(String(pass), salt, 32).toString('hex');
 // ---------------- İSTATİSTİK + SEVİYE ----------------
@@ -69,7 +118,8 @@ function publicAcc(u) {
   const st = ensureStats(u), xp = calcXp(st), level = levelOf(xp);
   const base = xpAt(level), next = level >= MAX_LEVEL ? base : xpAt(level + 1);
   let title = 0; TITLE_AT.forEach((l, i) => { if (level >= l) title = i; });
-  return { name: u.name, created: u.created, xp, level, xpInto: xp - base, xpNeed: Math.max(1, next - base), title, stats: { ...st } };
+  ensureWallet(u);
+  return { name: u.name, created: u.created, xp, level, xpInto: xp - base, xpNeed: Math.max(1, next - base), title, stats: { ...st }, coins: u.coins, hats: [...u.hats] };
 }
 function newToken(key) {
   const tok = crypto.randomBytes(24).toString('hex');
@@ -196,7 +246,7 @@ const clean = (s, n) => String(s || '').replace(/[<>]/g, '').trim().slice(0, n);
 function roomInfo(r) {
   return {
     code: r.code, name: r.name, public: r.public, max: r.max, state: r.state, hostId: r.hostId, bots: r.bots,
-    players: [...r.players.values()].map((p) => ({ id: p.id, name: p.name, flag: p.flag }))
+    players: [...r.players.values()].map((p) => ({ id: p.id, name: p.name, flag: p.flag, hat: p.client.hat || 'none' }))
   };
 }
 
@@ -234,7 +284,28 @@ function handle(c, m) {
     case 'profile':
       if (!c.account) c.name = clean(m.name, 16) || 'Misafir';
       c.flag = clean(m.flag, 4) || 'TR';
+      if (m.hat !== undefined) c.hat = ownsHat(c.account && accounts.users[c.account], String(m.hat)) ? String(m.hat) : 'none';
       break;
+    case 'buyHat': {
+      const u = c.account && accounts.users[c.account];
+      const h = String(m.hat || '');
+      if (!u) { send(c, { t: 'shopError', code: 'needLogin' }); return; }
+      if (!(h in HAT_PRICE)) return;
+      ensureWallet(u);
+      if (ownsHat(u, h)) { send(c, { t: 'account', account: publicAcc(u) }); return; }
+      if (u.coins < HAT_PRICE[h]) { send(c, { t: 'shopError', code: 'noCoins' }); return; }
+      u.coins -= HAT_PRICE[h];
+      u.hats.push(h);
+      saveAccounts();
+      send(c, { t: 'account', account: publicAcc(u), bought: h });
+      break;
+    }
+    case 'setHat': {
+      c.hat = ownsHat(c.account && accounts.users[c.account], String(m.hat)) ? String(m.hat) : 'none';
+      const r = rooms.get(c.room);
+      if (r) roomUpdate(r);
+      break;
+    }
     case 'register': {
       if (tooMany(c)) { send(c, { t: 'authError', code: 'tooMany' }); return; }
       const name = String(m.name || '').trim(), pass = String(m.pass || '');
@@ -243,7 +314,7 @@ function handle(c, m) {
       const key = name.toLocaleLowerCase('tr');
       if (accounts.users[key]) { send(c, { t: 'authError', code: 'nameTaken' }); return; }
       const salt = crypto.randomBytes(16).toString('hex');
-      accounts.users[key] = { name, salt, hash: hashPass(pass, salt), stats: emptyStats(), created: Date.now() };
+      accounts.users[key] = { name, salt, hash: hashPass(pass, salt), stats: emptyStats(), created: Date.now(), coins: START_COINS, hats: [] };
       saveAccounts();
       c.account = key; c.name = name;
       send(c, { t: 'account', account: publicAcc(accounts.users[key]), token: newToken(key) });
@@ -276,6 +347,7 @@ function handle(c, m) {
       send(c, { t: 'list', ...listRooms() });
       break;
     case 'create': {
+      if (!c.account) { send(c, { t: 'error', code: 'needLogin' }); return; }   // misafir başkasının adıyla giremesin
       if (rooms.size >= MAX_ROOMS) { send(c, { t: 'error', code: 'full' }); return; }
       leaveRoom(c);
       const code = makeCode();
@@ -291,6 +363,7 @@ function handle(c, m) {
       break;
     }
     case 'join': {
+      if (!c.account) { send(c, { t: 'error', code: 'needLogin' }); return; }
       const r = rooms.get(String(m.code || '').toUpperCase());
       if (!r) { send(c, { t: 'error', code: 'notFound' }); return; }
       if (r.players.size >= r.max) { send(c, { t: 'error', code: 'roomFull' }); return; }
@@ -326,20 +399,39 @@ function handle(c, m) {
       roomUpdate(r);
       break;
     }
-    case 'start': {                              // sadece host: oyunu başlat, kurulum herkese gider
+    case 'start': {                              // sadece host: oyunu başlat
+      // HİLE KORUMASI: rolleri SUNUCU dağıtır (host kendini katil seçemez) ve herkese
+      // sadece KENDİ rolü gider (tarayıcıdan katilin kim olduğu okunamaz). Host oyunu yönettiği
+      // için tam listeyi alır (host yetkili model; tam koruma için kuralların sunucuda çalışması gerekir).
       const r = rooms.get(c.room);
       if (!r || r.hostId !== c.id || r.state !== 'lobby') return;
-      r.state = 'game';
-      // Maç kaydı: kim hangi rolde (host'un gönderdiği kurulumdan) ve hangi hesap. Sonuç gelince istatistik buna göre yazılır.
-      r.match = { startAt: Date.now(), done: false, roster: {} };
-      const setupPlayers = (m.setup && Array.isArray(m.setup.players)) ? m.setup.players : [];
-      setupPlayers.forEach((sp) => {
-        const pl = r.players.get(sp && sp.id);
-        if (!pl || !pl.client.account) return;
-        const role = ['impostor', 'sheriff', 'crewmate'].includes(sp.role) ? sp.role : 'crewmate';
-        r.match.roster[sp.id] = { key: pl.client.account, role, left: false };
+      const sent = (m.setup && Array.isArray(m.setup.players)) ? m.setup.players : [];
+      const humans = [...r.players.values()].map((p) => ({ id: p.id, name: p.name, flag: p.flag, hat: p.client.hat || 'none' }));
+      const seen = new Set(humans.map((p) => p.id));
+      const bots = [];
+      sent.forEach((p) => {
+        if (!p || !p.bot || !/^bot\d{1,2}$/.test(String(p.id)) || seen.has(p.id)) return;
+        if (humans.length + bots.length >= r.max) return;
+        seen.add(p.id);
+        bots.push({ id: p.id, name: String(p.name || '').slice(0, 24), flag: String(p.flag || '').slice(0, 8), bot: true });
       });
-      broadcast(r, { t: 'start', setup: m.setup });
+      const all = [...humans, ...bots];
+      if (all.length < 3) return;
+      const roles = ['impostor', 'sheriff', ...Array(all.length - 2).fill('crewmate')];
+      for (let i = roles.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [roles[i], roles[j]] = [roles[j], roles[i]]; }
+      all.forEach((p, i) => { p.role = roles[i]; });
+      r.state = 'game';
+      // Maç kaydı: kim hangi rolde ve hangi hesap. Sonuç gelince istatistik buna göre yazılır.
+      r.match = { startAt: Date.now(), done: false, roster: {} };
+      all.forEach((sp) => {
+        const pl = r.players.get(sp.id);
+        if (!pl || !pl.client.account) return;
+        r.match.roster[sp.id] = { key: pl.client.account, role: sp.role, left: false };
+      });
+      r.players.forEach((pl) => {
+        const view = all.map((p) => (pl.id === r.hostId || p.id === pl.id) ? p : { ...p, role: null });
+        send(pl.client, { t: 'start', setup: { players: view } });
+      });
       roomUpdate(r);
       break;
     }
@@ -374,10 +466,13 @@ function handle(c, m) {
         if (e.left) st.left++;
         if (won) { st.wins++; if (winner === 'impostor') st.winsImpostor++; else st.winsCrew++; st.streak++; st.bestStreak = Math.max(st.bestStreak, st.streak); }
         else { st.losses++; st.streak = 0; }
+        ensureWallet(u);
+        const coins = COIN.played + (won ? COIN.win : 0) + tasks * COIN.task + kills * COIN.kill;
+        u.coins += coins;
         const after = publicAcc(u);
         const pl = r.players.get(pid);
         if (pl && pl.client.account === e.key) {
-          send(pl.client, { t: 'matchReward', account: after, gain: { xp: after.xp - before.xp, won, tasks, kills, levelUp: after.level > before.level, oldLevel: before.level } });
+          send(pl.client, { t: 'matchReward', account: after, gain: { xp: after.xp - before.xp, coins, won, tasks, kills, levelUp: after.level > before.level, oldLevel: before.level } });
         }
       });
       saveAccounts();
@@ -386,10 +481,26 @@ function handle(c, m) {
     case 'relay': {
       const r = rooms.get(c.room);
       if (!r) return;
+      // HİLE KORUMASI: oyun olaylarını (ev) ve bot konumlarını (bp) sadece host yollayabilir
+      const k = m.d && m.d.k;
+      if ((k === 'ev' || k === 'bp') && r.hostId !== c.id) return;
       const msg = { t: 'relay', from: c.id, d: m.d };
       if (m.to === 'host') { const h = r.players.get(r.hostId); if (h && h.id !== c.id) send(h.client, msg); }
       else if (m.to) { const p = r.players.get(m.to); if (p) send(p.client, msg); }
       else broadcast(r, msg, c.id);
+      break;
+    }
+    case 'chat': {
+      // Sohbet: lobi ve toplantı. Uzunluk + hız sınırı sunucuda.
+      const r = rooms.get(c.room);
+      if (!r) return;
+      const now = Date.now();
+      if (now - (c.lastChat || 0) < 600) return;
+      c.lastChat = now;
+      const text = String(m.text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 120);
+      if (!text) return;
+      const pl = r.players.get(c.id);
+      broadcast(r, { t: 'chat', from: c.id, name: pl ? pl.name : '?', flag: pl ? pl.flag : '', text, ch: m.ch === 'meet' ? 'meet' : 'lobby', dead: !!m.dead });
       break;
     }
     case 'ping':
@@ -404,8 +515,8 @@ function onClose(c) {
   leaveRoom(c);
 }
 
-server.listen(PORT, () => {
+loadCloud().then(() => server.listen(PORT, () => {
   console.log(`Sunucu çalışıyor -> http://localhost:${PORT}  (WebSocket: /ws)`);
-});
+}));
 
 module.exports = { server };

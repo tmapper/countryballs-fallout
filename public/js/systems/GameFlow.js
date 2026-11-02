@@ -25,6 +25,9 @@ import { FLAG_LIST } from './Flags.js';
 import { i18n } from './I18n.js';
 import { flagPicker } from '../ui/FlagPicker.js';
 import { saveFlag } from './Flags.js';
+import { lobbyChat } from '../ui/Chat.js';
+import { hatPicker } from '../ui/HatPicker.js';
+import { loadHat, saveHat, botHat } from './Looks.js';
 
 let game = null;
 let lobby = null;
@@ -45,10 +48,15 @@ export function initFlow(phaserGame) {
   initSkins(game);
   game.events.on('lobby-zone', (z) => lobby.setStartReady(z));
   game.events.on('lobby-flag-zone', (z) => { lobby.setFlagReady(z); roomHud.setFlagReady(z); });
+  game.events.on('lobby-hat-zone', (z) => { lobby.setHatReady(z); roomHud.setHatReady(z); });
+  net.profile.hat = loadHat();
+  // Giriş yapınca alınmış şapkalar açılır: kayıtlı şapkayı sunucuya tekrar bildir
+  net.on('account', () => { net.profile.hat = loadHat(); if (net.inRoom) net.setHat(net.profile.hat); else net.setProfile(); });
   lobby = new Lobby({
     onStart: startMatch,
     onMenu: () => showMainMenu(),
     onFlag: () => openLobbyFlagPicker(),
+    onHat: () => openLobbyHatPicker(),
     // Bayrak/bot değişince yürünen lobideki topları güncelle
     onChange: (st) => { if (game.scene.isActive('LobbyScene')) game.scene.getScene('LobbyScene').applyState(st); }
   });
@@ -59,7 +67,7 @@ export function initFlow(phaserGame) {
     roomHud.render();
     if (mode === 'online' && !match && game.scene.isActive('LobbyScene')) game.scene.getScene('LobbyScene').applyRoom(net.room);
   });
-  net.on('start', (m) => { if (!net.isHost && m.setup) startOnline(m.setup); });
+  net.on('start', (m) => { if (m.setup) startOnline(m.setup); });
   net.on('hostLeft', () => { if (mode === 'online') { flash(i18n.t('online.hostLeft')); returnToRoom(); } });
   net.on('disconnected', () => { if (mode === 'online') { flash(i18n.t('online.disconnected')); showMainMenu(); } });
 }
@@ -76,6 +84,21 @@ export function openLobbyFlagPicker() {
   } else {
     flagPicker.open({ current: lobby.myFlag, taken: new Set(lobby.botFlags), onPick: (f) => lobby.pickFlag(f) });
   }
+}
+
+// Lobideki şapka dolabı: şapka seç (kaydedilir, maçta da takılı)
+export function openLobbyHatPicker() {
+  if (hatPicker.isOpen || flagPicker.isOpen) return;
+  const sc = game.scene.isActive('LobbyScene') ? game.scene.getScene('LobbyScene') : null;
+  const flag = sc && sc.player ? sc.player.flag : net.profile.flag;
+  hatPicker.open({
+    current: loadHat(), flag,
+    onPick: (id) => {
+      saveHat(id);
+      if (sc && sc.player) { sc.player.setHat(id); sc.player.setMood('happy', 1.4); }
+      if (mode === 'online') net.setHat(id); else net.profile.hat = id;
+    }
+  });
 }
 
 // Odaya girince bayrağım başkasındaysa boştaki ilk bayrağı al
@@ -106,7 +129,7 @@ export function showMainMenu() {
   match = null;
   reveal.stop(); cutscene.stop(); result.hide();
   if (net.inRoom) net.leave();
-  lobby.hide(); roomHud.hide(); browser.hide();
+  lobby.hide(); roomHud.hide(); browser.hide(); lobbyChat.hide();
   stopScenes();
   if (game.loop.running) game.loop.sleep();   // menüdeyken oyun motoru boşta çizim yapmasın
   stopAllLoops();
@@ -120,7 +143,7 @@ export function showMainMenu() {
 
 function showBrowser(create) {
   menu.hide();
-  roomHud.hide();
+  roomHud.hide(); lobbyChat.hide();
   browser.show({ onBack: () => { browser.hide(); showMainMenu(); }, createFocus: create });
 }
 
@@ -137,13 +160,14 @@ function enterRoom() {
   playMusic('music_lobby');
   const me = net.room.players.find((p) => p.id === net.id);
   game.scene.start('LobbyScene', { online: true, myFlag: me ? me.flag : net.profile.flag, myName: net.profile.name, room: net.room });
-  roomHud.show({ onLeave: leaveRoom, onStart: hostStart, onFlag: openLobbyFlagPicker });
+  roomHud.show({ onLeave: leaveRoom, onStart: hostStart, onFlag: openLobbyFlagPicker, onHat: openLobbyHatPicker });
+  lobbyChat.show();
   ensureFreeFlag();
 }
 
 function leaveRoom() {
   net.leave();
-  roomHud.hide();
+  roomHud.hide(); lobbyChat.hide();
   stopScenes();
   showBrowser(false);
 }
@@ -166,20 +190,18 @@ function hostStart() {
   const pool = FLAG_LIST.filter((f) => !used.has(f)).sort(() => Math.random() - 0.5);
   const total = humans.length + nBots;
   if (total < 3) return;
-  const roles = assignRoles(total, 'random');
+  // Rolleri SUNUCU dağıtır (hile koruması); herkes, host dahil, 'start' mesajıyla başlar
   const players = [
-    ...humans.map((p, i) => ({ id: p.id, name: p.name, flag: p.flag, role: roles[i] })),
-    ...pool.slice(0, nBots).map((f, j) => ({ id: 'bot' + j, name: i18n.t('countries.' + f), flag: f, role: roles[humans.length + j], bot: true }))
+    ...humans.map((p) => ({ id: p.id, name: p.name, flag: p.flag })),
+    ...pool.slice(0, nBots).map((f, j) => ({ id: 'bot' + j, name: i18n.t('countries.' + f), flag: f, bot: true }))
   ];
-  const setup = { players };
-  net.start(setup);
-  startOnline(setup);
+  net.start({ players });
 }
 
 function startOnline(setup) {
   mode = 'online';
-  roomHud.hide();
-  const players = setup.players.map((p) => ({ ...p, me: p.id === net.id }));
+  roomHud.hide(); lobbyChat.hide();
+  const players = setup.players.map((p) => ({ ...p, me: p.id === net.id, hat: p.bot ? botHat(p.flag) : (p.hat || 'none') }));
   if (!players.some((p) => p.me)) return;
   startWith(players, net.isHost ? 'host' : 'client');
 }
@@ -238,8 +260,8 @@ export function startMatch(settings) {
   lastSettings = settings;
   const roles = assignRoles(settings.playerCount, settings.forcedRole);
   const players = [
-    { id: 'me', flag: settings.myFlag, role: roles[0], me: true, name: net.profile.name || '' },
-    ...settings.botFlags.map((flag, i) => ({ id: 'b' + i, flag, role: roles[i + 1], me: false }))
+    { id: 'me', flag: settings.myFlag, role: roles[0], me: true, name: net.profile.name || '', hat: loadHat() },
+    ...settings.botFlags.map((flag, i) => ({ id: 'b' + i, flag, role: roles[i + 1], me: false, hat: botHat(flag) }))
   ];
   startWith(players, 'offline');
 }

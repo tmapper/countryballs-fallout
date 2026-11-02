@@ -12,6 +12,7 @@ import { MiniMap } from '../ui/MiniMap.js';
 import { sfx, startLoop, stopLoop, playMusic } from '../systems/Sound.js';
 import { gameOver } from '../systems/GameFlow.js';
 import { net } from '../systems/Net.js';
+import { staticBall } from '../entities/CountryBall.js';
 
 export const REPORT_RANGE = 170;        // oyuncu cesede bu kadar yakınsa BİLDİR çıkar
 export const BOT_REPORT_RANGE = 420;    // bot cesedi bu mesafeden görürse bildirir
@@ -98,7 +99,8 @@ export function installExtras(GameScene) {
     if (!this.textures.exists(key)) this.textures.addCanvas(key, paintBloodPool(n * 7919));
     const c = this.add.container(ball.x, ball.y);
     const pool = this.add.image(4, -10, key).setScale(0.15).setAlpha(0.95).setAngle((Math.random() - 0.5) * 30);
-    const s = this.add.sprite(0, -30, `idle:${ball.flag}`, 0).setScale(ball.scaleFactor * 0.95).setAngle(90).setTint(0xb0b0b0);
+    const s = staticBall(this, ball.flag, ball.hat, 'x', ball.scaleFactor * 0.95).setPosition(0, -30).setAngle(90);
+    s.sprite.setTint(0xb0b0b0);
     c.add([pool, s]);
     c.setDepth(ball.y - 1);
     // kan yavaşça yayılır
@@ -147,6 +149,7 @@ export function installExtras(GameScene) {
     const m = this.meeting = { caller, body, votes: new Map(), accuse: new Map(), phase: 'discuss', left: DISCUSS_TIME, timers: [] };
     this.cancelSabotage();
     if (this.taskPanel) this.taskPanel.close(true);
+    this.taskOpen = false;
     sabMenu.close();
     minimap.hide();
     this.balls.forEach((b) => { b.reportT = undefined; });
@@ -160,6 +163,8 @@ export function installExtras(GameScene) {
       reporterFlag: caller.flag,
       kind: body ? 'body' : 'button',
       canVote: this.player.alive,
+      ghost: !this.player.alive,
+      onChat: (text) => this.sendChat(text),
       players: this.balls.map((b) => ({ id: m.ids.get(b), flag: b.flag, name: nameOf(b), alive: b.alive, me: b.isMe })),
       onVote: (id) => this.castVote(this.player, id)
     });
@@ -171,6 +176,22 @@ export function installExtras(GameScene) {
       m.timers.push(this.time.delayedCall(t * 1000, () => this.botChat(b, room)));
     });
     m.timers.push(this.time.addEvent({ delay: 250, loop: true, callback: () => this.tickMeeting(0.25) }));
+  };
+
+  // Oyuncu sohbeti (toplantıda). Ölülerin mesajlarını sadece ölüler görür.
+  P.sendChat = function (text) {
+    if (!this.meeting) return;
+    const me = this.player;
+    if (this.online) net.chat(text, 'meet', !me.alive);
+    else meetingUI.addChat(me.flag, nameOf(me), text, { ghost: !me.alive, mine: true });
+  };
+
+  P.onChatMsg = function (m) {
+    if (m.ch !== 'meet' || !this.meeting) return;
+    const b = this.ball(m.from);
+    const dead = !!m.dead || (b && !b.alive);          // ölü olduğunu gizleyip yaşayanlara yazamaz
+    if (dead && this.player.alive) return;
+    meetingUI.addChat(b ? b.flag : m.flag, b ? nameOf(b) : m.name, m.text, { ghost: dead, mine: m.from === net.id });
   };
 
   P.botChat = function (b, room) {
@@ -276,14 +297,15 @@ export function installExtras(GameScene) {
       if (!tie && n > skips.length) ejected = this.balls[Number(id)];
       if (n === skips.length) tie = true;
     }
-    this.emitEv('results', [byId, skips, ejected ? ejected.id : null, tie]);
+    this.emitEv('results', [byId, skips, ejected ? ejected.id : null, tie, ejected ? ejected.role === 'impostor' : false]);
     this.showVoteResults(byId, skips, ejected, tie);
   };
 
   // Sonuçları göster, sonra atılma ekranı. (Host ayrıca toplantıyı bitirir.)
-  P.showVoteResults = function (byId, skips, ejected, tie) {
+  P.showVoteResults = function (byId, skips, ejected, tie, wasImp) {
     const m = this.meeting;
     if (!m) return;
+    if (ejected && wasImp !== undefined && !ejected.role) ejected.role = wasImp ? 'impostor' : 'crewmate';
     m.phase = 'results';
     meetingUI.showResults(byId, skips);
     m.timers.push(this.time.delayedCall(RESULT_TIME * 1000, () => {
@@ -312,6 +334,7 @@ export function installExtras(GameScene) {
       if (!b.alive && !b.isMe) return;
       const p = gameSpawn(i, n);
       b.setPosition(p.x, p.y); b.setDepth(b.y);
+      b.netValid = null; b.net = null;
       if (b.brain) b.brain.reset();
       b.fixing = false;
       if (b.role === 'impostor') b.cooldown = KILL_COOLDOWN;
@@ -339,6 +362,7 @@ export function installExtras(GameScene) {
     if (!def) return false;
     this.emitEv('sab', [type]);
     this.sabotage = { type, def, left: def.time };
+    this.balls.forEach((b) => { if (b.alive) b.setMood('wide', 1.3); });
     // en yakın masum botlar tamire koşar
     const crew = this.balls.filter((b) => b.brain && b.alive && b.role !== 'impostor')
       .sort((a, b) => dist(a, def.fix) - dist(b, def.fix)).slice(0, def.fixers);
@@ -440,9 +464,11 @@ export function installExtras(GameScene) {
   };
 
   // ---------- Oyun sonu (sabotaj vb.) ----------
-  P.finishGame = function (winner) {
+  P.finishGame = function (winner, roles) {
     if (this.over) return;
-    this.emitEv('over', [winner]);
+    // Maç sonunda roller herkese açıklanır (client o ana kadar bilmez)
+    if (roles) this.balls.forEach((b) => { if (roles[b.id]) b.role = roles[b.id]; });
+    this.emitEv('over', [winner, Object.fromEntries(this.balls.map((b) => [b.id, b.role]))]);
     this.over = true;
     this.endSabotageFx();
     minimap.hide();

@@ -16,6 +16,13 @@ import { net } from '../systems/Net.js';
 import { KILL_RANGE, SHOOT_RANGE } from '../systems/Combat.js';
 import { REPORT_RANGE } from './GameExtras.js';
 import { FIX_RANGE } from '../systems/Sabotage.js';
+import { STATIONS, UPLOAD_STATION, TASKS_PER_PLAYER } from '../systems/Tasks.js';
+import { canStand, TUNNELS, EMERGENCY_BUTTON } from '../map/BunkerMap.js';
+import { nearestTunnel } from '../systems/Combat.js';
+import { SPEED } from '../entities/CountryBall.js';
+
+const TASK_MIN_GAP = 1500;      // iki görev arası en az (ms): en kısa mini oyun bile bundan uzun
+const TASK_RANGE = 230;
 
 const POS_RATE = 1 / 12;       // saniyede 12 konum
 const SLACK = 90;               // ağ gecikmesi payı (menzil kontrolünde)
@@ -34,9 +41,11 @@ export function installNet(GameScene) {
     this.applyRoleTags();
     const onRelay = (m) => this.onRelay(m.from, m.d || {});
     const onLeft = (m) => this.onPlayerLeft(m.id);
+    const onChat = (m) => this.onChatMsg(m);
     net.on('relay', onRelay);
     net.on('playerLeft', onLeft);
-    this.events.once('shutdown', () => { net.off('relay', onRelay); net.off('playerLeft', onLeft); });
+    net.on('chat', onChat);
+    this.events.once('shutdown', () => { net.off('relay', onRelay); net.off('playerLeft', onLeft); net.off('chat', onChat); });
   };
 
   // Host: olayı herkese yayınla (uygulanırken tekrar yayınlama)
@@ -66,9 +75,12 @@ export function installNet(GameScene) {
 
   // ---------- Gelen mesajlar ----------
   P.onRelay = function (from, d) {
+    const fromHost = net.room && from === net.room.hostId;
     if (d.k === 'p') {
       const b = this.ball(from);
-      if (b && !b.isMe) b.net = { x: d.x, y: d.y, f: d.f, m: d.m };
+      if (b && !b.isMe && !b.brain && this.validPos(b, d)) b.net = { x: d.x, y: d.y, f: d.f ? 1 : 0, m: d.m ? 1 : 0 };
+    } else if (!fromHost && (d.k === 'bp' || d.k === 'ev')) {
+      // sahte host mesajı: yok say (sunucu da engeller)
     } else if (d.k === 'bp' && this.isClient) {
       d.b.forEach(([id, x, y, f, m]) => { const b = this.ball(id); if (b) b.net = { x, y, f, m }; });
     } else if (d.k === 'req' && this.isHost) {
@@ -76,6 +88,24 @@ export function installNet(GameScene) {
     } else if (d.k === 'ev' && this.isClient) {
       this.applyEv(d.n, d.a || []);
     }
+  };
+
+  // HİLE KORUMASI: hız / ışınlanma / duvardan geçme. Herkes başkalarının konumunu kendisi kontrol eder;
+  // geçersiz konum yok sayılır (hileci diğerlerinde olduğu yerde kalır, uzaktan öldüremez/bildiremez).
+  P.validPos = function (b, d) {
+    const x = Number(d.x), y = Number(d.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+    const now = performance.now();
+    const last = b.netValid || { x: b.x, y: b.y, t: now - 100 };
+    const dt = Math.min(2, Math.max(0.1, (now - last.t) / 1000));
+    const dist = Math.hypot(x - last.x, y - last.y);
+    let ok = dist <= SPEED * 1.5 * dt + 80;
+    // Katil tüneli: iki ucu da tünel olmalı
+    if (!ok && b.alive && nearestTunnel(TUNNELS, last.x, last.y) && nearestTunnel(TUNNELS, x, y)) ok = true;
+    // Canlılar duvarın içinde duramaz (hayaletler serbest)
+    if (ok && b.alive && !canStand(x, y)) ok = false;
+    if (ok) b.netValid = { x, y, t: now };
+    return ok;
   };
 
   // Host: bir oyuncunun isteğini kontrol et ve uygula
@@ -99,20 +129,35 @@ export function installNet(GameScene) {
         break;
       }
       case 'emergency':
-        if (who.alive && !this.sabotage && (who.emergencyLeft === undefined ? 1 : who.emergencyLeft) > 0) { who.emergencyLeft = 0; this.callMeeting(who, null); }
+        if (who.alive && !this.sabotage && near(who, EMERGENCY_BUTTON, 260) && (who.emergencyLeft === undefined ? 1 : who.emergencyLeft) > 0) { who.emergencyLeft = 0; this.callMeeting(who, null); }
         break;
-      case 'vote':
-        this.castVote(who, d.id);
+      case 'vote': {
+        // sadece 'skip' ya da yaşayan bir oyuncunun numarası
+        const m = this.meeting;
+        const target = m && d.id !== 'skip' ? [...m.ids.entries()].find(([, v]) => v === String(d.id)) : null;
+        if (d.id === 'skip' || (target && target[0].alive)) this.castVote(who, d.id === 'skip' ? 'skip' : String(d.id));
         break;
-      case 'task':
+      }
+      case 'task': {
+        // Katil görev yapamaz; en fazla 5 görev; her istasyon bir kez; istasyonun yanında olmalı; çok hızlı olamaz
+        const st = STATIONS.find((x) => x.id === d.s);
+        if (!st || who.role === 'impostor' || this.meeting) break;
+        const done = who.taskIds || (who.taskIds = new Set());
+        if (done.has(st.id) || done.size >= TASKS_PER_PLAYER) break;
+        const now = performance.now();
+        if (now - (who.lastTaskAt || 0) < TASK_MIN_GAP) break;
+        const spot = st.type === 'download' ? UPLOAD_STATION : st;
+        if (!near(who, spot, TASK_RANGE)) break;
+        done.add(st.id); who.lastTaskAt = now;
         who.tasksDone = (who.tasksDone || 0) + 1;
         this.addTaskDone(1);
         break;
+      }
       case 'fix':
         if (this.sabotage && who.alive && who.role !== 'impostor' && near(who, this.sabotage.def.fix, FIX_RANGE)) this.fixSabotage();
         break;
       case 'sab':
-        if (who.alive && who.role === 'impostor') this.startSabotage(d.type);
+        if (who.alive && who.role === 'impostor' && !this.sabotage && this.sabCd <= 0) this.startSabotage(d.type);
         break;
     }
   };
@@ -124,17 +169,17 @@ export function installNet(GameScene) {
       const B = (i) => this.ball(a[i]);
       switch (n) {
         case 'kill': if (B(0) && B(1)) this.kill(B(0), B(1)); break;
-        case 'shoot': if (B(0) && B(1)) this.shoot(B(0), B(1)); break;
+        case 'shoot': if (B(0) && B(1)) this.shoot(B(0), B(1), a[2]); break;
         case 'meeting': if (B(0)) this.callMeeting(B(0), a[1] != null ? this.bodyOf(a[1]) : null); break;
         case 'chat': if (B(0)) this.showChat(B(0), a[1], this.ball(a[2]), a[3]); break;
         case 'phase': this.setMeetingPhase(a[0]); break;
         case 'voted': if (B(0)) this.castVote(B(0), '?'); break;
-        case 'results': this.showVoteResults(a[0], a[1], this.ball(a[2]), a[3]); break;
+        case 'results': this.showVoteResults(a[0], a[1], this.ball(a[2]), a[3], a[4]); break;
         case 'endMeeting': this.endMeeting(this.ball(a[0])); break;
         case 'sab': this.startSabotage(a[0]); break;
         case 'sabFix': this.fixSabotage(); break;
         case 'tasks': this.taskDone = a[0]; this.taskTotal = a[1]; this.publishTasks(); break;
-        case 'over': this.finishGame(a[0]); break;
+        case 'over': this.finishGame(a[0], a[1]); break;
       }
     } finally {
       this.applyingNet = false;

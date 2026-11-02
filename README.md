@@ -22,6 +22,40 @@ npm start          # http://localhost:3000
 - **Botlar**: odalar arasında koridorlardan gezer (`systems/BotBrain.js`)
 - Duran karakter `SabitDurma` karesiyle, yürüyen karakter yürüme klibiyle gösterilir
 
+## Aşama 7.6: Jeton (oyun içi para) + şapka dükkanı
+- **Jeton 🪙** gerçek para değil. Online maçlardan kazanılır: oyna +10, kazan +25, görev +2, öldürme +5. Yeni hesaba 200 jeton hoş geldin hediyesi.
+- Bakiye ve alınan şapkalar **sunucuda** hesapla saklanır (Upstash/accounts.json); hile ile artırılamaz, alınmamış şapka takılamaz (sunucu kontrol eder).
+- Şapka dolabı = dükkan: fiyatlar 100 / 250 / 500 / 1000 (taç, hale). Bedava: şapkasız, kırmızı/mavi kep, bere. Misafir sadece bedava şapkaları takar.
+- Fiyat listesi iki yerde, aynı olmalı: `server/index.js` (HAT_PRICE) ve `public/js/systems/Looks.js` (HAT_PRICE).
+
+## Aşama 7: Şapkalar + canlı gözler
+- **29 şapka** (`systems/Looks.js`, hepsi kodla çizilir, her çözünürlükte keskin): silindir, kovboy, taç, bere, kep, fötr, parti, aşçı, viking, asker miğferi, baret, fes, ressam beresi, Noel Baba, cadı, korsan, mezuniyet, kulaklık, çiçek tacı, hale, pervaneli, melon, sombrero, uşanka, tavşan/kedi kulağı, uzaylı, radyasyon başlığı. Yeni şapka: `HATS` listesine bir `draw` fonksiyonu ekle.
+- **Şapka dolabı**: lobide BM direğinin karşısında (sağda). Yanına git, E ya da ŞAPKA SEÇ. Seçim kaydedilir, maçta da takılı; çevrimiçi odada herkes görür. Botların şapkası bayraklarından türetilir.
+- **Canlı gözler** (animasyon videolarındaki göz paketi): gözler artık karakter görüntüsünden ayrı çiziliyor (`tools/eyes.py` eski gözleri sildi, her karedeki yerlerini `baked.json`a yazdı). Göz kırpma, uzun süre durunca uykulu (yarı kapalı), görev bitince mutlu (^ ^), ceset görünce ve sabotajda şaşkın (büyük göz), katil/şerif hedefe kilitlenince kısık sinsi göz (sadece kendi ekranında, rol belli olmaz), hayalet yarı kapalı, cesette X göz. Lobide mesaj yazan mutlu olur. Öldürme animasyonları değişmedi.
+
+## Aşama 6.2: Hile koruması
+- Rolleri artık **sunucu** dağıtır; her oyuncuya sadece **kendi rolü** gider (tarayıcıdan katil okunamaz, host kendini katil seçemez). Roller maç sonunda açıklanır, şerif atışı ve atılan kişinin rolü host'tan gelir.
+- Oyun olaylarını (öldürme, oyun bitti...) ve bot konumlarını **sadece host** gönderebilir (sunucu ve oyun ikisi de kontrol eder).
+- Konum kontrolü: hız hilesi, ışınlanma ve duvardan geçme yok sayılır (katil tüneli hariç).
+- Görev: katil görev sayamaz, oyuncu başına en fazla 5, her istasyon bir kez, istasyonun yanında olmalı, iki görev arası en az 1,5 sn.
+- Oy: sadece yaşayan oyuncuya ya da "geç". Acil toplantı: düğmenin yanında olmalı. Sabotaj: bekleme süresi kontrol edilir.
+- Toplantı sohbeti: ölü oyuncu kendini canlı gösterip yaşayanlara yazamaz.
+- Çevrimiçi lobi kurmak/katılmak için giriş zorunlu (misafir başkasının adıyla giremez).
+- Kalan sınır: host oyunu yönettiği için host hile yapabilir; diğer oyuncuların konumu herkese gittiği için "duvar arkasını görme" hilesi tam engellenemez (ikisi için kuralların sunucuda çalışması gerekir).
+
+## Aşama 6.1: Sohbet, telefon ekranı, yürüme düzeltmeleri, kalıcı hesaplar
+- **Sohbet**: çevrimiçi lobide sol altta 💬 (T tuşu ya da butona dokun). Yazılan mesaj yazanın başının üstünde balon olarak da çıkar. **Toplantıda** sohbet kutusuna yazılabilir; ölülerin mesajlarını sadece ölüler görür (👻). Sunucu mesajı 120 karakterle ve 0,6 sn'de 1 mesajla sınırlar. Kod: `ui/Chat.js`, sunucuda `chat` mesajı.
+- **Yürüme hatası**: görev paneli açıkken toplantı başlarsa toplantıdan sonra karakter yürüyemiyordu; düzeltildi. Yazı alanına yazarken karakter artık kendi kendine yürümez.
+- **Yürüme animasyonu**: yürüme kareleri her bayrak için arka planda üretilir; çevrimiçi lobide bu hiç istenmiyordu (o yüzden lobide yürüme animasyonu yoktu). Artık her top kendi dokusunu ister, yürümeye başlayan önce hazırlanır.
+- **Telefon**: yatay telefonda ana menü iki sütun (logo + kimlik kartı solda, terminal sağda), oda ekranında başlat butonu sağ altta, toplantı tek ekrana sığar. Dikeyde kamera daha geniş görür.
+- **Hesaplar kalıcı**: Render ücretsiz planda disk silindiği için hesaplar kayboluyordu. Artık hesaplar ücretsiz **Upstash Redis** veritabanına da yazılır (aşağıdaki kurulum). Ortam değişkenleri verilmezse eskisi gibi `data/accounts.json`.
+
+### Upstash kurulumu (5 dk, ücretsiz, kart istemez)
+1. upstash.com -> giriş yap (GitHub/Google) -> **Create Database** (Redis), bölge: Frankfurt (eu-central-1), Free plan.
+2. Veritabanı sayfasında **REST API** kısmından `UPSTASH_REDIS_REST_URL` ve `UPSTASH_REDIS_REST_TOKEN` değerlerini kopyala.
+3. Render -> servisin -> **Environment** -> bu iki değişkeni aynen ekle -> Save (sunucu yeniden başlar).
+4. Render loglarında `Hesaplar: bulut (Upstash) - N hesap` yazısını görürsen tamamdır.
+
 ## Aşama 6: Yeni görevler, seviye sistemi, hesap istatistikleri
 - **6 yeni görev türü, 14 yeni istasyon** (toplam 17 tür, 39 istasyon; oyuncu başına yine 5 görev): **yakıt** (çizgide KİLİTLE, 3 tur), **sıralı düğmeler** (1'den 9'a), **borular** (kareleri çevirip sol girişten sağ kenara yol aç), **atık ayrıştırma** (tehlikeli/normal), **frekans** (iki kaydırıcıyla dalgayı uydur), **biyometrik tarama** (elini basılı tut). Kod: `ui/TaskPanel.js`, istasyonlar: `systems/Tasks.js` (konumlar `BunkerMap.canStand` ile doğrulandı).
 - **İstatistikler** (sunucuda, hesapla birlikte `data/accounts.json`): oynanan/kazanılan/kaybedilen maç, kazanma oranı, güncel ve en iyi seri, Katil/Şerif/Masum olarak oynanan maç, masum ve katil galibiyeti, yapılan görev, öldürme, terk edilen maç.

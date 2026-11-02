@@ -33,7 +33,16 @@
     "off": "Kapalı",
     "ghost": "Hayalet",
     "map": "Harita",
-    "info": "Bilgi"
+    "info": "Bilgi",
+    "settings": "AYARLAR",
+    "musicVol": "Müzik sesi",
+    "sfxVol": "Efekt sesi",
+    "mute": "Sessiz (M)",
+    "quality": "Grafik",
+    "qHigh": "Yüksek",
+    "qLow": "Düşük (hızlı)",
+    "fullscreen": "Tam ekran",
+    "resume": "DEVAM ET"
   },
   "lobby": {
     "kicker": "Sığınak Lobisi",
@@ -56,7 +65,12 @@
     "flagTakenHint": "Gri bayraklar başka oyuncular tarafından kullanılıyor.",
     "poleHint": "🇺🇳 BM DİREĞİ\nBayrak seçmek için yaklaş",
     "poleHintNear": "E: BAYRAK SEÇ",
-    "pickFlagBtn": "BAYRAK SEÇ"
+    "pickFlagBtn": "BAYRAK SEÇ",
+    "pickHat": "ŞAPKA DOLABI",
+    "hatSub": "{n} şapka var. Birini seç, maçta da takılı kalır.",
+    "wardHint": "🎩 Şapka dolabı",
+    "wardHintNear": "🎩 Şapka seçmek için E",
+    "pickHatBtn": "ŞAPKA SEÇ"
   },
   "actions": {
     "kill": "ÖLDÜR",
@@ -228,7 +242,9 @@
     "bodyIn": "Ceset {room} odasındaydı.",
     "notMe": "Ben değilim!",
     "skipVote": "Kanıt yok, geçelim.",
-    "defend": "{target} beni suçluyor ama yalan!"
+    "defend": "{target} beni suçluyor ama yalan!",
+    "placeholder": "Mesaj yaz… (Enter)",
+    "ghostPlaceholder": "👻 Sadece ölüler görür…"
   },
   "sabotage": {
     "title": "SABOTAJ",
@@ -261,7 +277,7 @@
     "offline": "Sunucuya bağlı değil",
     "connecting": "Bağlanıyor...",
     "noServer": "Sunucu adresi yok (Ayarlar)",
-    "version": "Sürüm 0.6",
+    "version": "Sürüm 0.7",
     "back": "GERİ",
     "language": "Dil",
     "sound": "Ses",
@@ -334,7 +350,8 @@
     "playerLeft": "{name} oyundan ayrıldı.",
     "disconnected": "Sunucu bağlantısı koptu.",
     "flag": "Bayrağın",
-    "err_flagTaken": "Bu bayrak alınmış."
+    "err_flagTaken": "Bu bayrak alınmış.",
+    "err_needLogin": "Çevrimiçi oynamak için giriş yap."
   },
   "levels": {
     "title": {
@@ -371,5 +388,47 @@
     "guest": "İstatistikler için giriş yap.",
     "howXp": "XP: maç başı 20, galibiyet +30, görev başı 4, öldürme başı 8. Sadece en az 2 gerçek oyuncunun olduğu çevrimiçi maçlar sayılır.",
     "nextTitle": "Sonraki unvan: {t} (seviye {n})"
+  },
+  "hats": {
+    "none": "Şapkasız",
+    "tophat": "Silindir",
+    "cowboy": "Kovboy",
+    "crown": "Taç",
+    "beanie": "Bere",
+    "cap_red": "Kırmızı Kep",
+    "cap_blue": "Mavi Kep",
+    "fedora": "Fötr",
+    "party": "Parti Şapkası",
+    "chef": "Aşçı",
+    "viking": "Viking",
+    "army": "Asker Miğferi",
+    "hardhat": "Baret",
+    "fez": "Fes",
+    "beret": "Ressam Beresi",
+    "santa": "Noel Baba",
+    "witch": "Cadı",
+    "pirate": "Korsan",
+    "grad": "Mezuniyet",
+    "headphones": "Kulaklık",
+    "flowers": "Çiçek Tacı",
+    "halo": "Hale",
+    "propeller": "Pervaneli",
+    "bowler": "Melon",
+    "sombrero": "Sombrero",
+    "ushanka": "Uşanka",
+    "bunny": "Tavşan Kulağı",
+    "cat": "Kedi Kulağı",
+    "antenna": "Uzaylı",
+    "gasmask": "Radyasyon Başlığı"
+  },
+  "shop": {
+    "sub": "Jeton maçlardan kazanılır (oyna +10, kazan +25, görev +2, öldürme +5). Gerçek para değildir.",
+    "guest": "Şapka almak için giriş yap. Misafirken sadece bedava şapkalar takılır.",
+    "free": "Bedava",
+    "owned": "Senin",
+    "confirm": "Al? 🪙 {n}",
+    "buying": "Alınıyor…",
+    "noCoins": "Yeterli jetonun yok. Online maç oynayarak kazan.",
+    "needLogin": "Şapka almak için giriş yapmalısın."
   }
 }

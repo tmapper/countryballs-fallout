@@ -6,6 +6,7 @@
 //   { players: [{ flag, role, me }, ...] }   (me = bu cihazdaki oyuncu)
 // Rol kuralları ve sayılar: systems/Combat.js
 // Kontroller: hareket WASD/ok/joystick · Q/Boşluk = aksiyon (öldür/vur) · E = tünel · Esc = lobi
+import { gameSettings } from '../ui/GameSettings.js';
 import { i18n } from '../systems/I18n.js';
 import { InputController } from '../systems/InputController.js';
 import { FogOfWar } from '../systems/FogOfWar.js';
@@ -62,7 +63,7 @@ export class GameScene extends Phaser.Scene {
     const n = players.length;
     this.balls = players.map((p, i) => {
       const { x, y } = gameSpawn(i, n); // acil toplantı masasının etrafında halka
-      const ball = new CountryBall(this, x, y, p.flag, { isMe: p.me, role: p.role });
+      const ball = new CountryBall(this, x, y, p.flag, { isMe: p.me, role: p.role, hat: p.hat });
       ball.id = p.id || 'b' + i;
       ball.name = p.name || '';
       ball.cooldown = p.role === 'impostor' ? FIRST_KILL_COOLDOWN : p.role === 'sheriff' ? FIRST_SHOOT_COOLDOWN : 0;
@@ -84,7 +85,8 @@ export class GameScene extends Phaser.Scene {
     // Katil'in sahte görev listesi var (kimseye belli olmasın diye), ama görev yapamaz
     this.fakeTasks = this.player.role === 'impostor';
     this.myTasks = pickTasks(TASKS_PER_PLAYER);
-    this.taskTotal = this.balls.filter((b) => b.role !== 'impostor').length * TASKS_PER_PLAYER;
+    // Çevrimiçi client başkalarının rolünü bilmez (hile koruması); maçta her zaman 1 Katil var
+    this.taskTotal = (this.balls.length - (this.balls.filter((b) => b.role === 'impostor').length || 1)) * TASKS_PER_PLAYER;
     this.taskDone = 0;
     // Botlar görevlerine gerçekten yürür ve başında bekler (Katil bot da sahte görev yapar)
     this.balls.forEach((b) => {
@@ -99,7 +101,7 @@ export class GameScene extends Phaser.Scene {
       };
     });
     this.buildTaskMarkers();
-    this.events.once('shutdown', () => { this.taskPanel.close(true); stopAllLoops(); });
+    this.events.once('shutdown', () => { this.taskPanel.close(true); gameSettings.close(); stopAllLoops(); });
 
     this.registry.set('flag', this.player.flag);
     this.registry.set('role', this.player.role);
@@ -131,8 +133,9 @@ export class GameScene extends Phaser.Scene {
     // Savaş sisi + F2 ile açıp kapatma (haritayı incelemek için)
     this.fog = new FogOfWar(this, WORLD.w, WORLD.h, this.grid);
     const kb = this.input.keyboard;
-    kb.on('keydown-F2', () => this.fog.setEnabled(!this.fog.enabled));
-    kb.on('keydown-ESC', () => { if (this.taskPanel.isOpen) this.taskPanel.close(); else if (!this.online) backToLobby(); });
+    // F2 sis aç/kapa: sadece test modunda (?debug=1) ve çevrimdışı (yoksa duvar hilesi olurdu)
+    if (/[?&]debug=1/.test(location.search)) kb.on('keydown-F2', () => { if (!this.online) this.fog.setEnabled(!this.fog.enabled); });
+    kb.on('keydown-ESC', () => { if (this.taskPanel.isOpen) this.taskPanel.close(); else if (!gameSettings.isOpen) gameSettings.open({ onLeave: () => backToLobby() }); });
     kb.on('keydown-Q', () => this.doAction());
     kb.on('keydown-SPACE', () => this.doAction());
     kb.on('keydown-E', () => this.interact());
@@ -143,7 +146,7 @@ export class GameScene extends Phaser.Scene {
 
   // Yakınlaştırma CSS boyuna göre hesaplanır, 1080p çizim için RES.k ile çarpılır
   applyZoom() {
-    this.cameras.main.setZoom(Phaser.Math.Clamp(RES.cssH / 1000, 0.5, 1.2) * RES.k);
+    this.cameras.main.setZoom(Phaser.Math.Clamp(Math.min(RES.cssH, RES.cssW) / 1000, RES.cssW < RES.cssH ? 0.45 : 0.5, 1.2) * RES.k);
   }
 
   // "Rolleri göster" açıksa her topun üstünde rolü yazar; kapalıysa sadece "Sen"
@@ -237,11 +240,12 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     t.done = true;
+    this.player.setMood('happy', 1.5);
     sfx('task_done');
     this.fxTaskDone();
     this.toast(i18n.t('tasks.completed'), '#6be38a');
     this.player.tasksDone = (this.player.tasksDone || 0) + 1;   // maç sonu istatistiği için
-    if (this.isClient) { this.publishTasks(); this.req('task'); return; }   // toplamı host tutar
+    if (this.isClient) { this.publishTasks(); this.req('task', { s: t.id }); return; }   // toplamı host tutar
     this.addTaskDone(1);
   }
 
@@ -293,13 +297,16 @@ export class GameScene extends Phaser.Scene {
     this.checkEnd();
   }
 
-  shoot(sheriff, target) {
+  shoot(sheriff, target, hitArg) {
     if (this.meeting || this.over) return;
-    this.emitEv('shoot', [sheriff.id, target.id]);
+    // Client hedefin rolünü bilmez: sonuç host'tan gelir
+    const hit = hitArg !== undefined ? !!hitArg : target.role === 'impostor';
+    if (hit && !target.role) target.role = 'impostor';
+    this.emitEv('shoot', [sheriff.id, target.id, hit ? 1 : 0]);
     sheriff.cooldown = SHOOT_COOLDOWN;
     this.fxShot(sheriff, target);
     if (sheriff.isMe || target.isMe || !this.player.alive || canSee(this.grid, this.player, sheriff)) sfx('shoot');
-    if (target.role === 'impostor') {
+    if (hit) {
       this.die(target);
       // Vurulma animasyonu sadece VURULANA oynar
       if (target.isMe) {
@@ -319,7 +326,7 @@ export class GameScene extends Phaser.Scene {
     ball.alive = false;
     ball.brain = null;
     // Ölen botun yapılmamış görevleri toplamdan düşer (ölü bot görev yapmaz). Oyuncu hayalet olarak devam eder.
-    if (!ball.isMe && ball.tasksLeft) { this.taskTotal -= ball.tasksLeft; ball.tasksLeft = 0; this.publishTasks(); }
+    if (!ball.isMe && ball.tasksLeft && !this.isClient) { this.taskTotal -= ball.tasksLeft; ball.tasksLeft = 0; this.publishTasks(); this.emitEv('tasks', [this.taskDone, this.taskTotal]); }
     if (ball.isMe && this.taskPanel) this.taskPanel.close();
     if (!opts.noBody) { this.spawnBody(ball); this.fxDeath(ball); }
     if (ball.isMe) {
@@ -409,6 +416,7 @@ export class GameScene extends Phaser.Scene {
     if (this.meeting) { this.registry.set('hud', { action: null }); return; }
     const ui = this.scene.get('UIScene');
     this.controls.joystick = ui && ui.joystick ? ui.joystick : null;
+    if (this.taskOpen && !this.taskPanel.isOpen) this.taskOpen = false;   // panel başka yoldan kapandıysa kilit kalmasın
     const dir = this.taskOpen ? { x: 0, y: 0 } : this.controls.update();   // görev açıkken yürüme yok
     this.updateBotTasks(dt);
     if (!this.over && !this.sandbox) { this.updateSabotage(dt); this.updateBotReports(dt); }
@@ -430,14 +438,49 @@ export class GameScene extends Phaser.Scene {
 
     // Gözün konumu: ayak noktasının biraz yukarısı (ayak izi kutusunun içinde kalsın)
     this.fog.update(this.player.x, this.player.y - 16, this.visionRadius);
+    this.updateSight(dt);
 
     // Arayüze bilgi ver
     this.registry.set('playerPos', { x: Math.round(this.player.x), y: Math.round(this.player.y) });
     const room = getRoomAt(this.player.x, this.player.y - 8);
     if (room !== this.registry.get('room')) this.registry.set('room', room);
-    this.registry.set('hud', this.hudState());
+    const hud = this.hudState();
+    this.registry.set('hud', hud);
+    this.updateMoods(hud);
     this.registry.set('taskArrow', this.arrowTarget());
     this.updateMinimap();
+  }
+
+  // Görüş: duvar arkasındaki / görüş alanı dışındaki oyuncular ve cesetler hiç görünmez (yumuşak geçişle)
+  updateSight(dt) {
+    const me = this.player;
+    const all = !me.alive || !this.fog.enabled;
+    this.sightT = (this.sightT || 0) - dt;
+    if (this.sightT <= 0) {
+      this.sightT = 0.08;
+      const r = this.visionRadius + 30;
+      const see = (o) => all || canSee(this.grid, me, o, r);
+      this.balls.forEach((b) => { if (!b.isMe && b.alive) b.seen = see(b); });
+      this.bodies.forEach((c) => { c.seen = see(c); });
+    }
+    const k = Math.min(1, dt * 12);
+    const fade = (o) => {
+      const a = (o.sightA ?? 0) + ((o.seen ? 1 : 0) - (o.sightA ?? 0)) * k;
+      o.sightA = a;
+      o.setAlpha(a);
+      o.setVisible(a > 0.02);
+    };
+    this.balls.forEach((b) => { if (!b.isMe && b.alive) fade(b); });
+    this.bodies.forEach(fade);
+  }
+
+  // Yüz ifadeleri (sadece bu ekranda): katil/şerif hedefe kilitlenince kısık göz, ceset görünce şaşkın
+  updateMoods(hud) {
+    const me = this.player;
+    if (!me.alive) return;
+    if (hud.ready && (me.role === 'impostor' || me.role === 'sheriff') && (!me.mood || me.mood.style === 'squint')) me.setMood('squint', 0.3);
+    const body = this.nearestBody(me, 520);
+    if (body && !body.seen) { body.seen = true; me.setMood('wide', 1.8); }
   }
 
   // Ekranda olmayan en yakın hedefe ok: sabotaj tamiri (kırmızı) ya da görev (sarı)

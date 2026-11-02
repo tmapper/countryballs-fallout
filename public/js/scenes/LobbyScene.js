@@ -15,7 +15,9 @@ import { RES } from '../systems/Resolution.js';
 import { world } from '../map/BunkerMap.js';
 import { paintGrassTile, paintBunkerDoor, paintStartPad } from '../map/MapPainter.js';
 import { PROP_IMG } from '../map/PropImages.js';
-import { startFromLobby, openLobbyFlagPicker } from '../systems/GameFlow.js';
+import { startFromLobby, openLobbyFlagPicker, openLobbyHatPicker } from '../systems/GameFlow.js';
+import { loadHat, botHat, ensureHatTexture } from '../systems/Looks.js';
+import { hatPicker } from '../ui/HatPicker.js';
 import { net } from '../systems/Net.js';
 import { flagPicker } from '../ui/FlagPicker.js';
 
@@ -25,9 +27,11 @@ const FIELD = { x: 160, y: 300, w: 1880, h: 960 };          // yürünebilir çi
 const DOOR = { x: 1100, y: 300 };                            // sığınak kapısının ortası (alanın üst kenarı)
 const START = { x: 1100, y: 420, r: 190 };                   // BAŞLAT bölgesi
 const POLE = { x: 470, y: 640, r: 170 };                     // BM direği (bayrak seç)
+const WARD = { x: 1730, y: 640, r: 170 };                    // şapka dolabı (askı)
 const FOOT_W = 26, FOOT_D = 22;
 const SOLIDS = [                                             // çarpışma: ağaçlar, kayalar, kum torbaları, direk
   { x: POLE.x, y: POLE.y, r: 26 },
+  { x: WARD.x, y: WARD.y, r: 40 },
   ...[[300, 420], [1900, 430], [280, 1150], [1920, 1140], [760, 1180], [1460, 1190]].map(([x, y]) => ({ x, y, r: 36, tree: true })),
   ...[[1600, 700], [700, 960]].map(([x, y]) => ({ x, y, r: 30, rock: true }))
 ];
@@ -56,7 +60,7 @@ export class LobbyScene extends Phaser.Scene {
 
     this.lobbyStand = lobbyStand;
     const sp = lobbySpawn(0);
-    this.player = new CountryBall(this, sp.x, sp.y, state.myFlag || 'TR', { isMe: true });
+    this.player = new CountryBall(this, sp.x, sp.y, state.myFlag || 'TR', { isMe: true, hat: loadHat() });
     this.player.showTag(i18n.t('ui.you'), '#ffffff');
     this.bots = [];
     this.online = !!state.online;
@@ -67,6 +71,10 @@ export class LobbyScene extends Phaser.Scene {
       const onRelay = (m) => { const d = m.d || {}; if (d.k === 'lp') { const b = this.remotes.get(m.from); if (b) b.net = { x: d.x, y: d.y, f: d.f, m: d.m }; } };
       net.on('relay', onRelay);
       this.events.once('shutdown', () => net.off('relay', onRelay));
+      // Sohbet balonu: yazan oyuncunun başının üstünde birkaç saniye
+      const onBubble = ({ from, text }) => { const b = from === net.id ? this.player : this.remotes.get(from); if (b) { this.bubble(b, text); b.setMood('happy', 1.4); } };
+      this.game.events.on('chat-bubble', onBubble);
+      this.events.once('shutdown', () => this.game.events.off('chat-bubble', onBubble));
       this.applyRoom(state.room);
     } else {
       this.applyState(state);
@@ -75,9 +83,10 @@ export class LobbyScene extends Phaser.Scene {
     this.controls = new InputController(this, null);
     this.inZone = false;
     this.inFlag = false;
-    this.input.keyboard.on('keydown-E', () => { if (this.inFlag) openLobbyFlagPicker(); else if (this.inZone) startFromLobby(); });
+    this.inHat = false;
+    this.input.keyboard.on('keydown-E', () => { if (this.inFlag) openLobbyFlagPicker(); else if (this.inHat) openLobbyHatPicker(); else if (this.inZone) startFromLobby(); });
     this.input.keyboard.on('keydown-ENTER', () => { if (this.inZone) startFromLobby(); });
-    this.events.once('shutdown', () => flagPicker.close());
+    this.events.once('shutdown', () => { flagPicker.close(); hatPicker.close(); });
 
     // Dünya kamerası
     const cam = this.cameras.main;
@@ -103,13 +112,37 @@ export class LobbyScene extends Phaser.Scene {
     });
   }
 
+  bubble(ball, text) {
+    if (ball.bubble) { ball.bubble.destroy(); ball.bubble = null; }
+    const top = ball.tag.y - 34;
+    const t = this.add.text(0, 0, text.length > 70 ? text.slice(0, 68) + '…' : text, {
+      fontFamily: 'Arial', fontSize: '22px', color: '#111', align: 'center', wordWrap: { width: 300 }, resolution: Math.min(4, RES.k * 1.5)
+    }).setOrigin(0.5, 1);
+    const w = t.width + 28, h = t.height + 18;
+    const g = this.add.graphics();
+    g.fillStyle(0x000000, 0.25).fillRoundedRect(-w / 2 + 3, -h + 3, w, h, 14);
+    g.fillStyle(0xffffff, 0.96).fillRoundedRect(-w / 2, -h, w, h, 14);
+    g.fillTriangle(-10, -1, 10, -1, 0, 14);
+    t.setPosition(0, -9);
+    const c = ball.bubble = this.add.container(0, top, [g, t]);
+    this.children.remove(c); ball.add(c);          // topla birlikte hareket etsin, arayüz kamerası çizmesin
+    c.setScale(0.6).setAlpha(0);
+    this.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 160, ease: 'Back.easeOut' });
+    this.time.delayedCall(4500, () => {
+      if (ball.bubble !== c) return;
+      this.tweens.add({ targets: c, alpha: 0, y: top - 20, duration: 300, onComplete: () => { c.destroy(); if (ball.bubble === c) ball.bubble = null; } });
+    });
+  }
+
   onResize() {
     this.applyZoom();
     this.uiCam.setSize(this.scale.width, this.scale.height).setZoom(RES.k);
   }
 
   applyZoom() {
-    this.cameras.main.setZoom(Phaser.Math.Clamp(RES.cssH / 1000, 0.5, 1.2) * RES.k);
+    // Lobi alanından büyük görünmesin (kenarlarda boşluk kalmasın)
+    const minZ = Math.max(RES.cssW / LOBBY.w, RES.cssH / LOBBY.h);
+    this.cameras.main.setZoom(Math.max(minZ, Phaser.Math.Clamp(Math.min(RES.cssH, RES.cssW) / 1000, RES.cssW < RES.cssH ? 0.45 : 0.5, 1.2)) * RES.k);
   }
 
   // Her kamera sadece kendi nesnelerini çizsin
@@ -153,8 +186,11 @@ export class LobbyScene extends Phaser.Scene {
     const padKey = tex('lobbypad', () => paintStartPad(START.r));
     fit(s.add.image(START.x - START.r - 10, START.y - START.r - 10, padKey).setOrigin(0).setDepth(-7), padKey);
     // Toprak yol: kapıdan aşağı
+    // Toprak patika (kapıdan başlat alanına): yumuşak kenarlı, çakıllı
     const path = s.add.graphics().setDepth(-8);
-    path.fillStyle(0x7a6a4e, 0.55).fillRoundedRect(DOOR.x - 90, DOOR.y, 180, 560, 40);
+    for (let i = 0; i < 6; i++) path.fillStyle(0x6b5a3e, 0.12).fillEllipse(DOOR.x, DOOR.y + 120, 230 - i * 22, 300 - i * 20);
+    path.fillStyle(0x7a6648, 0.35).fillEllipse(DOOR.x, DOOR.y + 120, 150, 230);
+    for (let i = 0; i < 26; i++) { const a = (i * 2.399) % 6.283, r = 18 + (i * 37) % 80; path.fillStyle(i % 2 ? 0x9b8a6a : 0x5c4c33, 0.7).fillCircle(DOOR.x + Math.cos(a) * r * 0.8, DOOR.y + 120 + Math.sin(a) * r * 1.2, 3 + (i % 3)); }
     // BM direği: mavi bayrak + beyaz amblem, dalgalanır
     const pole = s.add.graphics().setDepth(POLE.y);
     pole.fillStyle(0x000000, 0.3).fillEllipse(POLE.x + 10, POLE.y + 6, 90, 26);
@@ -174,11 +210,25 @@ export class LobbyScene extends Phaser.Scene {
     const style = { fontFamily: 'Arial', fontSize: '28px', fontStyle: 'bold', color: '#ffffff', stroke: '#000', strokeThickness: 6, align: 'center', resolution: Math.min(4, RES.k * 1.5) };
     this.poleHint = s.add.text(POLE.x, POLE.y - 390, '', { ...style, color: '#cfe3ff' }).setOrigin(0.5).setDepth(5000);
     this.hint = s.add.text(START.x, START.y - 230, '', style).setOrigin(0.5).setDepth(5000);
+    // Şapka dolabı: ahşap askı + üstünde şapkalar
+    const w = s.add.graphics().setDepth(WARD.y);
+    w.fillStyle(0x000000, 0.3).fillEllipse(WARD.x + 10, WARD.y + 6, 150, 34);
+    w.fillStyle(0x5e3e17, 1).fillRoundedRect(WARD.x - 70, WARD.y - 16, 140, 24, 8);
+    w.fillStyle(0x8a5a2b, 1).fillRect(WARD.x - 8, WARD.y - 300, 16, 290);
+    w.fillStyle(0x6b4520, 1).fillRect(WARD.x - 90, WARD.y - 280, 180, 14);
+    w.fillStyle(0xd7b26a, 1).fillCircle(WARD.x, WARD.y - 304, 12);
+    [['tophat', -78, -270], ['cowboy', 78, -270], ['crown', 0, -300]].forEach(([id, dx, dy]) => {
+      s.add.image(WARD.x + dx, WARD.y + dy, ensureHatTexture(s, id)).setOrigin(0.5, 470 / 512).setScale(0.26).setDepth(WARD.y + 1);
+    });
+    this.wardRing = s.add.ellipse(WARD.x, WARD.y + 4, 260, 110, 0xc8913f, 0.18).setStrokeStyle(4, 0xe0b77a, 0.8).setDepth(-7);
+    this.tweens.add({ targets: this.wardRing, alpha: 0.45, duration: 800, yoyo: true, repeat: -1 });
+    this.wardHint = s.add.text(WARD.x, WARD.y - 390, '', { ...style, color: '#ffe2b0' }).setOrigin(0.5).setDepth(5000);
   }
 
   refreshTexts() {
     if (this.hint) this.hint.setText(i18n.t(this.inZone ? (this.online && !net.isHost ? 'online.waitHost' : 'lobby.pressStart') : 'lobby.goToDoor'));
     if (this.poleHint) this.poleHint.setText(i18n.t(this.inFlag ? 'lobby.poleHintNear' : 'lobby.poleHint'));
+    if (this.wardHint) this.wardHint.setText(i18n.t(this.inHat ? 'lobby.wardHintNear' : 'lobby.wardHint'));
     if (this.player) this.player.showTag(i18n.t('ui.you'), '#ffffff');
   }
 
@@ -187,6 +237,7 @@ export class LobbyScene extends Phaser.Scene {
     if (!room) return;
     const me = room.players.find((p) => p.id === net.id);
     if (me && me.flag !== this.player.flag) this.player.setFlag(me.flag);
+    if (me && me.hat && me.hat !== this.player.hat) this.player.setHat(me.hat);
     const want = new Map(room.players.filter((p) => p.id !== net.id).map((p) => [p.id, p]));
     this.remotes.forEach((b, id) => { if (!want.has(id)) { b.destroy(); this.remotes.delete(id); } });
     let i = 1;
@@ -194,10 +245,11 @@ export class LobbyScene extends Phaser.Scene {
       let b = this.remotes.get(id);
       if (!b) {
         const sp = lobbySpawn(i);
-        b = new CountryBall(this, sp.x, sp.y, p.flag, {});
+        b = new CountryBall(this, sp.x, sp.y, p.flag, { hat: p.hat });
         b.net = { x: sp.x, y: sp.y, f: 0, m: 0 };
         this.remotes.set(id, b);
       } else if (b.flag !== p.flag) b.setFlag(p.flag);
+      if ((p.hat || 'none') !== b.hat) b.setHat(p.hat);
       b.showTag(p.name, '#ffffff');
       i++;
     });
@@ -217,7 +269,7 @@ export class LobbyScene extends Phaser.Scene {
     want.forEach((flag) => {
       if (this.bots.some((b) => b.flag === flag)) return;
       const p = lobbySpawn(this.bots.length + 1);
-      const b = new CountryBall(this, p.x, p.y, flag, {});
+      const b = new CountryBall(this, p.x, p.y, flag, { hat: botHat(flag) });
       b.target = null;
       b.wait = Math.random() * 2;
       this.bots.push(b);
@@ -248,6 +300,8 @@ export class LobbyScene extends Phaser.Scene {
     // Başlat bölgesi: kapıdaki direğin yanına gelince "BAŞLAT" belirir (E veya buton)
     const z = near(this.player, START);
     const f = near(this.player, POLE);
+    const hz = near(this.player, WARD);
+    if (hz !== this.inHat) { this.inHat = hz; this.game.events.emit('lobby-hat-zone', hz); this.refreshTexts(); }
     if (z !== this.inZone || f !== this.inFlag) {
       this.inZone = z; this.inFlag = f;
       this.refreshTexts();

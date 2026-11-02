@@ -98,6 +98,18 @@ export function requestSkins(flags) {
   if (queue.length && !timer) timer = setTimeout(work, 16);
 }
 
+// Bu bayrağın yürüme dokusu lazım (hiç silmeden). front: sıranın başına al (kendi topun / şu an yürüyen)
+export function wantSkin(flag, front = false) {
+  if (!target) return;
+  ['walk_r', 'walk_l'].forEach((skin) => {
+    if (!missing(target, flag, skin)) return;
+    const i = queue.findIndex((j) => j.flag === flag && j.skin === skin);
+    if (i >= 0) { if (front && i > 1) queue.unshift(queue.splice(i, 1)[0]); }
+    else if (front) queue.unshift({ flag, skin }); else queue.push({ flag, skin });
+  });
+  if (queue.length && !timer) timer = setTimeout(work, 16);
+}
+
 // Eksik kalanları hemen bitir (gerekirse senkron). skins: sadece bu skin'ler (varsayılan hepsi)
 export function flushSkins(flags, mgr = target, skins = Object.keys(SKINS)) {
   flags.forEach((flag) => skins.forEach((skin) => {

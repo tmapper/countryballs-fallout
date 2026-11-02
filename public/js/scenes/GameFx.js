@@ -10,6 +10,7 @@
 //   - Görev bitince yeşil ışıltı
 // Tüm efektler tek bir küçük "nokta" dokusuyla yapılır; parçacık sayıları düşük tutulur (kasmasın).
 import { WORLD, ROOMS } from '../map/BunkerMap.js';
+import { staticBall } from '../entities/CountryBall.js';
 
 function makeDot(scene) {
   if (scene.textures.exists('fxdot')) return;
@@ -101,8 +102,9 @@ export function installFx(GameScene) {
     this.fxBlood.emitParticleAt(ball.x, ball.y - 40, near ? 26 : 10);
     if (ball.isMe || near) this.cameras.main.shake(260, ball.isMe ? 0.012 : 0.006);
     // Hayalet ruhu yukarı süzülür
-    const ghost = this.add.sprite(ball.x, ball.y - 30, `idle:${ball.flag}`, 0).setScale(ball.scaleFactor * 0.9).setAlpha(0.6).setTint(0xcfe6ff).setDepth(999002).setBlendMode(Phaser.BlendModes.SCREEN);
-    this.tweens.add({ targets: ghost, y: ghost.y - 160, alpha: 0, scale: ball.scaleFactor * 1.1, duration: 1500, ease: 'Sine.easeOut', onComplete: () => ghost.destroy() });
+    const ghost = staticBall(this, ball.flag, ball.hat, 'closed', ball.scaleFactor * 0.9).setPosition(ball.x, ball.y - 30).setAlpha(0.6).setDepth(999002);
+    ghost.sprite.setTint(0xcfe6ff);
+    this.tweens.add({ targets: ghost, y: ghost.y - 160, alpha: 0, scale: 1.2, duration: 1500, ease: 'Sine.easeOut', onComplete: () => ghost.destroy() });
   };
 
   P.fxTunnel = function (x, y) {

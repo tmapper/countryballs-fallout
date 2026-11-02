@@ -20,7 +20,7 @@ class Net {
     this.handlers = {};
     this.queue = [];
     this.retry = 0;
-    this.profile = { name: '', flag: 'TR' };
+    this.profile = { name: '', flag: 'TR', hat: 'none' };
     this.account = null;           // { name, level, xp, xpInto, xpNeed, title, stats } giriş yapıldıysa (sunucu hesaplar)
     this.lastReward = null;        // son maçın ödülü (sunucudan 'matchReward')
     try { this.token = localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { this.token = ''; }
@@ -56,7 +56,11 @@ class Net {
     this.send({ t: 'profile', ...this.profile });
   }
 
+  // Hile koruması tetiklendi: bağlantıyı kes, bir daha bağlanma
+  block() { this.blocked = true; this.queue = []; if (this.ws) { try { this.ws.close(); } catch (e) { /* yoksay */ } } this.room = null; }
+
   connect() {
+    if (this.blocked) return false;
     if (this.ws && (this.ws.readyState === 0 || this.ws.readyState === 1)) return true;
     const url = this.url();
     if (!url) { this.setStatus('noServer'); return false; }
@@ -100,6 +104,7 @@ class Net {
   setStatus(s) { this.status = s; this.emit('status', { status: s }); }
 
   send(m) {
+    if (this.blocked) return;
     if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(m));
     else if (m.t !== 'relay') { this.queue.push(m); this.connect(); }
   }
@@ -115,13 +120,16 @@ class Net {
   create(opts) { this.send({ t: 'create', ...opts }); }
   join(code) { this.send({ t: 'join', code: String(code || '').trim().toUpperCase() }); }
   leave() { if (this.room) this.send({ t: 'leave' }); this.room = null; }
+  buyHat(hat) { this.send({ t: 'buyHat', hat }); }
+  setHat(hat) { this.profile.hat = hat; this.setProfile(); this.send({ t: 'setHat', hat }); }
   setFlag(flag) { this.profile.flag = flag; this.setProfile(undefined, flag); this.send({ t: 'setFlag', flag }); }
   roomSettings(o) { this.send({ t: 'roomSettings', ...o }); }
   start(setup) { this.send({ t: 'start', setup }); }
   end() { this.send({ t: 'end' }); }
   // Host: maç bitti. stats = [{ id, tasks, kills }] -> sunucu istatistik ve XP yazar, herkese 'matchReward' gönderir
   matchResult(winner, stats) { this.send({ t: 'matchResult', winner, stats }); }
-  relay(d, to) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({ t: 'relay', d, to })); }
+  chat(text, ch = 'lobby', dead = false) { this.send({ t: 'chat', text, ch, dead }); }
+  relay(d, to) { if (!this.blocked && this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({ t: 'relay', d, to })); }
 }
 
 export const net = new Net();

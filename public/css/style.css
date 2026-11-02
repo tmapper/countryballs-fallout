@@ -728,3 +728,112 @@ canvas { display: block; }
 .rr-lvl.up { color: #6be38a; font-size: 16px; font-weight: 900; animation: tpPop .5s ease-out; }
 .rr-bar { height: 10px; background: #0b0e13; border-radius: 8px; overflow: hidden; border: 1px solid #3a4452; }
 .rr-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #d9a400, #ffd23f); transition: width .9s ease-out; }
+
+/* ---------- Sohbet (Aşama 6.1) ---------- */
+.mt-chat-row, .lc-row { display: flex; gap: 6px; padding: 8px; border-top: 1px solid #2a323d; }
+.mt-chat-row.hidden { display: none; }
+.mt-chat-input, .lc-input { flex: 1; min-width: 0; background: #070a0e; border: 1px solid #3a4452; border-radius: 8px; color: #e6edf3; font: 600 14px system-ui; padding: 9px 10px; outline: none; }
+.mt-chat-input:focus, .lc-input:focus { border-color: #d9a400; box-shadow: 0 0 0 2px rgba(217,164,0,.25); }
+.mt-chat-send, .lc-send { flex: none; width: 40px; border-radius: 8px; border: 1px solid #d9a400; background: #2a2410; color: #ffd23f; font-size: 16px; cursor: pointer; }
+.mt-chat.ghost { border-color: #5a6b85; }
+.mt-chat.ghost .mt-chat-input { border-style: dashed; }
+.mt-msg.ghost { opacity: .7; font-style: italic; }
+.mt-msg.ghost b { color: #a9c3e8; }
+.mt-msg.mine b { color: #7dff9a; }
+.lchat { position: fixed; left: max(12px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 11; display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 8px; pointer-events: none; }
+.lchat.hidden { display: none; }
+.lchat > * { pointer-events: auto; }
+.lc-toggle { position: relative; width: 48px; height: 48px; border-radius: 50%; border: 1px solid #3a4452; background: rgba(10,13,18,.88); font-size: 22px; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
+.lc-badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: #e04a3f; color: #fff; font: 800 12px/20px system-ui; }
+.lc-badge.hidden { display: none; }
+.lc-box { display: none; width: min(340px, 80vw); height: min(260px, 42vh); background: rgba(10,13,18,.9); border: 1px solid #3a4452; border-radius: 12px; flex-direction: column; overflow: hidden; animation: rise .2s ease; }
+.lchat.open .lc-box { display: flex; }
+.lc-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.lc-list .mt-msg span { font-size: 13px; }
+
+/* ---------- Telefon (yatay, kısa ekran) ---------- */
+.mainmenu .mm-ui { overflow-y: auto; }
+@media (orientation: landscape) and (max-height: 560px) {
+  .mainmenu .mm-ui { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); grid-template-rows: 1fr auto; gap: 10px 18px; padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+  .mm-top { flex-direction: column; gap: 10px; justify-content: center; }
+  .mainmenu .mm-title { font-size: clamp(26px, 6.2vh, 40px); }
+  .mm-logo { max-height: 20vh; max-width: 40vw; }
+  .mm-id { width: min(270px, 100%); }
+  .mm-id-body { padding: 6px 8px; } .mm-id-photo { width: 44px; height: 52px; font-size: 24px; }
+  .mm-terminal { grid-column: 2; grid-row: 1; width: 100%; align-self: center; }
+  .mainmenu .mm-foot { grid-column: 1 / -1; }
+  .mm-bezel { padding: 24px 14px 14px; }
+  .mm-crt { padding: 10px 12px 8px; }
+  .mm-crt-head { font-size: 11px; margin-bottom: 4px; padding-bottom: 4px; }
+  .mm-crt-line { display: none; }
+  .mm-item { padding: 5px 8px; font-size: 15px; }
+  .mm-crt-status { margin-top: 6px; padding-top: 4px; font-size: 11px; }
+  .mm-leds { display: none; }
+  .mm-card { max-height: calc(100vh - 20px); overflow-y: auto; }
+  /* Oda: başlat butonu sağ altta, sohbet sol altta (üst üste binmesin) */
+  .rh-bottom { align-items: flex-end; }
+  .rh-start { padding: 12px 26px; font-size: 16px; }
+  .rh-note { font-size: 12px; max-width: 46vw; text-align: right; }
+  .rh-panel { width: min(250px, 36vw); max-height: 52vh; padding: 8px; top: 46%; }
+  .rh-p { padding: 4px 6px; font-size: 13px; }
+  .rh-flagbtn { padding: 8px 14px; font-size: 13px; }
+  .lc-box { width: min(300px, 40vw); height: min(190px, 52vh); }
+  .lc-toggle { width: 42px; height: 42px; font-size: 19px; }
+  /* Toplantı: tek ekrana sığsın */
+  .mt-panel { max-height: calc(100vh - 12px); }
+  .mt-body { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) !important; gap: 8px; min-height: 0; }
+  .mt-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)) !important; gap: 6px; overflow-y: auto; }
+  .mt-chat { min-height: 0 !important; max-height: none !important; }
+  .mt-chat-title { padding: 4px 8px; }
+  .mt-chat-row { padding: 5px; }
+  .mt-chat-input { padding: 6px 8px; font-size: 13px; }
+}
+/* Telefon (dikey) */
+@media (orientation: portrait) and (max-width: 560px) {
+  .rh-panel { width: auto; left: 12px; right: 12px; bottom: 150px; max-height: 30vh; }
+  .lc-box { width: calc(100vw - 24px); height: 34vh; }
+  .lchat { bottom: max(80px, env(safe-area-inset-bottom)); }
+}
+
+/* ---------- Şapka dolabı ---------- */
+.hp-card { background: linear-gradient(180deg,#3a2a1a,#21170d); border-color: #c8913f; }
+.hp-ico { font-size: 28px; }
+.hp-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.hp-prev { position: relative; width: 76px; height: 78px; }
+.hp-ball { position: absolute; left: 8px; bottom: 0; width: 60px; height: 52px; border-radius: 50% 50% 46% 46% / 55% 55% 45% 45%; background-size: cover; background-position: center; border: 2px solid #1d1d1d; box-shadow: inset -6px -8px 0 rgba(0,0,0,.18); }
+.hp-ball i { position: absolute; top: 16px; width: 13px; height: 13px; border-radius: 50%; background: #fff; border: 2px solid #1d1d1d; }
+.hp-ball i:first-child { left: 13px; } .hp-ball i:last-child { right: 13px; }
+.hp-prev img { position: absolute; left: 50%; top: -6px; width: 72px; height: 72px; transform: translateX(-50%); pointer-events: none; }
+.hp-hat.on { border-color: #ffd23f; background: rgba(255,210,63,.15); }
+.rh-hatbtn { border-color: #e0b77a !important; background: linear-gradient(180deg,#9a6a2e,#5e3e17) !important; box-shadow: 0 8px 22px rgba(160,110,40,.45) !important; }
+.devlock { position: fixed; inset: 0; z-index: 99999; background: #050608; display: flex; align-items: center; justify-content: center; text-align: center; color: #e6edf3; font-family: system-ui; padding: 20px; }
+.devlock b { font-size: 56px; color: #ffd23f; } .devlock h2 { margin: 10px 0; color: #ff6a5f; } .devlock p { color: #9fb0c0; line-height: 1.6; }
+
+/* ---------- Oyun içi ayarlar ---------- */
+.gset { position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.6); animation: mtFade .2s ease; }
+.gset.hidden { display: none; }
+.gs-card { width: 100%; max-width: 440px; max-height: calc(100vh - 24px); overflow: auto; background: linear-gradient(180deg,#1e2630,#12171e); border: 2px solid #3a4452; border-radius: 16px; padding: 16px 18px; color: #e6edf3; font-family: system-ui; box-shadow: 0 20px 60px rgba(0,0,0,.6); animation: sabPop .25s cubic-bezier(.2,1.5,.4,1); }
+.gs-head { display: flex; align-items: center; margin-bottom: 6px; }
+.gs-head h2 { flex: 1; margin: 0; font-size: 20px; letter-spacing: .1em; }
+.gs-x { width: 36px; height: 36px; border-radius: 10px; border: 0; background: rgba(255,255,255,.1); color: #fff; font-size: 18px; cursor: pointer; }
+.gs-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #2a323d; font-weight: 700; }
+.gs-row.hidden { display: none; }
+.gs-row > span { flex: 1; }
+.gs-row input[type=range] { width: 46%; accent-color: #d9a400; }
+.gs-row b { width: 44px; text-align: right; color: #ffd23f; font-size: 13px; }
+.gs-tog { min-width: 80px; padding: 7px 12px; border-radius: 8px; border: 1px solid #3a4452; background: #161b23; color: #c9d0d8; font: 800 13px system-ui; cursor: pointer; }
+.gs-tog.on { background: #2e7d3e; border-color: #46c46a; color: #fff; }
+.gs-seg { display: flex; border: 1px solid #3a4452; border-radius: 8px; overflow: hidden; }
+.gs-seg button { padding: 7px 12px; border: 0; background: #161b23; color: #c9d0d8; font: 800 13px system-ui; cursor: pointer; }
+.gs-seg button.on { background: #d9a400; color: #111; }
+.gs-foot { display: flex; gap: 10px; margin-top: 14px; }
+.gs-btn { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #3a4452; background: #232b36; color: #fff; font: 900 14px system-ui; letter-spacing: .06em; cursor: pointer; }
+.gs-btn.danger { border-color: #6e1216; background: #4a0f12; }
+/* Jeton / dükkan */
+.hp-bar { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.hp-coins { padding: 6px 12px; border-radius: 999px; background: #2a2410; border: 1px solid #d9a400; color: #ffd23f; font: 900 15px system-ui; }
+.hp-msg { color: #b9f5c6; font: 700 13px system-ui; } .hp-msg.bad { color: #ff8a80; } .hp-msg.pop { animation: shake .35s; }
+.hp-price { font-style: normal; font: 800 12px system-ui; color: #ffd23f; } .hp-price.own { color: #8fdc9f; }
+.hp-hat.locked .hp-prev { filter: grayscale(.6) brightness(.8); }
+.hp-hat[data-confirm] { border-color: #46c46a; background: rgba(70,196,106,.15); }
+.rr-coin { color: #ffd23f; }

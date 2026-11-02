@@ -15,15 +15,38 @@ export const MAX_LONG_SIDE = 1920;   // 1080p: net ve akıcı (2K çok kasıyord
 export const MAX_K = 3;
 
 export const RES = { k: 1, cssW: 800, cssH: 600 };
+// Grafik kalitesi: 'high' = 1080p, 'low' = 720p (zayıf cihazlar). Oyun içi Ayarlar'dan.
+const Q_KEY = 'cfs.quality';
+let quality = 'high';
+try { if (localStorage.getItem(Q_KEY) === 'low') quality = 'low'; } catch (e) { /* yoksay */ }
+export const getQuality = () => quality;
+export function setQuality(q) {
+  quality = q === 'low' ? 'low' : 'high';
+  try { localStorage.setItem(Q_KEY, quality); } catch (e) { /* yoksay */ }
+  window.dispatchEvent(new Event('resize'));
+}
+
+// Oyunun gerçekten kapladığı alan (#game). Telefonda adres çubuğu açılıp kapanınca
+// window.innerHeight ile ekrandaki alan farklı olabiliyor; görüntü çarpılmasın diye kutunun kendisini ölçeriz.
+function viewSize() {
+  const el = document.getElementById('game');
+  const r = el ? el.getBoundingClientRect() : null;
+  const vv = window.visualViewport;
+  const w = r && r.width > 0 ? r.width : (vv ? vv.width : window.innerWidth);
+  const h = r && r.height > 0 ? r.height : (vv ? vv.height : window.innerHeight);
+  return { w, h };
+}
 
 export function measure() {
-  RES.cssW = Math.max(1, Math.round(window.innerWidth));
-  RES.cssH = Math.max(1, Math.round(window.innerHeight));
+  const v = viewSize();
+  RES.cssW = Math.max(1, Math.round(v.w));
+  RES.cssH = Math.max(1, Math.round(v.h));
   const long = Math.max(RES.cssW, RES.cssH);
   const phys = long * Math.min(3, window.devicePixelRatio || 1);
   // Telefon/tablette 1080p yeter (pil ve ısınma)
   const mobile = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
-  const target = Math.max(MIN_LONG_SIDE, Math.min(mobile ? MIN_LONG_SIDE : MAX_LONG_SIDE, phys));
+  let target = Math.max(MIN_LONG_SIDE, Math.min(mobile ? MIN_LONG_SIDE : MAX_LONG_SIDE, phys));
+  if (quality === 'low') target = 1280;
   RES.k = Math.min(MAX_K, target / long);
   return RES;
 }
@@ -34,12 +57,27 @@ export function gameSize() {
 
 // Pencere boyutu / telefon yönü değişince oyunu yeniden boyutlandır
 export function attachResolution(game) {
+  let lastW = 0, lastH = 0, lastK = 0, raf = 0;
   const apply = () => {
+    raf = 0;
     measure();
+    if (RES.cssW === lastW && RES.cssH === lastH && RES.k === lastK) return;
+    lastW = RES.cssW; lastH = RES.cssH; lastK = RES.k;
     const { width, height } = gameSize();
     game.scale.setZoom(1 / RES.k);
     game.scale.resize(width, height);
+    // Tuval tam olarak kutunun boyutunda (tarayıcı esnetip çarpıtmasın)
+    const c = game.canvas;
+    if (c) { c.style.width = RES.cssW + 'px'; c.style.height = RES.cssH + 'px'; }
   };
-  window.addEventListener('resize', apply);
-  window.addEventListener('orientationchange', () => setTimeout(apply, 250));
+  let ready = false;
+  game.events.once('ready', () => { ready = true; });
+  const later = () => { if (ready && !raf) raf = requestAnimationFrame(apply); };
+  window.addEventListener('resize', later);
+  window.addEventListener('orientationchange', () => { later(); setTimeout(apply, 300); setTimeout(apply, 800); });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', later);
+  document.addEventListener('fullscreenchange', () => { later(); setTimeout(apply, 300); });
+  const el = document.getElementById('game');
+  // Phaser hazır olmadan boyutlandırma yapma
+  game.events.once('ready', () => { if (el && typeof ResizeObserver === 'function') new ResizeObserver(later).observe(el); apply(); });
 }

@@ -13,21 +13,16 @@ import { requestSkins } from '../systems/CharacterAtlas.js';
 
 const SETTINGS_KEY = 'cfs_lobby';
 
+// Ayarlar butonu kaldırıldı: tek kişilik maç her zaman 6 kişi (5 bot), rol rastgele
 function loadSettings() {
-  let s = {};
-  try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') || {}; } catch (e) { /* yoksay */ }
-  const n = Number(s.playerCount);
-  return {
-    playerCount: n >= MIN_PLAYERS && n <= MAX_PLAYERS ? n : MIN_PLAYERS,
-    forcedRole: ['random', ...ROLES].includes(s.forcedRole) ? s.forcedRole : 'random',
-    bots: s.bots !== false
-  };
+  return { playerCount: 6, forcedRole: 'random', bots: true };
 }
 
 const pct = (v) => `%${Math.round(v * 100)}`;
 
 export class Lobby {
-  constructor({ onStart, onChange, onMenu, onFlag }) {
+  constructor({ onStart, onChange, onMenu, onFlag, onHat }) {
+    this.onHat = onHat;
     this.onStart = onStart;
     this.onFlag = onFlag;
     this.onMenu = onMenu;
@@ -81,7 +76,7 @@ export class Lobby {
       </header>
       <div class="lh-actions">
         <button class="btn lh-btn flag-open hidden" type="button"><span class="ico">🇺🇳</span><span data-t="lobby.pickFlagBtn"></span></button>
-        <button class="btn lh-btn settings-open" type="button"><span class="ico">⚙</span><span data-t="lobby.settings"></span></button>
+        <button class="btn lh-btn hat-open hidden" type="button"><span class="ico">🎩</span><span data-t="lobby.pickHatBtn"></span></button>
         <button class="btn btn-start lh-start" type="button" data-t="lobby.start"></button>
       </div>
 
@@ -129,7 +124,7 @@ export class Lobby {
     r.querySelector('.lang-btn').addEventListener('click', () => i18n.toggle());
     r.querySelector('.menu-btn').addEventListener('click', () => this.onMenu && this.onMenu());
     r.querySelector('.flag-open').addEventListener('click', () => this.onFlag && this.onFlag());
-    r.querySelector('.settings-open').addEventListener('click', () => this.openSheet('.settings-sheet'));
+    r.querySelector('.hat-open').addEventListener('click', () => this.onHat && this.onHat());
     r.querySelectorAll('.sheet').forEach((s) => s.addEventListener('click', (e) => {
       if (e.target === s || e.target.classList.contains('sheet-close')) this.closeSheets();
     }));
@@ -215,6 +210,10 @@ export class Lobby {
   // Bayrak butonu sadece BM direğinin yanındayken görünür (dokunmatik için)
   setFlagReady(on) {
     if (this.root) this.root.querySelector('.flag-open').classList.toggle('hidden', !on);
+  }
+
+  setHatReady(on) {
+    if (this.root) this.root.querySelector('.hat-open').classList.toggle('hidden', !on);
   }
 
   // Başlat butonu sadece oyuncu kapıdaki başlat bölgesindeyken görünür
