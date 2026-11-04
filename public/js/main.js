@@ -8,6 +8,7 @@ import { LobbyScene } from './scenes/LobbyScene.js';
 import { RES, measure, gameSize, attachResolution } from './systems/Resolution.js';
 import { initFlow } from './systems/GameFlow.js';
 import { setChatGame } from './ui/Chat.js';
+import { runStartPrompts } from './ui/StartPrompts.js';
 import { net } from './systems/Net.js';
 
 // iOS: iki parmakla yakınlaştırmayı engelle
@@ -28,6 +29,8 @@ const config = {
     zoom: 1 / RES.k
   },
   render: { antialias: true },
+  // Gerçek kare süresi (yumuşatma yok): yavaş telefonda oyun hızı düşmesin
+  fps: { smoothStep: false },
   input: { activePointers: 3 },
   scene: [BootScene, LobbyScene, GameScene, UIScene]
 };
@@ -37,6 +40,7 @@ attachResolution(game);
 initFlow(game);
 
 setChatGame(game);
+runStartPrompts();   // ilk açılış: Mobil mi PC mi? + Yeni Güncelleme! notu
 
 // Konsol kapalı (hile zorlaşsın): F12 / Ctrl+Shift+I-J-C / Ctrl+U / sağ tık engellenir,
 // konsol çıktısı susturulur, oyun nesnesine konsoldan erişilemez.

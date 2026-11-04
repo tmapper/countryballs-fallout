@@ -5,7 +5,7 @@
 // Katil görev almaz. Tüm masumların görevleri biterse MASUMLAR kazanır.
 // Yeni istasyon eklemek: STATIONS listesine bir satır (oda + odaya göre x,y + görev türü).
 // x,y = oyuncunun DURACAĞI nokta (ayak noktası). Eşya/duvar içine koyma: test edilir.
-import { ROOMS } from '../map/BunkerMap.js';
+import { ROOMS, onMapChange } from '../map/BunkerMap.js';
 
 export const TASKS_PER_PLAYER = 5;
 export const TASK_RANGE = 110;     // dünya pikseli: istasyona bu kadar yakın olunca kullanılabilir
@@ -31,7 +31,8 @@ export const TASK_ICON = {
   scan:     { img: null,             emoji: '🖐' }
 };
 
-const at = (room, dx, dy) => ({ room, x: ROOMS[room].x + dx, y: ROOMS[room].y + dy });
+// Odaya göre göreli konum (dx, dy saklanır: harita değişince yeniden hesaplanır)
+const at = (room, dx, dy) => ({ room, dx, dy, x: ROOMS[room].x + dx, y: ROOMS[room].y + dy });
 
 // İki aşamalı görevlerin ikinci adımı (veri indir -> İletişim'e yükle)
 export const UPLOAD_STATION = { id: 'upload_comms', type: 'upload', ...at('comms', 250, 450) };
@@ -105,3 +106,8 @@ export function nearestTask(tasks, x, y) {
   });
   return best;
 }
+
+// Harita değişince (kurucu başka harita seçti) bütün istasyonları yeni oda konumlarına taşı
+onMapChange(() => {
+  [...STATIONS, UPLOAD_STATION].forEach((st) => { const r = ROOMS[st.room]; if (r) { st.x = r.x + st.dx; st.y = r.y + st.dy; } });
+});

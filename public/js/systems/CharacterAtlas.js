@@ -14,7 +14,7 @@
 //                          (lobi açıkken botların bayrakları da hazırlanır)
 //   flushSkins(flags)   -> eksik kalan varsa hemen bitirir (maç başlarken)
 import { loadJSON, loadImage } from './Assets.js';
-import { createSkinCanvas, composeFrame } from './SkinFactory.js';
+import { createSkinCanvas, composeFrame, SKIN_SCALE } from './SkinFactory.js';
 
 const LAYERS = ['overlay', 'sil', 'shade'];
 const SLICE_MS = 6; // her parçada en fazla bu kadar çalış (kare akıcı kalsın)
@@ -56,7 +56,8 @@ function register(mgr, job) {
   if (mgr.textures.exists(key)) return;
   const info = baked[SKINS[job.skin].clip];
   const tex = mgr.textures.addCanvas(key, job.cv);
-  info.frames.forEach((f, i) => tex.add(i, 0, f.x, f.y, f.w, f.h));
+  const k = SKIN_SCALE;
+  info.frames.forEach((f, i) => tex.add(i, 0, Math.round(f.x * k), Math.round(f.y * k), Math.round(f.w * k), Math.round(f.h * k)));
   if (info.count > 1 && !mgr.anims.exists(key)) {
     mgr.anims.create({ key, frames: info.frames.map((_, i) => ({ key, frame: i })), frameRate: info.fps, repeat: -1 });
   }

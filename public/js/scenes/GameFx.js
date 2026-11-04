@@ -11,6 +11,7 @@
 // Tüm efektler tek bir küçük "nokta" dokusuyla yapılır; parçacık sayıları düşük tutulur (kasmasın).
 import { WORLD, ROOMS } from '../map/BunkerMap.js';
 import { staticBall } from '../entities/CountryBall.js';
+import { SKIN_SCALE } from '../systems/SkinFactory.js';
 
 function makeDot(scene) {
   if (scene.textures.exists('fxdot')) return;
@@ -85,11 +86,12 @@ export function installFx(GameScene) {
       if (b.isMoving && b.alive) {
         b.bobT = (b.bobT || 0) + dt * 11;
         const s = Math.sin(b.bobT);
-        b.sprite.setScale(b.scaleFactor * (1 + s * 0.035), b.scaleFactor * (1 - s * 0.045));
+        const k = b.scaleFactor / SKIN_SCALE;
+        b.sprite.setScale(k * (1 + s * 0.035), k * (1 - s * 0.045));
         b.stepFx = (b.stepFx || 0) - dt;
         if (b.stepFx <= 0) { b.stepFx = 0.22; this.fxDust.emitParticleAt(b.x + (Math.random() - 0.5) * 30, b.y - 4, 2); }
       } else if (b.bobT) {
-        b.bobT = 0; b.sprite.setScale(b.scaleFactor);
+        b.bobT = 0; b.sprite.setScale(b.scaleFactor / SKIN_SCALE);
       }
     });
     // Hayalet: hafifçe süzülür

@@ -20,18 +20,34 @@ export class MiniMap {
     this.last = 0;
   }
 
+  // Harita normalde KAPALI: sağ üstteki 🗺 butonu (ya da Tab / Q) ile büyük harita açılır, tekrar basınca kapanır.
+  // Kapalıyken hiç çizilmez (performans) ve ekranda dokunmaları engellemez.
   build() {
     const r = this.root = document.createElement('div');
-    r.className = 'minimap hidden';
-    r.innerHTML = '<canvas></canvas><div class="minimap-label"></div>';
+    r.className = 'minimap big hidden';
+    r.innerHTML = '<canvas></canvas><div class="minimap-label"></div><button class="mapclose" type="button">✕</button>';
     document.body.appendChild(r);
     this.canvas = r.querySelector('canvas');
     this.label = r.querySelector('.minimap-label');
-    r.addEventListener('pointerdown', (e) => { e.stopPropagation(); this.big = !this.big; r.classList.toggle('big', this.big); this.base = null; });
+    r.addEventListener('pointerdown', (e) => { e.stopPropagation(); this.close(); });
+    const b = this.btn = document.createElement('button');
+    b.type = 'button'; b.className = 'mapbtn hidden'; b.innerHTML = '🗺<span></span>';
+    b.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); this.toggle(); });
+    document.body.appendChild(b);
+    window.addEventListener('keydown', (e) => {
+      if (!this.active || e.repeat) return;
+      const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+      if (e.code === 'Tab' || e.code === 'KeyQ') { e.preventDefault(); this.toggle(); }
+      else if (e.code === 'Escape' && this.open) { e.stopPropagation(); this.close(); }
+    }, true);
+    i18n.onChange(() => { if (this.btn) this.btn.querySelector('span').textContent = i18n.t('ui.map'); });
+    this.btn.querySelector('span').textContent = i18n.t('ui.map');
   }
 
-  show() { if (!this.root) this.build(); this.root.classList.remove('hidden'); this.base = null; }
-  hide() { if (this.root) { this.root.classList.add('hidden'); this.big = false; this.root.classList.remove('big'); } }
+  toggle() { if (this.open) this.close(); else { this.open = true; this.big = true; this.root.classList.remove('hidden'); this.btn.classList.add('on'); this.base = null; this.last = 0; } }
+  close() { this.open = false; if (this.root) this.root.classList.add('hidden'); if (this.btn) this.btn.classList.remove('on'); }
+  show() { if (!this.root) this.build(); this.active = true; this.btn.classList.remove('hidden'); }
+  hide() { if (!this.root) return; this.active = false; this.close(); this.btn.classList.add('hidden'); }
 
   // Statik harita (oda/koridor) bir kez çizilir
   drawBase(w, h) {
@@ -60,6 +76,7 @@ export class MiniMap {
     this.last = now;
     const css = this.root.getBoundingClientRect();
     const dpr = Math.min(2, window.devicePixelRatio || 1);
+    this.root.style.setProperty('--mm-ar', (WORLD.w / WORLD.h).toFixed(3));   // büyük harita ekrana sığsın
     const w = Math.max(10, Math.round(css.width * dpr)), h = Math.round(w * WORLD.h / WORLD.w);
     if (this.canvas.width !== w || this.canvas.height !== h) { this.canvas.width = w; this.canvas.height = h; this.base = null; }
     this.scale = w / WORLD.w;

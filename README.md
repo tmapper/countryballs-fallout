@@ -22,6 +22,64 @@ npm start          # http://localhost:3000
 - **Botlar**: odalar arasında koridorlardan gezer (`systems/BotBrain.js`)
 - Duran karakter `SabitDurma` karesiyle, yürüyen karakter yürüme klibiyle gösterilir
 
+## Aşama 9.2 (Parti 3): Adil ve zeki botlar
+
+- Botlar sadece kendi görüş alanında gördüklerini bilir (oyuncuyla aynı yarıçap, duvar arkası yok); hız, bekleme süresi ve menzil aynı.
+- Katil bot: görüşünde tek bir masum varsa kısa bir tepki gecikmesiyle öldürür, sonra kaçar ve çoğu zaman tünele girer; kimse görmüyorsa avlanmak için tünele yürür.
+- Mantıklı sabotaj: kalabalığın yanındaysa ışıklar, öldürme beklemesi uzunsa uzaktaki reaktör/O2.
+- Şerif bot: tanık olduğu katili gördüğü anda menzildeyse vurur; masum botlar şüpheliden kaçar.
+
+## Aşama 9.1 (Parti 2): Kurucu ayarları, harita seçimi, atma/devretme
+- **Harita seçimi**: Kavşak (yeni, varsayılan) ve Klasik Sığınak. `map/BunkerMap.js` içinde `MAPS`; `useMap(id)` aktif haritayı yerinde değiştirir; görev istasyonları (`Tasks.js`, `onMapChange`) ve sabotaj noktaları kendiliğinden taşınır. Yeni harita: `MAPS`'e giriş + `locales maps.<id>`.
+- **Oda ayarları** (odada "⚙ Oda ayarları", sadece kurucu değiştirir, herkes görür): harita, maks. oyuncu (4-25, varsayılan 25), oyuncu hızı (0.5x-2x), tartışma (0-180 sn), oylama (10-120 sn), öldürme bekleme (10-90 sn), katil sayısı ve şerif sayısı (Otomatik ya da 1-5). Sınırları sunucu da uygular (`server/index.js sanitizeCfg`). Varsayılanlar: `systems/RoomConfig.js`.
+- **Atma**: kurucu oyuncu satırındaki ✕ (2 kez bas). Atılan aynı odaya tekrar giremez.
+- **Kuruculuğu devret**: oyuncu satırındaki 👑 (2 kez bas, sadece lobideyken).
+- Oda listesi artık sadece değiştiğinde yeniden çiziliyor (basılıyken yeniden çizilen butonlarda tıklama kayboluyordu).
+
+## Aşama 9.0 (Parti 1): Yeni harita + hızlı düzeltmeler
+- **Yeni harita** (`map/BunkerMap.js`): çapraz halka; solda merkez küme (ana salon + yemekhane + elektrik + jeneratör), sağ üstte büyük oda (O2 + kontrol + iletişim), sağda güvenlik -> laboratuvar, sağ altta depo + reaktör, altta revir, sol altta yatakhane. Ana salondan büyük odaya ORTADAN kestirme geçiş. Katil tünelleri odaların köşelerinde 8 kapak (4 çift). Oda boyutları aynı kaldığı için görevler/eşyalar bozulmadı; bütün istasyonların, tünellerin ve 25 kişilik doğma noktalarının ulaşılabilir olduğu test edildi.
+- **Görev sonrası donma**: telefonda başparmak joystick'teyken görev bitince joystick bırakılıyordu -> yeni dokunuşu almıyordu. Artık sadece parmak gerçekten kalktıysa bırakılır. Ek olarak oyuncu bir şekilde eşyanın içinde kalırsa en yakın boş yere çekilir.
+- **Hayaletler** tüm duvarlardan geçer, %50 hızlıdır, ölü oyuncular birbirini görür (yaşayanlar görmez).
+- **Duvarların arkası toprak** (bellek dostu karolar).
+- **Öldürme animasyonu**: arkada sarı-kırmızı patlama (ışınlar, parlama, halka).
+- **Bot şapkaları**: botların çoğu şapkasız; şapka takanlar ülkesine uygun (`Looks.BOT_HATS`, ör. TR fes, NO viking, MX sombrero), her gün değişir.
+- **Açılış**: "Mobil mi PC mi?" (Ayarlar'dan değişir; mobilde joystick + büyük butonlar + düşük grafik) ve "Yeni Güncelleme!" notu. Notu değiştirmek için `ui/StartPrompts.js` içindeki `UPDATE` (id değişince herkese bir kez çıkar).
+
+## Aşama 8.4: Test turu + büyük bellek ve sunucu optimizasyonu
+Test edilenler: 2 tarayıcılı online maç (roller gizli, öldürme, bildirme, oylama, oyun sonu, ödül, konum eşleşmesi), 17 görev türünün hepsi, 3 sabotaj, art arda 4 maç (sızıntı yok), telefon yatay/dikey yeni paneller, 25 kişilik sunucu yükü.
+- **Bellek ~4 kat azaldı** (maçta 396 MB -> 110 MB, lobide 148 -> 46):
+  - Harita dışındaki boşluk Phaser TileSprite ile 7650x5300'lük TEK tuval tutuyordu (162 MB). Artık düz arka plan rengi.
+  - Oda zeminleri / duvar yüzleri / lobi çimeni: TileSprite yerine 4x4 büyütülmüş karolar (`systems/Tiled.js`).
+  - Karakter yürüme dokuları yarı çözünürlükte (`SkinFactory.SKIN_SCALE = 0.5`): oyuncu başına 20 MB -> 5 MB.
+  - Öldürme animasyonu resimleri maç başında hepsi değil, sadece oynanacak klip yüklenir ve bitince bırakılır.
+  - Düşük grafikte harita dokuları 1x.
+- **Sunucu**: oyuncu konumları (oyun `p`, lobi `lp`) tek tek herkese gitmiyor; sunucu odada biriktirip 100 ms'de bir TEK toplu mesaj (`pp`) yolluyor. 10 oyuncuda istemcilere giden mesaj 891/sn -> 99/sn (25 kişide ~24 kat az).
+- Bilinmeyen görev türü artık çökme yerine kablo görevi açar.
+- Telefon: ölüler sohbeti alt ortada (görev listesi ve joystick ile çakışmıyor), ayarlar paneli kısa ekrana sığıyor.
+
+## Aşama 8.3: Ölüler sohbeti, ağır çekim düzeltmesi
+- **Ölüler sohbeti**: ölünce sol ortada 💬👻 kutusu açılır (T tuşu). Yazılanları sadece ölüler görür; toplantıda gizlenir (toplantı sohbeti var), maç bitince kapanır. Sunucuda `chat` kanalı `ghost`.
+- **Ağır çekim düzeltmesi**: oyun bir karede en fazla 0,1 sn ilerliyordu; telefon 10 kare/sn altına düşünce her şey yavaşlıyordu. Artık gerçek süre kullanılır (en fazla 0,25 sn), hareket 0,04 sn'lik adımlara bölünür (duvardan geçme yok), Phaser kare yumuşatması kapalı.
+- Telefonda grafik varsayılan **Düşük** (Ayarlar'dan Yüksek yapılabilir).
+
+## Aşama 8.2: Bot yol bulma, rol sayıları, isimler
+- **Botlar eşyalara çarpmıyor**: harita 30 px hücrelere bölünür, A* ile duvar ve eşyaların etrafından yol bulunur (`BotBrain.navPath`). Takılırsa yolu yeniden hesaplar.
+- **Rol sayıları oyuncuya göre**: Katil 1-7 kişi 1 · 8-12 kişi 2 · 13-19 kişi 3 · 20-25 kişi 4. Şerif 1-9 kişi 1 · 10-17 kişi 2 · 18-25 kişi 3. (`Roles.impCount/sheriffCount` + sunucuda aynısı.)
+- **İsimler**: kendi topunda "Sen" yerine adın yazar (misafirsen bayrağın ülke adı). Katilsen kendi adın ve diğer katillerin adı kırmızı (sadece katiller görür).
+
+## Aşama 8: Arkadaşlar + sıralama
+- Ana menü -> **ARKADAŞLAR & SIRALAMA** (giriş gerekir). Oyuncu adıyla arkadaş isteği gönder; karşı taraf kabul edince arkadaş olursunuz (ikiniz de birbirinizi eklerseniz direkt arkadaş). Gelen istek sayısı menüde kırmızı rozet olarak görünür.
+- Arkadaş listesi: çevrimiçi / lobide / maçta durumu. Arkadaşın açık bir lobideyse **KATIL** ile direkt girersin.
+- Odadayken sağ üstte **📨 Davet et**: çevrimiçi arkadaşlarına davet gönderir; onlara her ekranda "Katıl / Yoksay" kartı çıkar.
+- **Sıralama**: Bu hafta (her pazartesi sıfırlanır) ve Tüm zamanlar, XP'ye göre ilk 25 + senin sıran. Sunucu listeyi 30 sn önbellekte tutar (yük az).
+- Hepsi sunucuda hesapla saklanır (`friends`, `freq`, `wxp`, `wk`). Mesajlar: social, friendAdd, friendAnswer, friendRemove, invite, board.
+
+## Aşama 7.8: Harita butonu, 25 kişi, optimizasyon
+- **Harita** artık normalde kapalı: sağ üstteki 🗺 HARİTA butonu (ya da Tab / Q) açar, tekrar basınca / Esc kapanır. Kapalıyken çizilmez ve ekranda dokunmaları engellemez (eskiden sağ üstteki küçük harita alttaki dokunmaları yutuyordu).
+- **25 kişilik odalar**. Katil sayısı: 10 kişiye kadar 1, 11-17 kişide 2, 18+ kişide 3 (`Roles.impCount`, sunucuda `impCount`). Katiller birbirini görür (kırmızı etiket) ve birbirini öldüremez. 12 kişiden fazlasında masa etrafında iki halka.
+- **Çizim**: kamera dışındaki eşyalar hiç çizilmez; görüş alanı dışında (karanlıkta) kalan eşyalar ve ışıklar da çizilmez. Cihaz sürekli 30 kare/sn altında kalırsa grafik bir kez otomatik Düşük'e geçer.
+- **Sunucu tasarrufu**: konum sadece değişince gönderilir (duran oyuncu saniyede 1), saniyede en fazla 10; botlarda sadece hareket edenler. Lobi listesi 5 sn'de bir ve sadece sekme açıkken. Sunucuda mesaj tek sefer JSON'a çevrilip herkese aynı gönderilir; 16 KB'tan büyük mesaj ve saniyede 80'den fazla mesaj yok sayılır.
+
 ## Aşama 7.6: Jeton (oyun içi para) + şapka dükkanı
 - **Jeton 🪙** gerçek para değil. Online maçlardan kazanılır: oyna +10, kazan +25, görev +2, öldürme +5. Yeni hesaba 200 jeton hoş geldin hediyesi.
 - Bakiye ve alınan şapkalar **sunucuda** hesapla saklanır (Upstash/accounts.json); hile ile artırılamaz, alınmamış şapka takılamaz (sunucu kontrol eder).

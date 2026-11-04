@@ -19,15 +19,18 @@ const images = {};
 export async function loadKillMeta() {
   META = await loadJSON('assets/kills/kills.json');
 }
-// Resimleri arka planda indir (maç başında çağrılır)
+// BELLEK: eskiden maç başında 3 animasyonun 6 büyük resmi (~130 MB) önceden açılıyordu. Oyuncu maç başına
+// en fazla birini görür; artık sadece oynayacağı klibin resimleri yüklenir ve bitince bellekten atılır.
 export function preloadKills() {
-  Object.keys(META || {}).forEach((clip) => {
-    ['overlay', 'data'].forEach((layer) => {
-      const k = `${clip}_${layer}`;
-      if (!images[k]) images[k] = loadImage(`assets/kills/${k}.png`).catch((e) => { delete images[k]; throw e; });
-    });
+  if (!META) loadKillMeta().catch(() => {});
+}
+function loadClip(clip) {
+  ['overlay', 'data'].forEach((layer) => {
+    const k = `${clip}_${layer}`;
+    if (!images[k]) images[k] = loadImage(`assets/kills/${k}.png`).catch((e) => { delete images[k]; throw e; });
   });
 }
+function dropClip(clip) { delete images[`${clip}_overlay`]; delete images[`${clip}_data`]; }
 
 const VERT = `
 attribute vec2 p;
@@ -71,7 +74,8 @@ export class KillCutscene {
   build() {
     const r = this.root = document.createElement('div');
     r.className = 'killcut hidden';
-    r.innerHTML = '<canvas></canvas><div class="killcut-text"></div>';
+    // Arkada sarı-kırmızı patlama (ışınlar + parlama + kıvılcım halkası), önde animasyon
+    r.innerHTML = '<div class="kc-boom"><i class="kc-rays"></i><i class="kc-core"></i><i class="kc-ring"></i></div><canvas></canvas><div class="killcut-text"></div>';
     document.body.appendChild(r);
     this.canvas = r.querySelector('canvas');
     this.text = r.querySelector('.killcut-text');
@@ -119,6 +123,7 @@ export class KillCutscene {
   // clip: 'kill1' | 'kill2' | 'sheriff_kill'; flagA = öldüren/vuran, flagB = ölen
   async play(clip, flagA, flagB, caption = '', tone = 'kill') {
     if (!this.root) this.build();
+    if (!META) { try { await loadKillMeta(); } catch (e) { /* yoksay */ } }   // ilk öldürmede henüz yüklenmemiş olabilir
     if (!this.gl || !META || !META[clip]) return;
     if (this.active) this.stop();
     const meta = META[clip];
@@ -128,7 +133,7 @@ export class KillCutscene {
     this.text.textContent = caption;
     let ov, data;
     try {
-      if (!images[`${clip}_overlay`]) preloadKills();
+      loadClip(clip);
       [ov, data] = await Promise.all([images[`${clip}_overlay`], images[`${clip}_data`]]);
     } catch (e) {
       console.warn('Öldürme animasyonu yüklenemedi', e);
@@ -176,6 +181,9 @@ export class KillCutscene {
       else this.finish(token);
     };
     token.raf = requestAnimationFrame(draw);
+    // Güvenlik: sekme arka plandayken requestAnimationFrame durur; animasyon asla bitmeyip
+    // maç sonu ekranını / sesleri bekletmesin diye süre dolunca her durumda kapat.
+    token.safety = setTimeout(() => this.finish(token), total + hold + 1200);
   }
 
   finish(token) {
@@ -192,6 +200,8 @@ export class KillCutscene {
     this.active = null;
     if (a) {
       cancelAnimationFrame(a.raf);
+      clearTimeout(a.safety);
+      dropClip(a.clip);
       if (this.gl) a.textures.forEach((t) => this.gl.deleteTexture(t)); // GPU belleğini hemen boşalt
     }
     if (this.root) this.root.classList.add('hidden');

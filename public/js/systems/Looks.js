@@ -123,10 +123,21 @@ export function loadHat() { let h = 'none'; try { h = localStorage.getItem(HAT_K
 export function saveHat(id) { try { localStorage.setItem(HAT_KEY, id); } catch (e) { /* yoksay */ } }
 export function randomHat() { return Math.random() < 0.25 ? 'none' : HAT_IDS[1 + Math.floor(Math.random() * (HAT_IDS.length - 1))]; }
 
-// Botların şapkası bayraktan türetilir: lobide ve maçta, her cihazda aynı (ayrıca göndermeye gerek yok)
+// Botların şapkası: ÜLKESİNE UYGUN şapkalar (Norveç viking, Türkiye fes...) ve botların çoğu şapkasız.
+// Bayraktan türetilir: lobide ve maçta, her cihazda aynı (ayrıca göndermeye gerek yok).
+export const BOT_HATS = {
+  TR: ['fez'], AZ: ['fez'], DE: ['army', 'chef'], FR: ['beret', 'chef'], IT: ['chef'], ES: ['sombrero'], PT: ['beret'],
+  GB: ['tophat', 'crown', 'bowler'], NL: ['flowers'], PL: ['ushanka'], CZ: ['bowler'], GR: ['flowers'], CH: ['chef'],
+  SE: ['viking'], NO: ['viking'], FI: ['viking', 'ushanka'], UA: ['ushanka'], RU: ['ushanka', 'army'], US: ['cowboy', 'cap_blue', 'grad'],
+  MX: ['sombrero'], BR: ['party'], AR: ['cowboy'], JP: ['headphones'], CN: ['army'], IN: ['flowers']
+};
 export function botHat(flag) {
-  let h = 0; for (const ch of String(flag)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return h % 4 === 0 ? 'none' : HAT_IDS[1 + (h % (HAT_IDS.length - 1))];
+  // Her gün değişir (bugün Türkiye fesli, yarın şapkasız olabilir); aynı gün herkeste aynı
+  const day = new Date().toISOString().slice(0, 10);
+  let h = 0; for (const ch of String(flag) + day) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const list = BOT_HATS[flag];
+  if (!list || h % 100 >= 35) return 'none';           // botların ~%65'i şapkasız
+  return list[(h >>> 3) % list.length];
 }
 
 // ---------------- Jeton fiyatları (sunucudaki HAT_PRICE ile aynı) ----------------

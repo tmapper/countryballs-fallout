@@ -60,6 +60,22 @@ export class Joystick {
     else this.vector.set(Math.cos(angle) * power, Math.sin(angle) * power);
   }
 
+  // Takılı kalma koruması: joystick'i tutan parmak artık basılı değilse (parmak bir panelin
+  // üstünde kalkınca oyun bunu göremeyebiliyordu) joystick'i bırak. Her karede çağrılır.
+  check() {
+    if (this.pointerId === null) return;
+    const ptrs = this.scene.input.manager.pointers || [];
+    const p = ptrs.find((x) => x && x.id === this.pointerId);
+    if (!p || !p.isDown) this.reset();
+  }
+
+  reset() {
+    this.pointerId = null;
+    this.vector.set(0, 0);
+    this.base.setVisible(false);
+    this.thumb.setVisible(false);
+  }
+
   onUp(pointer) {
     if (pointer.id !== this.pointerId) return;
     this.pointerId = null;

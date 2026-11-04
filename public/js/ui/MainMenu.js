@@ -6,6 +6,7 @@
 // terminal komutu gibi; ok tuşları + Enter ile de seçilir. Sağ üstte KİMLİK KARTI (hesap).
 //   menu.show({ onOnline, onCreate, onSolo })   menu.hide()
 // İsteğe bağlı görseller (yoksa kodla çizilir): assets/menu/menu_bg.jpg, assets/menu/logo.png
+import { social } from './Social.js';
 import { i18n } from '../systems/I18n.js';
 import { net, Net } from '../systems/Net.js';
 import { isMuted, toggleMute, sfx } from '../systems/Sound.js';
@@ -21,6 +22,7 @@ function loadOptional(path) {
 const ITEMS = [
   { act: 'online', key: 'menu.play', icon: '☢' },
   { act: 'create', key: 'menu.create', icon: '⊕' },
+  { act: 'social', key: 'menu.social', icon: '★' },
   { act: 'solo', key: 'menu.solo', icon: '◎' },
   { act: 'settings', key: 'menu.settings', icon: '⚙' },
   { act: 'howto', key: 'menu.howto', icon: '?' }
@@ -140,9 +142,19 @@ export class MainMenu {
     this.root.querySelectorAll('.mm-item').forEach((b, k) => b.classList.toggle('sel', k === i));
   }
 
+  setSocialBadge(n) {
+    const b = this.root && this.root.querySelector('.mm-item[data-act="social"] .mm-txt');
+    if (b) b.dataset.badge = n > 0 ? String(n) : '';
+  }
+
   act(a) {
     if (a === 'settings') { this.openModal('settings'); return; }
     if (a === 'howto') { this.openModal('howto'); return; }
+    if (a === 'social') {
+      const open = () => { net.connect(); social.open('friends'); };
+      if (!net.account) { this.authPending = open; this.openAuth('login'); return; }
+      open(); return;
+    }
     const fn = { online: this.handlers.onOnline, create: this.handlers.onCreate, solo: this.handlers.onSolo }[a];
     if (!fn) return;
     // Çevrimiçi oyun için hesap gerekli

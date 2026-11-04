@@ -32,7 +32,7 @@
     "on": "On",
     "off": "Off",
     "ghost": "Ghost",
-    "map": "Map",
+    "map": "MAP",
     "info": "Info",
     "settings": "SETTINGS",
     "musicVol": "Music volume",
@@ -42,7 +42,9 @@
     "qHigh": "High",
     "qLow": "Low (fast)",
     "fullscreen": "Fullscreen",
-    "resume": "RESUME"
+    "resume": "RESUME",
+    "autoLow": "Slow device: graphics set to Low automatically (change in Settings)",
+    "device": "Device (next match)"
   },
   "lobby": {
     "kicker": "Bunker Lobby",
@@ -244,7 +246,10 @@
     "skipVote": "No proof, skip.",
     "defend": "{target} is lying about me!",
     "placeholder": "Type a message… (Enter)",
-    "ghostPlaceholder": "👻 Only the dead can see…"
+    "ghostPlaceholder": "👻 Only the dead can see…",
+    "sawVent": "I saw {target} vent! They are the killer!",
+    "sawNear": "{target} was near the body, sus.",
+    "agree": "Yeah, I think it's {target} too!"
   },
   "sabotage": {
     "title": "SABOTAGE",
@@ -277,7 +282,7 @@
     "offline": "Not connected",
     "connecting": "Connecting...",
     "noServer": "No server address (Settings)",
-    "version": "Version 0.7",
+    "version": "Version 0.9.11",
     "back": "BACK",
     "language": "Language",
     "sound": "Sound",
@@ -311,7 +316,8 @@
       "tooMany": "Too many attempts. Wait a minute.",
       "mismatch": "Passwords do not match.",
       "expired": "Session expired, please log in again."
-    }
+    },
+    "social": "FRIENDS & RANKS"
   },
   "online": {
     "title": "LOBBIES",
@@ -351,7 +357,21 @@
     "disconnected": "Lost connection to the server.",
     "flag": "Your flag",
     "err_flagTaken": "That flag is taken.",
-    "err_needLogin": "Log in to play online."
+    "err_needLogin": "Log in to play online.",
+    "roomSettings": "Room settings",
+    "auto": "Auto",
+    "cfg_map": "Map",
+    "cfg_max": "Max players",
+    "cfg_speed": "Player speed",
+    "cfg_discuss": "Discussion time",
+    "cfg_vote": "Voting time",
+    "cfg_killCd": "Kill cooldown",
+    "cfg_imps": "Impostors",
+    "cfg_sheriffs": "Sheriffs",
+    "kick": "Kick (press twice)",
+    "giveHost": "Make host (press twice)",
+    "kicked": "The host kicked you from the room.",
+    "err_kicked": "You were kicked from this room."
   },
   "levels": {
     "title": {
@@ -430,5 +450,48 @@
     "buying": "Buying…",
     "noCoins": "Not enough coins. Play online matches to earn more.",
     "needLogin": "You need to log in to buy hats."
+  },
+  "social": {
+    "friends": "FRIENDS",
+    "board": "LEADERBOARD",
+    "inviteTitle": "INVITE FRIENDS",
+    "needLogin": "Log in for friends and leaderboard.",
+    "addPh": "Player name",
+    "add": "ADD",
+    "requests": "Friend requests",
+    "friendsN": "Friends ({n})",
+    "onlineFriends": "Online friends",
+    "inGame": "in a match",
+    "inRoom": "in a lobby",
+    "online": "online",
+    "offline": "offline",
+    "invite": "INVITE",
+    "join": "JOIN",
+    "remove": "Remove",
+    "sure": "Sure?",
+    "noFriends": "No friends yet. Type a player name above.",
+    "noOnline": "No friends online right now.",
+    "week": "This week",
+    "all": "All time",
+    "weekNote": "Weekly board resets every Monday. {n} players.",
+    "allNote": "{n} players ranked.",
+    "boardEmpty": "Nobody has scored yet. Be the first!",
+    "invitedYou": "invited you to \"{room}\"",
+    "ignore": "Ignore",
+    "busy": "You cannot join a lobby during a match.",
+    "inviteBtn": "📨 Invite",
+    "ok_sent": "Request sent.",
+    "ok_added": "You are now friends!",
+    "ok_invited": "Invite sent.",
+    "err_noUser": "No player with that name.",
+    "err_self": "You cannot add yourself :)",
+    "err_already": "Already friends.",
+    "err_full": "This player has too many pending requests.",
+    "err_offline": "Your friend is offline right now.",
+    "err_needLogin": "You need to log in."
+  },
+  "maps": {
+    "ring": "Crossroads",
+    "classic": "Classic Bunker"
   }
 }

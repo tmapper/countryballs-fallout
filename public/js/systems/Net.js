@@ -120,9 +120,17 @@ class Net {
   create(opts) { this.send({ t: 'create', ...opts }); }
   join(code) { this.send({ t: 'join', code: String(code || '').trim().toUpperCase() }); }
   leave() { if (this.room) this.send({ t: 'leave' }); this.room = null; }
+  social() { this.send({ t: 'social' }); }
+  friendAdd(name) { this.send({ t: 'friendAdd', name }); }
+  friendAnswer(name, accept) { this.send({ t: 'friendAnswer', name, accept }); }
+  friendRemove(name) { this.send({ t: 'friendRemove', name }); }
+  invite(name) { this.send({ t: 'invite', name }); }
+  board(period) { this.send({ t: 'board', period }); }
   buyHat(hat) { this.send({ t: 'buyHat', hat }); }
   setHat(hat) { this.profile.hat = hat; this.setProfile(); this.send({ t: 'setHat', hat }); }
   setFlag(flag) { this.profile.flag = flag; this.setProfile(undefined, flag); this.send({ t: 'setFlag', flag }); }
+  kick(id) { this.send({ t: 'kick', id }); }
+  giveHost(id) { this.send({ t: 'giveHost', id }); }
   roomSettings(o) { this.send({ t: 'roomSettings', ...o }); }
   start(setup) { this.send({ t: 'start', setup }); }
   end() { this.send({ t: 'end' }); }

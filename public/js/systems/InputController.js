@@ -18,6 +18,13 @@ export class InputController {
     this.vector = new Phaser.Math.Vector2(0, 0);
   }
 
+  // Panel kapanınca: basılı kalmış tuşları ve joystick'i bırak
+  reset(scene) {
+    try { scene.input.keyboard.resetKeys(); } catch (e) { /* yoksay */ }
+    if (this.joystick && this.joystick.reset) this.joystick.reset();
+    this.vector.set(0, 0);
+  }
+
   // Her karede çağrılır; (x, y) uzunluğu en fazla 1 olan bir vektör döndürür.
   update() {
     const k = this.keys;
@@ -33,6 +40,7 @@ export class InputController {
       // Çapraz giderken hızlanmasın diye normalize (uzunluğu 1 yap)
       this.vector.set(x, y).normalize();
     } else if (this.joystick) {
+      if (this.joystick.check) this.joystick.check();
       this.vector.copy(this.joystick.vector);
     } else {
       this.vector.set(0, 0);

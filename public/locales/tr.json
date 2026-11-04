@@ -32,7 +32,7 @@
     "on": "Açık",
     "off": "Kapalı",
     "ghost": "Hayalet",
-    "map": "Harita",
+    "map": "HARİTA",
     "info": "Bilgi",
     "settings": "AYARLAR",
     "musicVol": "Müzik sesi",
@@ -42,7 +42,9 @@
     "qHigh": "Yüksek",
     "qLow": "Düşük (hızlı)",
     "fullscreen": "Tam ekran",
-    "resume": "DEVAM ET"
+    "resume": "DEVAM ET",
+    "autoLow": "Cihaz yavaş: grafik otomatik olarak Düşük yapıldı (Ayarlar'dan değiştirilebilir)",
+    "device": "Cihaz (sonraki maçta)"
   },
   "lobby": {
     "kicker": "Sığınak Lobisi",
@@ -244,7 +246,10 @@
     "skipVote": "Kanıt yok, geçelim.",
     "defend": "{target} beni suçluyor ama yalan!",
     "placeholder": "Mesaj yaz… (Enter)",
-    "ghostPlaceholder": "👻 Sadece ölüler görür…"
+    "ghostPlaceholder": "👻 Sadece ölüler görür…",
+    "sawVent": "{target} tünele girerken gördüm! Katil o!",
+    "sawNear": "{target} cesedin yakınındaydı, şüpheli.",
+    "agree": "Evet, bence de {target}!"
   },
   "sabotage": {
     "title": "SABOTAJ",
@@ -277,7 +282,7 @@
     "offline": "Sunucuya bağlı değil",
     "connecting": "Bağlanıyor...",
     "noServer": "Sunucu adresi yok (Ayarlar)",
-    "version": "Sürüm 0.7",
+    "version": "Sürüm 0.9.11",
     "back": "GERİ",
     "language": "Dil",
     "sound": "Ses",
@@ -311,7 +316,8 @@
       "tooMany": "Çok fazla deneme. Bir dakika bekle.",
       "mismatch": "Şifreler aynı değil.",
       "expired": "Oturum süresi doldu, tekrar giriş yap."
-    }
+    },
+    "social": "ARKADAŞLAR & SIRALAMA"
   },
   "online": {
     "title": "LOBİLER",
@@ -351,7 +357,21 @@
     "disconnected": "Sunucu bağlantısı koptu.",
     "flag": "Bayrağın",
     "err_flagTaken": "Bu bayrak alınmış.",
-    "err_needLogin": "Çevrimiçi oynamak için giriş yap."
+    "err_needLogin": "Çevrimiçi oynamak için giriş yap.",
+    "roomSettings": "Oda ayarları",
+    "auto": "Otomatik",
+    "cfg_map": "Harita",
+    "cfg_max": "Maks. oyuncu",
+    "cfg_speed": "Oyuncu hızı",
+    "cfg_discuss": "Tartışma süresi",
+    "cfg_vote": "Oylama süresi",
+    "cfg_killCd": "Öldürme bekleme",
+    "cfg_imps": "Katil sayısı",
+    "cfg_sheriffs": "Şerif sayısı",
+    "kick": "Odadan at (2 kez bas)",
+    "giveHost": "Kuruculuğu ver (2 kez bas)",
+    "kicked": "Kurucu seni odadan attı.",
+    "err_kicked": "Bu odadan atıldın, tekrar giremezsin."
   },
   "levels": {
     "title": {
@@ -430,5 +450,48 @@
     "buying": "Alınıyor…",
     "noCoins": "Yeterli jetonun yok. Online maç oynayarak kazan.",
     "needLogin": "Şapka almak için giriş yapmalısın."
+  },
+  "social": {
+    "friends": "ARKADAŞLAR",
+    "board": "SIRALAMA",
+    "inviteTitle": "ARKADAŞ DAVET ET",
+    "needLogin": "Arkadaşlar ve sıralama için giriş yap.",
+    "addPh": "Oyuncu adı",
+    "add": "EKLE",
+    "requests": "Gelen istekler",
+    "friendsN": "Arkadaşlar ({n})",
+    "onlineFriends": "Çevrimiçi arkadaşlar",
+    "inGame": "maçta",
+    "inRoom": "lobide",
+    "online": "çevrimiçi",
+    "offline": "çevrimdışı",
+    "invite": "DAVET ET",
+    "join": "KATIL",
+    "remove": "Sil",
+    "sure": "Emin?",
+    "noFriends": "Henüz arkadaşın yok. Yukarıya bir oyuncu adı yaz.",
+    "noOnline": "Şu an çevrimiçi arkadaşın yok.",
+    "week": "Bu hafta",
+    "all": "Tüm zamanlar",
+    "weekNote": "Haftalık sıralama her pazartesi sıfırlanır. {n} oyuncu.",
+    "allNote": "{n} oyuncu sıralamada.",
+    "boardEmpty": "Henüz kimse puan almadı. İlk sen ol!",
+    "invitedYou": "seni \"{room}\" odasına davet etti",
+    "ignore": "Yoksay",
+    "busy": "Maçtayken odaya katılamazsın.",
+    "inviteBtn": "📨 Davet et",
+    "ok_sent": "İstek gönderildi.",
+    "ok_added": "Artık arkadaşsınız!",
+    "ok_invited": "Davet gönderildi.",
+    "err_noUser": "Bu isimde oyuncu yok.",
+    "err_self": "Kendini ekleyemezsin :)",
+    "err_already": "Zaten arkadaşsınız.",
+    "err_full": "Bu oyuncunun bekleyen isteği çok fazla.",
+    "err_offline": "Arkadaşın şu an çevrimdışı.",
+    "err_needLogin": "Giriş yapmalısın."
+  },
+  "maps": {
+    "ring": "Kavşak",
+    "classic": "Klasik Sığınak"
   }
 }

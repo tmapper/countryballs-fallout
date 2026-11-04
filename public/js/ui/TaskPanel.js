@@ -517,7 +517,7 @@ export class TaskPanel {
       const ok = H('div', 'tp-ok', body); ok.textContent = '✔';
       setTimeout(() => { const h = this.handlers; this.close(true); if (h && h.onDone) h.onDone(); if (h && h.onClose) h.onClose(); }, 700);
     };
-    GAMES[type](body, done, (fn) => this.cleanups.push(fn));
+    (GAMES[type] || GAMES.wires)(body, done, (fn) => this.cleanups.push(fn));   // bilinmeyen tür: kablo görevi (çökmesin)
   }
 
   close(silent = false) {

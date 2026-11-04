@@ -6,20 +6,24 @@
 //   { players: [{ flag, role, me }, ...] }   (me = bu cihazdaki oyuncu)
 // Rol kuralları ve sayılar: systems/Combat.js
 // Kontroller: hareket WASD/ok/joystick · Q/Boşluk = aksiyon (öldür/vur) · E = tünel · Esc = lobi
+import { ghostChat } from '../ui/Chat.js';
+import { net } from '../systems/Net.js';
 import { gameSettings } from '../ui/GameSettings.js';
 import { i18n } from '../systems/I18n.js';
 import { InputController } from '../systems/InputController.js';
 import { FogOfWar } from '../systems/FogOfWar.js';
 import { CountryBall } from '../entities/CountryBall.js';
 import { BotBrain } from '../systems/BotBrain.js';
-import { ROLE_COLORS } from '../systems/Roles.js';
-import { RES } from '../systems/Resolution.js';
+import { ROLE_COLORS, impCount } from '../systems/Roles.js';
+import { RES, getQuality, setQuality } from '../systems/Resolution.js';
 import { backToLobby, playKillCutscene, gameOver } from '../systems/GameFlow.js';
 import {
   KILL_RANGE, SHOOT_RANGE, KILL_COOLDOWN, FIRST_KILL_COOLDOWN, SHOOT_COOLDOWN, FIRST_SHOOT_COOLDOWN,
   findTarget, witnesses, nearestTunnel, checkWinner, canSee, BOT_AGGRESSIVE
 } from '../systems/Combat.js';
-import { WORLD, gameSpawn, TUNNELS, canStand, getRoomAt, buildGrid, world } from '../map/BunkerMap.js';
+import { SABOTAGES } from '../systems/Sabotage.js';
+import { WORLD, gameSpawn, TUNNELS, canStand, getRoomAt, buildGrid, world, useMap } from '../map/BunkerMap.js';
+import { DEFAULT_CFG } from '../systems/RoomConfig.js';
 import { MapRenderer } from '../map/MapRenderer.js';
 import { TaskPanel } from '../ui/TaskPanel.js';
 import { PROP_IMG } from '../map/PropImages.js';
@@ -43,6 +47,9 @@ export class GameScene extends Phaser.Scene {
     const players = (data && data.players) || [{ flag: 'TR', role: 'crewmate', me: true }];
     const mode = (data && data.net) || 'offline';     // 'offline' | 'host' | 'client'
     this.over = false;
+    // Kurucu ayarları (çevrimiçi odadan gelir; tek kişilik oyunda varsayılan)
+    this.cfg = { ...DEFAULT_CFG, ...((data && data.cfg) || {}) };
+    useMap(this.cfg.map);           // harita: ÖNCE seçilmeli (ızgara, çizim, görev noktaları buna göre)
     // Tek başına (bot yok): serbest test, kazanma koşulu yok
     this.sandbox = players.length === 1 && mode === 'offline';
 
@@ -66,9 +73,11 @@ export class GameScene extends Phaser.Scene {
       const ball = new CountryBall(this, x, y, p.flag, { isMe: p.me, role: p.role, hat: p.hat });
       ball.id = p.id || 'b' + i;
       ball.name = p.name || '';
-      ball.cooldown = p.role === 'impostor' ? FIRST_KILL_COOLDOWN : p.role === 'sheriff' ? FIRST_SHOOT_COOLDOWN : 0;
+      ball.cooldown = p.role === 'impostor' ? Math.min(FIRST_KILL_COOLDOWN, this.cfg.killCd) : p.role === 'sheriff' ? FIRST_SHOOT_COOLDOWN : 0;
+      ball.speedMul = this.cfg.speed;   // kurucunun seçtiği oyuncu hızı (herkese aynı)
       // Botları sadece host (ya da tek başına oyun) yönetir; diğer oyuncular ağdan gelir
       const isBot = mode === 'offline' ? !p.me : !!p.bot;
+      ball.isBot = isBot;
       if (!p.me && isBot && mode !== 'client') ball.brain = new BotBrain(ball);
       if (!p.me && !ball.brain) ball.net = { x, y, f: 0, m: 0 };
       return ball;
@@ -86,7 +95,7 @@ export class GameScene extends Phaser.Scene {
     this.fakeTasks = this.player.role === 'impostor';
     this.myTasks = pickTasks(TASKS_PER_PLAYER);
     // Çevrimiçi client başkalarının rolünü bilmez (hile koruması); maçta her zaman 1 Katil var
-    this.taskTotal = (this.balls.length - (this.balls.filter((b) => b.role === 'impostor').length || 1)) * TASKS_PER_PLAYER;
+    this.taskTotal = (this.balls.length - impCount(this.balls.length)) * TASKS_PER_PLAYER;
     this.taskDone = 0;
     // Botlar görevlerine gerçekten yürür ve başında bekler (Katil bot da sahte görev yapar)
     this.balls.forEach((b) => {
@@ -101,7 +110,7 @@ export class GameScene extends Phaser.Scene {
       };
     });
     this.buildTaskMarkers();
-    this.events.once('shutdown', () => { this.taskPanel.close(true); gameSettings.close(); stopAllLoops(); });
+    this.events.once('shutdown', () => { this.taskPanel.close(true); gameSettings.close(); ghostChat.hide(); stopAllLoops(); });
 
     this.registry.set('flag', this.player.flag);
     this.registry.set('role', this.player.role);
@@ -141,6 +150,7 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-E', () => this.interact());
     this.setupExtras();   // ceset bildirme, toplantı, sabotaj, mini harita (GameExtras.js)
     this.setupFx();       // ışık, toz, kan, duman (GameFx.js)
+    this.setupCull();
     // Not: UIScene'i GameFlow açar (rol animasyonu bitince)
   }
 
@@ -150,11 +160,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   // "Rolleri göster" açıksa her topun üstünde rolü yazar; kapalıysa sadece "Sen"
+  // İsim etiketleri: kendi topunda "Sen" yerine ADIN yazar. Katillerin adı KIRMIZI (sadece katiller görür:
+  // kendin katilsen kendi adın ve ortaklarının adı kırmızı). "Rolleri göster" (test) açıksa rol de yazar.
   applyRoleTags() {
     const show = !!this.registry.get('showRoles');
+    const iAmImp = this.player && this.player.role === 'impostor';
+    const nameOf = (b) => b.name || (b.isMe ? (net.profile.name || '') : '') || i18n.t('countries.' + b.flag);
     this.balls.forEach((b) => {
-      if (show) b.showTag((b.isMe ? i18n.t('ui.you') + ' · ' : '') + i18n.t('roles.' + b.role), ROLE_COLORS[b.role]);
-      else b.showTag(b.isMe ? i18n.t(b.alive ? 'ui.you' : 'ui.ghost') : (this.online ? b.name : ''), '#ffffff');
+      if (show) { b.showTag(`${nameOf(b)} · ${i18n.t('roles.' + b.role)}`, ROLE_COLORS[b.role]); return; }
+      const red = iAmImp && b.role === 'impostor';
+      if (b.isMe) b.showTag(nameOf(b) + (b.alive ? '' : ' 👻'), red ? ROLE_COLORS.impostor : '#ffffff');
+      else if (red) b.showTag(nameOf(b), ROLE_COLORS.impostor);
+      else b.showTag(this.online ? b.name : '', '#ffffff');
     });
   }
 
@@ -225,7 +242,7 @@ export class GameScene extends Phaser.Scene {
     const t = this.nearTask();
     if (!t) { if (this.nearEmergency()) this.pressEmergency(); return; }
     this.taskOpen = true;
-    this.taskPanel.open(t.type, { onDone: () => this.completeTask(t), onClose: () => { this.taskOpen = false; } });
+    this.taskPanel.open(t.type, { onDone: () => this.completeTask(t), onClose: () => { this.taskOpen = false; this.releaseControls(); } });
   }
 
   completeTask(t) {
@@ -263,6 +280,7 @@ export class GameScene extends Phaser.Scene {
     const dest = TUNNELS.find((x) => x.id === t.links[0]);
     if (!dest) return;
     this.tunnelLock = this.time.now + 600;
+    this.ventWitness(me);
     sfx('tunnel');
     this.fxTunnel(me.x, me.y);
     me.setPosition(dest.x, dest.y);
@@ -279,15 +297,21 @@ export class GameScene extends Phaser.Scene {
     killer.setPosition(victim.x, victim.y);
     killer.setDepth(killer.y);
     if (killer.isMe) this.cameras.main.centerOn(killer.x, killer.y - 40);
-    killer.cooldown = KILL_COOLDOWN;
+    killer.cooldown = this.cfg.killCd;
     killer.kills = (killer.kills || 0) + 1;      // maç sonu istatistiği için (host raporlar)
     const seen = witnesses(this.grid, killer, victim, this.balls);
     // Ses: olayın içindeysen öldürme sesi, uzaktan gördüysen ceset bulundu sesi
     if (killer.isMe || victim.isMe) sfx('kill');
     else if (this.player.alive && canSee(this.grid, this.player, victim)) sfx('body_found');
     this.die(victim);
-    // Gören botlar öldüreni şüpheli olarak işaretler (bot Şerif onu vurmaya gider)
-    seen.forEach((w) => { if (w.brain) w.brain.suspect = killer; });
+    const body = this.bodies[this.bodies.length - 1];
+    if (body) body.t = this.time.now;
+    // Gören botlar öldüreni şüpheli olarak işaretler (bot Şerif onu vurmaya gider), masum tanık hemen bildirir
+    seen.forEach((w) => {
+      if (!w.brain || w.role === 'impostor') return;
+      w.brain.suspect = killer;
+      if (w.role !== 'sheriff' && body && !this.isClient && w.reportT === undefined) { w.reportT = 0.6 + Math.random() * 0.8; w.reportBody = body; }
+    });
     // Öldürme animasyonu sadece ÖLENE oynar (öldüren oyuna devam eder)
     if (victim.isMe) {
       const clip = Math.random() < 0.5 ? 'kill1' : 'kill2';
@@ -330,6 +354,8 @@ export class GameScene extends Phaser.Scene {
     if (ball.isMe && this.taskPanel) this.taskPanel.close();
     if (!opts.noBody) { this.spawnBody(ball); this.fxDeath(ball); }
     if (ball.isMe) {
+      // Ölüler sohbeti: sadece diğer ölüler görür
+      ghostChat.show({ local: !this.online, me: { name: ball.name || net.profile.name || i18n.t('countries.' + ball.flag), flag: ball.flag } });
       // Hayalet: yürüyebilir, herkesi görür, kimse onu görmez
       ball.setAlpha(0.45);
       ball.shadow.setVisible(false);
@@ -353,30 +379,141 @@ export class GameScene extends Phaser.Scene {
 
   // ---------------- Botlar ----------------
 
+  // ---------------- BOT ZEKASI (adil) ----------------
+  // Botlar SADECE kendi görüş alanında (oyuncuyla aynı yarıçap, duvar arkası görünmez) gördüklerini bilir.
+  // Aynı hız, aynı bekleme süreleri, aynı menziller; kararlarda insan gibi kısa tepki gecikmesi var.
+  botSight(b) {
+    const lightsOut = this.sabotage && this.sabotage.type === 'lights' && b.role !== 'impostor';
+    return lightsOut ? this.visionLightsOut : this.visionNormal;
+  }
+
+  botVisible(b) {
+    const R = this.botSight(b);
+    return this.balls.filter((o) => o !== b && o.alive && Math.hypot(o.x - b.x, o.y - b.y) <= R && canSee(this.grid, b, o, R));
+  }
+
   botThink(b, dt) {
     if (b.fixing && this.sabotage) return this.fixerThink(b, dt);   // sabotaj tamirine koşuyor
-    if (!BOT_AGGRESSIVE) return b.brain.update(dt); // botlar sadece gezer
+    const br = b.brain;
+    br.react = Math.max(0, (br.react || 0) - dt);
     let chase = null;
-    if (b.role === 'impostor' && b.cooldown <= 0) {
-      const t = findTarget(this.grid, b, this.balls, KILL_RANGE);
-      // Tanık yoksa (ya da bazen cesurca) öldür
-      if (t && (witnesses(this.grid, b, t, this.balls).length === 0 || Math.random() < 0.002)) {
-        this.kill(b, t);
-        return { x: 0, y: 0 };
+
+    if (b.role === 'impostor') {
+      const seen = this.botVisible(b);
+      const crew = seen.filter((o) => o.role !== 'impostor');      // katil ortaklarını tanır (insan katil de görür)
+      // Kaçış: az önce öldürdü -> yakında tünel varsa kullan, yoksa uzaklaş
+      if (br.flee > 0) {
+        br.flee -= dt;
+        if (br.fleeTunnel && this.botTunnel(b)) br.fleeTunnel = false;
+        return br.update(dt);
       }
-      chase = this.nearestVisible(b, (o) => o.alive && o !== b, 500);
-    } else if (b.role === 'sheriff' && b.brain.suspect) {
-      const s = b.brain.suspect;
-      if (!s.alive) b.brain.suspect = null;
-      else {
-        if (b.cooldown <= 0 && Math.hypot(s.x - b.x, s.y - b.y) <= SHOOT_RANGE && canSee(this.grid, b, s)) {
-          this.shoot(b, s);
-          return { x: 0, y: 0 };
+      // Tenha mı? Görüş alanında hedeften başka masum yoksa saldır
+      if (b.cooldown <= 0 && crew.length === 1) {
+        const t = crew[0];
+        const d = Math.hypot(t.x - b.x, t.y - b.y);
+        if (d <= KILL_RANGE && br.react <= 0 && !br.aimT) { br.aimT = 0.25 + Math.random() * 0.35; }   // tepki gecikmesi
+        if (br.aimT) {
+          br.aimT -= dt;
+          if (br.aimT <= 0) {
+            br.aimT = 0;
+            // Hâlâ menzilde ve hâlâ tenha mı?
+            const still = this.botVisible(b).filter((o) => o.role !== 'impostor');
+            if (still.length === 1 && still[0] === t && Math.hypot(t.x - b.x, t.y - b.y) <= KILL_RANGE) {
+              this.kill(b, t);
+              br.flee = 2.5; br.fleeTunnel = Math.random() < 0.7;
+              br.reset(); br.wait = 0;
+              return { x: 0, y: 0 };
+            }
+          }
         }
-        if (canSee(this.grid, b, s, 700)) chase = s;
+        if (d < this.botSight(b) * 0.85) chase = t;                  // yalnız hedefe yaklaş
+      } else br.aimT = 0;
+      // Mantıklı sabotaj (ortak bekleme süresi)
+      if (!this.sabotage && this.sabCd <= 0 && !this.isClient && br.react <= 0) this.botSabotage(b, crew);
+      // Ara sıra yer değiştirmek için tünel (kimse görmüyorsa)
+      if (br.tunGoal) {
+        if (crew.length) br.tunGoal = null;                          // görülürse vazgeç
+        else if (Math.hypot(br.tunGoal.x - b.x, br.tunGoal.y - b.y) < 70) { br.tunGoal = null; this.botTunnel(b); }
+      } else if (!chase && crew.length === 0 && Math.random() < dt / 14) {
+        // Avlanmak için başka bölgeye geç: en yakın tünele yürü
+        let best = null, bd = 1400;
+        TUNNELS.forEach((t) => { const d = Math.hypot(t.x - b.x, t.y - b.y); if (d < bd) { bd = d; best = t; } });
+        if (best) { br.tunGoal = best; br.goTo(best.x, best.y); }
       }
+    } else if (b.role === 'sheriff') {
+      this.botRemember(b, dt);
+      // Öldürürken gördüğü kişi (tanık olduğu cinayet) = şüpheli. Gördüğü anda vurmaya çalışır.
+      const s = br.suspect;
+      if (s && !s.alive) br.suspect = null;
+      else if (s) {
+        const R = this.botSight(b);
+        const visible = canSee(this.grid, b, s, R);
+        if (visible) {
+          if (b.cooldown <= 0 && Math.hypot(s.x - b.x, s.y - b.y) <= SHOOT_RANGE) {
+            if (!br.aimT) br.aimT = 0.3 + Math.random() * 0.4;
+            br.aimT -= dt;
+            if (br.aimT <= 0) { br.aimT = 0; this.shoot(b, s); return { x: 0, y: 0 }; }
+          }
+          chase = s;
+        }
+      }
+    } else if ((this.botRemember(b, dt), br.suspect) && br.suspect.alive && canSee(this.grid, b, br.suspect, this.botSight(b))) {
+      // Masum: katili gördüyse ondan uzaklaş
+      const s = br.suspect, dx = b.x - s.x, dy = b.y - s.y, d = Math.hypot(dx, dy) || 1;
+      if (d < 400) return { x: (dx / d) * 0.8, y: (dy / d) * 0.8 };
     }
-    return b.brain.update(dt, chase);
+    return br.update(dt, chase);
+  }
+
+  // Bot katil tünele girer: SADECE yanında tünel varsa (oyuncuyla aynı kural)
+  botTunnel(b) {
+    if (this.over || this.meeting || !b.alive) return false;
+    const t = nearestTunnel(TUNNELS, b.x, b.y);
+    if (!t || (b.tunnelLock || 0) > this.time.now) return false;
+    const dest = TUNNELS.find((x) => x.id === t.links[0]);
+    if (!dest) return false;
+    b.tunnelLock = this.time.now + 4000;
+    this.ventWitness(b);
+    if (canSee(this.grid, this.player, b, this.visionRadius)) { this.fxTunnel(b.x, b.y); }
+    b.setPosition(dest.x, dest.y); b.setDepth(b.y);
+    b.brain.reset(); b.brain.wait = 0.3;
+    return true;
+  }
+
+  // Tünele girerken görülen kişi kesin katildir (masum botlar bunu bilir, Şerif vurmaya gider)
+  ventWitness(user) {
+    if (this.isClient) return;
+    this.balls.forEach((o) => {
+      if (!o.brain || !o.alive || o === user || o.role === 'impostor') return;
+      if (Math.hypot(o.x - user.x, o.y - user.y) <= this.botSight(o) && canSee(this.grid, o, user, this.botSight(o))) {
+        o.brain.suspect = user; o.brain.sawVent = true;
+      }
+    });
+  }
+
+  // Masum botların hafızası: kimi, ne zaman, nerede gördü (sadece kendi görüşü)
+  botRemember(b, dt) {
+    const br = b.brain;
+    br.memT = (br.memT || 0) - dt;
+    if (br.memT > 0) return;
+    br.memT = 0.7 + Math.random() * 0.3;
+    if (!br.seen) br.seen = new Map();
+    const now = this.time.now;
+    this.botVisible(b).forEach((o) => br.seen.set(o, { t: now, x: o.x, y: o.y }));
+  }
+
+  // Sabotaj kararı: kalabalığın yanındaysa IŞIKLAR (karanlıkta tek tek avla); öldürme beklemesi uzunsa
+  // masumları dağıtmak için reaktör/O2 (tamir noktası bulunduğu yerden uzak olanı seçer)
+  botSabotage(b, crewSeen) {
+    if (this.sabCd > 0 || this.sabotage) return;
+    let type = null;
+    if (crewSeen.length >= 2 && b.cooldown <= 3) type = 'lights';
+    else if (b.cooldown > 8 && Math.random() < 0.5) {
+      const far = ['reactor', 'o2'].map((k) => [k, Math.hypot(SABOTAGES[k].fix.x - b.x, SABOTAGES[k].fix.y - b.y)]).sort((x, y) => y[1] - x[1]);
+      type = far[0][0];
+    }
+    b.brain.react = 4 + Math.random() * 6;                          // her karede düşünmesin
+    if (type) this.startSabotage(type);
   }
 
   nearestVisible(from, filter, range) {
@@ -409,21 +546,27 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    const dt = Math.min(delta, 100) / 1000; // yavaş cihazda ağır çekim olmasın, büyük takılmada ışınlanmasın
-    this.netUpdate(Math.min(delta, 100) / 1000);
-    this.updateFx(Math.min(delta, 100) / 1000, time);
+    // Gerçek geçen süre: telefon kasınca oyun AĞIR ÇEKİME girmesin (eskiden 0,1 sn ile sınırlıydı).
+    // Çok uzun takılmada (sekme arka plandaydı) en fazla 0,25 sn; hareket CountryBall.move içinde adımlara bölünür.
+    const dt = Math.min(delta, 250) / 1000;
+    this.netUpdate(dt);
+    this.updateFx(dt, time);
     // Toplantıda herkes donar
     if (this.meeting) { this.registry.set('hud', { action: null }); return; }
     const ui = this.scene.get('UIScene');
     this.controls.joystick = ui && ui.joystick ? ui.joystick : null;
-    if (this.taskOpen && !this.taskPanel.isOpen) this.taskOpen = false;   // panel başka yoldan kapandıysa kilit kalmasın
+    if (this.taskOpen && !this.taskPanel.isOpen) { this.taskOpen = false; this.releaseControls(); }   // panel başka yoldan kapandıysa kilit kalmasın
     const dir = this.taskOpen ? { x: 0, y: 0 } : this.controls.update();   // görev açıkken yürüme yok
     this.updateBotTasks(dt);
     if (!this.over && !this.sandbox) { this.updateSabotage(dt); this.updateBotReports(dt); }
     if (this.meeting) return;   // bu karede toplantı başladıysa
 
     // canStand: yürünebilir alan kontrolü. Duvara çarpınca durur ama duvar boyunca kayar.
-    this.player.move(dir, dt, canStand);
+    // Hayalet tüm duvarlardan geçer (sadece dünyanın sınırında kalır)
+    const stand = this.player.alive ? canStand : (x, y) => x > 0 && y > 0 && x < WORLD.w && y < WORLD.h;
+    const moved = this.player.move(dir, dt, stand);
+    // Takılma koruması: yön verildiği halde 0,5 sn hiç kıpırdamadıysa ve eşyanın içindeyse kurtar
+    if (this.player.alive && (dir.x || dir.y) && !moved) { this.stuckT = (this.stuckT || 0) + dt; if (this.stuckT > 0.5) { this.stuckT = 0; this.unstick(this.player); } } else this.stuckT = 0;
 
     this.balls.forEach((b) => { if (b.cooldown > 0) b.cooldown = Math.max(0, b.cooldown - dt); });
 
@@ -439,6 +582,7 @@ export class GameScene extends Phaser.Scene {
     // Gözün konumu: ayak noktasının biraz yukarısı (ayak izi kutusunun içinde kalsın)
     this.fog.update(this.player.x, this.player.y - 16, this.visionRadius);
     this.updateSight(dt);
+    this.updateCull(dt);
 
     // Arayüze bilgi ver
     this.registry.set('playerPos', { x: Math.round(this.player.x), y: Math.round(this.player.y) });
@@ -451,6 +595,67 @@ export class GameScene extends Phaser.Scene {
     this.updateMinimap();
   }
 
+  // Görev/panel kapanınca: tüm sahnelerde basılı tuşları ve joystick'i bırak (takılı kalıp yürüyememe hatası)
+  releaseControls() {
+    this.game.scene.getScenes(true).forEach((sc) => { try { sc.input.keyboard.resetKeys(); } catch (e) { /* yoksay */ } });
+    // Joystick'i KÖRÜ KÖRÜNE bırakma: başparmak hâlâ üstündeyse bırakmak "donma" yapıyordu.
+    // Sadece parmak gerçekten kalktıysa bırakılır (check).
+    const ui = this.scene.get('UIScene');
+    if (ui && ui.joystick && ui.joystick.check) ui.joystick.check();
+    this.unstick(this.player);
+  }
+
+  // Bir şekilde eşyanın/duvarın içinde kaldıysa en yakın boş yere çek (yoksa hiç yürüyemez)
+  unstick(b) {
+    if (!b || !b.alive || canStand(b.x, b.y)) return;
+    for (let r = 10; r <= 200; r += 10) {
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+        const x = b.x + Math.cos(a) * r, y = b.y + Math.sin(a) * r;
+        if (canStand(x, y)) { b.setPosition(x, y); return; }
+      }
+    }
+  }
+
+  // ---------------- PERFORMANS ----------------
+  // Harita eşyaları: kamera dışındakiler HİÇ çizilmez; görüş alanının dışında (karanlıkta) kalan
+  // eşyalar ve ışıklar da çizilmez (zaten sisin altında görünmüyorlar). 6 kez/sn kontrol edilir.
+  setupCull() {
+    const skip = new Set([this.fog && this.fog.image, this.fxLight].filter(Boolean));
+    this.cullList = this.children.list.filter((o) => o.visible && !skip.has(o) && o.depth < 999000 &&
+      (o.type === 'Image' || o.type === 'Sprite' || o.type === 'TileSprite' || o.type === 'Text') && o.getBounds &&
+      !(o.width >= 3000 || o.height >= 3000))
+      .map((o) => ({ o, b: o.getBounds(), far: o.depth > -7.5 }));
+    this.cullT = 0;
+    this.fpsLow = 0;
+  }
+
+  updateCull(dt) {
+    this.cullT -= dt;
+    if (this.cullT > 0 || !this.cullList) return;
+    this.cullT = 0.16;
+    const v = this.cameras.main.worldView, M = 160;
+    const me = this.player, seeAll = !me.alive || !this.fog.enabled;
+    const R = this.visionRadius + 260;
+    this.cullList.forEach((c) => {
+      if (!c.o.scene) return;
+      const b = c.b;
+      let on = b.right > v.x - M && b.x < v.right + M && b.bottom > v.y - M && b.y < v.bottom + M;
+      if (on && c.far && !seeAll) {
+        const nx = Math.max(b.x, Math.min(me.x, b.right)), ny = Math.max(b.y, Math.min(me.y, b.bottom));
+        on = (nx - me.x) ** 2 + (ny - me.y) ** 2 < R * R;
+      }
+      if (c.o.visible !== on) c.o.setVisible(on);
+    });
+    // Otomatik kalite: oyun sürekli yavaşsa (30 kare/sn altı) bir kez düşük grafiğe geç
+    const fps = this.game.loop.actualFps;
+    this.fpsLow = fps < 30 ? this.fpsLow + 0.16 : Math.max(0, this.fpsLow - 0.32);
+    if (this.fpsLow > 6 && getQuality() === 'high' && !this.autoLowDone) {
+      this.autoLowDone = true;
+      setQuality('low');
+      this.toast(i18n.t('ui.autoLow'), '#ffd23f');
+    }
+  }
+
   // Görüş: duvar arkasındaki / görüş alanı dışındaki oyuncular ve cesetler hiç görünmez (yumuşak geçişle)
   updateSight(dt) {
     const me = this.player;
@@ -461,6 +666,8 @@ export class GameScene extends Phaser.Scene {
       const r = this.visionRadius + 30;
       const see = (o) => all || canSee(this.grid, me, o, r);
       this.balls.forEach((b) => { if (!b.isMe && b.alive) b.seen = see(b); });
+      // Hayaletler birbirini görür (ölü gerçek oyuncular; ölü botlar dolaşmadığı için gizli kalır)
+      this.balls.forEach((b) => { if (!b.isMe && !b.alive) b.ghostSeen = !me.alive && !b.left && !b.brain && !b.isBot; });
       this.bodies.forEach((c) => { c.seen = see(c); });
     }
     const k = Math.min(1, dt * 12);
@@ -470,7 +677,14 @@ export class GameScene extends Phaser.Scene {
       o.setAlpha(a);
       o.setVisible(a > 0.02);
     };
-    this.balls.forEach((b) => { if (!b.isMe && b.alive) fade(b); });
+    this.balls.forEach((b) => {
+      if (!b.isMe && b.alive) fade(b);
+      else if (!b.isMe && !b.alive && b.ghostSeen !== b.ghostShown) {
+        b.ghostShown = b.ghostSeen;
+        b.setVisible(!!b.ghostSeen).setAlpha(0.45);
+        if (b.shadow) b.shadow.setVisible(false);
+      }
+    });
     this.bodies.forEach(fade);
   }
 
@@ -498,8 +712,9 @@ export class GameScene extends Phaser.Scene {
   // UIScene'deki aksiyon butonlarının durumu
   hudState() {
     const me = this.player;
-    const st = { action: null, ready: false, cooldown: 0, tunnel: false, task: false, useLabel: 'use', report: false, sabotage: false };
+    const st = { action: null, ready: false, cooldown: 0, tunnel: false, task: false, useLabel: 'use', report: false, sabotage: false, inGame: false };
     if (this.over || this.meeting) return st;
+    st.inGame = true;
     st.task = !this.taskOpen && !!this.nearTask();
     if (st.task) st.useLabel = 'use';
     if (!this.taskOpen && this.canFix()) { st.task = true; st.useLabel = 'fix'; }
@@ -516,7 +731,7 @@ export class GameScene extends Phaser.Scene {
       st.ready = me.cooldown <= 0 && !!findTarget(this.grid, me, this.balls, SHOOT_RANGE);
     }
     st.cooldown = Math.ceil(me.cooldown);
-    const cdMax = me.role === 'impostor' ? KILL_COOLDOWN : SHOOT_COOLDOWN;
+    const cdMax = me.role === 'impostor' ? this.cfg.killCd : SHOOT_COOLDOWN;
     st.cdFrac = Math.min(1, me.cooldown / cdMax);
     return st;
   }

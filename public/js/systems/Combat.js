@@ -31,6 +31,7 @@ export function findTarget(grid, actor, balls, range) {
   let best = null, bestD = Infinity;
   balls.forEach((b) => {
     if (b === actor || !b.alive) return;
+    if (actor.role === 'impostor' && b.role === 'impostor') return;   // katil ortağına dokunulmaz
     const d = Math.hypot(actor.x - b.x, actor.y - b.y);
     if (d < bestD && d <= range && canSee(grid, actor, b)) { best = b; bestD = d; }
   });

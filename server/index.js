@@ -26,7 +26,9 @@ const crypto = require('crypto');
 const PORT = process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, '..', 'public');
 const MAX_ROOMS = 200;
-const MAX_PLAYERS = 10;
+const MAX_PLAYERS = 25;
+const impCount = (n) => (n >= 20 ? 4 : n >= 13 ? 3 : n >= 8 ? 2 : 1);     // istemcideki Roles.impCount ile aynı
+const sheriffCount = (n) => (n >= 18 ? 3 : n >= 10 ? 2 : 1);              // istemcideki Roles.sheriffCount ile aynı
 const MIN_MATCH_SECS = Number(process.env.MIN_MATCH_SECS) || 40;     // bundan kısa maçlar istatistiğe yazılmaz (hile/test engeli)
 const MAX_TASKS_PER_MATCH = 5; // Tasks.js -> TASKS_PER_PLAYER ile aynı olmalı (oyuncu başına görev sayısı)
 const MIN_HUMANS = 2;          // istatistik için maçta en az 2 gerçek (hesaplı) oyuncu olmalı; botlarla tek başına XP kasılamaz
@@ -99,6 +101,36 @@ const START_COINS = 200;                                  // yeni hesaba hoş ge
 const COIN = { played: 10, win: 25, task: 2, kill: 5 };
 function ensureWallet(u) { if (typeof u.coins !== 'number') u.coins = START_COINS; if (!Array.isArray(u.hats)) u.hats = []; return u; }
 const ownsHat = (u, h) => HAT_PRICE[h] === 0 || (u && Array.isArray(u.hats) && u.hats.includes(h));
+// ---------------- ARKADAŞLAR + SIRALAMA ----------------
+// u.friends: arkadaş hesap anahtarları, u.freq: gelen istekler. Haftalık XP: u.wxp + u.wk (yılın haftası).
+const weekId = (t = Date.now()) => Math.floor((t / 86400000 + 3) / 7);   // Pazartesi başlar
+function addWeekXp(u, xp) { const w = weekId(); if (u.wk !== w) { u.wk = w; u.wxp = 0; } u.wxp += Math.max(0, xp); }
+const weekXp = (u) => (u.wk === weekId() ? u.wxp || 0 : 0);
+function ensureSocial(u) { if (!Array.isArray(u.friends)) u.friends = []; if (!Array.isArray(u.freq)) u.freq = []; return u; }
+const keyOf = (name) => String(name || '').trim().toLocaleLowerCase('tr');
+function onlineClient(key) { for (const c of clients) if (c.account === key) return c; return null; }
+function friendView(key) {
+  const u = accounts.users[key]; if (!u) return null;
+  const c = onlineClient(key);
+  const r = c && c.room ? rooms.get(c.room) : null;
+  return { name: u.name, level: publicAcc(u).level, online: !!c, room: r && r.state === 'lobby' && r.players.size < r.max ? r.code : null, inGame: !!(r && r.state === 'game') };
+}
+function sendSocial(c) {
+  const u = c.account && accounts.users[c.account]; if (!u) return;
+  ensureSocial(u);
+  send(c, { t: 'social', friends: u.friends.map(friendView).filter(Boolean), requests: u.freq.map((k) => accounts.users[k] && accounts.users[k].name).filter(Boolean) });
+}
+let boardCache = { at: 0, all: [], week: [] };
+function boards() {
+  if (Date.now() - boardCache.at < 30000) return boardCache;            // 30 sn önbellek (sunucu yükü)
+  const list = Object.entries(accounts.users).map(([k, u]) => { const a = publicAcc(u); return { k, name: u.name, level: a.level, title: a.title, xp: a.xp, wxp: weekXp(u), wins: a.stats.wins }; });
+  boardCache = {
+    at: Date.now(),
+    all: list.filter((x) => x.xp > 0).sort((a, b) => b.xp - a.xp),
+    week: list.filter((x) => x.wxp > 0).sort((a, b) => b.wxp - a.wxp)
+  };
+  return boardCache;
+}
 const NAME_RE = /^[A-Za-z0-9_ÇĞİÖŞÜçğıöşü]{3,16}$/;
 const hashPass = (pass, salt) => crypto.scryptSync(String(pass), salt, 32).toString('hex');
 // ---------------- İSTATİSTİK + SEVİYE ----------------
@@ -205,6 +237,11 @@ function onData(c, chunk) {
     if (op === 0xA) { c.alive = true; continue; }               // pong
     if (op === 0x1) {
       let msg;
+      // SUNUCU KORUMASI: çok büyük mesaj ya da saniyede 80'den fazla mesaj yok sayılır (spam / hile)
+      if (payload.length > 16384) continue;
+      const now = Date.now();
+      if (now - (c.rateAt || 0) >= 1000) { c.rateAt = now; c.rateN = 0; }
+      if (++c.rateN > 80) continue;
       try { msg = JSON.parse(payload.toString('utf8')); } catch (e) { continue; }
       c.alive = true;
       try { handle(c, msg); } catch (e) { console.error('Mesaj hatası', e); }
@@ -232,6 +269,33 @@ setInterval(() => {
   });
 }, 20000);
 
+// Konum toplu gönderimi: her odada biriken konumları 100 ms'de bir tek mesajla yolla
+setInterval(() => {
+  rooms.forEach((r) => {
+    if (!r.pos || !r.pos.size) return;
+    const all = [...r.pos.values()];
+    r.pos.clear();
+    broadcast(r, { t: 'relay', from: '*', d: { k: 'pp', a: all } });
+  });
+}, 100);
+
+// ---------------- Kurucu ayarları ----------------
+// imps / sheriffs: 0 = otomatik (oyuncu sayısına göre). Sınırlar burada (hile ile uç değer girilemez).
+const MAP_IDS = ['ring', 'classic'];
+const defaultCfg = () => ({ map: 'ring', speed: 1, discuss: 15, vote: 25, killCd: 15, imps: 0, sheriffs: 0 });   // istemcide RoomConfig.DEFAULT_CFG
+const clampNum = (v, lo, hi, def) => { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : def; };
+function sanitizeCfg(old, m) {
+  const c = { ...old };
+  if (MAP_IDS.includes(m.map)) c.map = m.map;
+  if (m.speed !== undefined) c.speed = Math.round(clampNum(m.speed, 0.5, 2, 1) * 4) / 4;          // 0.5x .. 2x
+  if (m.discuss !== undefined) c.discuss = Math.round(clampNum(m.discuss, 0, 180, 15) / 5) * 5;   // 0..180 sn
+  if (m.vote !== undefined) c.vote = Math.round(clampNum(m.vote, 10, 120, 25) / 5) * 5;
+  if (m.killCd !== undefined) c.killCd = Math.round(clampNum(m.killCd, 10, 90, 15) / 5) * 5;
+  if (m.imps !== undefined) c.imps = Math.round(clampNum(m.imps, 0, 5, 0));
+  if (m.sheriffs !== undefined) c.sheriffs = Math.round(clampNum(m.sheriffs, 0, 5, 0));
+  return c;
+}
+
 // ---------------- Lobiler ----------------
 
 function makeCode() {
@@ -245,7 +309,7 @@ const clean = (s, n) => String(s || '').replace(/[<>]/g, '').trim().slice(0, n);
 
 function roomInfo(r) {
   return {
-    code: r.code, name: r.name, public: r.public, max: r.max, state: r.state, hostId: r.hostId, bots: r.bots,
+    code: r.code, name: r.name, public: r.public, max: r.max, state: r.state, hostId: r.hostId, bots: r.bots, cfg: r.cfg || defaultCfg(),
     players: [...r.players.values()].map((p) => ({ id: p.id, name: p.name, flag: p.flag, hat: p.client.hat || 'none' }))
   };
 }
@@ -259,7 +323,8 @@ function listRooms() {
 }
 
 function broadcast(r, obj, exceptId) {
-  r.players.forEach((p) => { if (p.id !== exceptId) send(p.client, obj); });
+  const buf = Buffer.from(JSON.stringify(obj));   // bir kez çevir, herkese aynısını yolla
+  r.players.forEach((p) => { if (p.id !== exceptId) frame(p.client, 0x1, buf); });
 }
 const roomUpdate = (r) => broadcast(r, { t: 'room', room: roomInfo(r) });
 
@@ -286,6 +351,64 @@ function handle(c, m) {
       c.flag = clean(m.flag, 4) || 'TR';
       if (m.hat !== undefined) c.hat = ownsHat(c.account && accounts.users[c.account], String(m.hat)) ? String(m.hat) : 'none';
       break;
+    case 'social': { sendSocial(c); break; }
+    case 'friendAdd': {
+      const u = c.account && accounts.users[c.account];
+      if (!u) { send(c, { t: 'socialError', code: 'needLogin' }); return; }
+      const k = keyOf(m.name), v = accounts.users[k];
+      if (!v) { send(c, { t: 'socialError', code: 'noUser' }); return; }
+      if (k === c.account) { send(c, { t: 'socialError', code: 'self' }); return; }
+      ensureSocial(u); ensureSocial(v);
+      if (u.friends.includes(k)) { send(c, { t: 'socialError', code: 'already' }); return; }
+      if (u.freq.includes(k)) {                                  // o da beni eklemişti: direkt arkadaş
+        u.freq = u.freq.filter((x) => x !== k); u.friends.push(k); if (!v.friends.includes(c.account)) v.friends.push(c.account);
+      } else if (!v.freq.includes(c.account)) {
+        if (v.freq.length >= 50) { send(c, { t: 'socialError', code: 'full' }); return; }
+        v.freq.push(c.account);
+      }
+      saveAccounts();
+      send(c, { t: 'socialOk', code: u.friends.includes(k) ? 'added' : 'sent' });
+      sendSocial(c);
+      const vc = onlineClient(k); if (vc) sendSocial(vc);
+      break;
+    }
+    case 'friendAnswer': {                                       // gelen isteği kabul / reddet
+      const u = c.account && accounts.users[c.account]; if (!u) return;
+      const k = keyOf(m.name), v = accounts.users[k];
+      ensureSocial(u);
+      u.freq = u.freq.filter((x) => x !== k);
+      if (m.accept && v) { ensureSocial(v); if (!u.friends.includes(k)) u.friends.push(k); if (!v.friends.includes(c.account)) v.friends.push(c.account); }
+      saveAccounts(); sendSocial(c);
+      const vc = onlineClient(k); if (vc) sendSocial(vc);
+      break;
+    }
+    case 'friendRemove': {
+      const u = c.account && accounts.users[c.account]; if (!u) return;
+      const k = keyOf(m.name), v = accounts.users[k];
+      ensureSocial(u); u.friends = u.friends.filter((x) => x !== k);
+      if (v) { ensureSocial(v); v.friends = v.friends.filter((x) => x !== c.account); }
+      saveAccounts(); sendSocial(c);
+      break;
+    }
+    case 'invite': {                                             // odadayken arkadaşı davet et
+      const u = c.account && accounts.users[c.account]; const r = rooms.get(c.room);
+      if (!u || !r) return;
+      const k = keyOf(m.name); ensureSocial(u);
+      if (!u.friends.includes(k)) return;
+      const now = Date.now(); if (now - (c.lastInvite || 0) < 2000) return; c.lastInvite = now;
+      const vc = onlineClient(k);
+      if (!vc) { send(c, { t: 'socialError', code: 'offline' }); return; }
+      send(vc, { t: 'invite', from: u.name, code: r.code, room: r.name });
+      send(c, { t: 'socialOk', code: 'invited' });
+      break;
+    }
+    case 'board': {
+      const b = boards(), week = m.period === 'week', arr = week ? b.week : b.all;
+      const row = (x, i) => ({ rank: i + 1, name: x.name, level: x.level, title: x.title, value: week ? x.wxp : x.xp, wins: x.wins });
+      const meIdx = c.account ? arr.findIndex((x) => x.k === c.account) : -1;
+      send(c, { t: 'board', period: week ? 'week' : 'all', top: arr.slice(0, 25).map(row), me: meIdx >= 0 ? row(arr[meIdx], meIdx) : null, total: arr.length });
+      break;
+    }
     case 'buyHat': {
       const u = c.account && accounts.users[c.account];
       const h = String(m.hat || '');
@@ -353,8 +476,8 @@ function handle(c, m) {
       const code = makeCode();
       const r = {
         code, name: clean(m.name, 28) || `${c.name} lobisi`, public: m.public !== false,
-        max: Math.max(4, Math.min(MAX_PLAYERS, Number(m.max) || 10)), hostId: c.id, state: 'lobby',
-        bots: false, players: new Map(), created: Date.now()
+        max: Math.max(4, Math.min(MAX_PLAYERS, Number(m.max) || MAX_PLAYERS)), hostId: c.id, state: 'lobby',
+        bots: false, players: new Map(), created: Date.now(), cfg: defaultCfg()
       };
       rooms.set(code, r);
       r.players.set(c.id, { id: c.id, name: c.name, flag: c.flag, client: c });
@@ -367,6 +490,7 @@ function handle(c, m) {
       const r = rooms.get(String(m.code || '').toUpperCase());
       if (!r) { send(c, { t: 'error', code: 'notFound' }); return; }
       if (r.players.size >= r.max) { send(c, { t: 'error', code: 'roomFull' }); return; }
+      if (r.banned && r.banned.has(c.account || c.id)) { send(c, { t: 'error', code: 'kicked' }); return; }
       if (r.state !== 'lobby') { send(c, { t: 'error', code: 'inGame' }); return; }
       leaveRoom(c);
       // Aynı bayrak varsa boşta bir bayrağı seçmesi için istemciye bırakılır
@@ -396,6 +520,25 @@ function handle(c, m) {
       if (typeof m.bots === 'boolean') r.bots = m.bots;
       if (typeof m.public === 'boolean') r.public = m.public;
       if (m.name) r.name = clean(m.name, 28);
+      if (m.max !== undefined) r.max = Math.max(Math.max(4, r.players.size), Math.min(MAX_PLAYERS, Math.round(Number(m.max) || r.max)));
+      if (m.cfg && typeof m.cfg === 'object') r.cfg = sanitizeCfg(r.cfg || defaultCfg(), m.cfg);
+      roomUpdate(r);
+      break;
+    }
+    case 'kick': {                               // sadece kurucu: oyuncuyu odadan at
+      const r = rooms.get(c.room);
+      if (!r || r.hostId !== c.id || m.id === c.id) return;
+      const p = r.players.get(m.id);
+      if (!p) return;
+      (r.banned || (r.banned = new Set())).add(p.client.account || p.id);   // aynı odaya geri giremez
+      send(p.client, { t: 'kicked' });
+      leaveRoom(p.client);
+      break;
+    }
+    case 'giveHost': {                           // sadece kurucu (lobideyken): kuruculuğu devret
+      const r = rooms.get(c.room);
+      if (!r || r.hostId !== c.id || r.state !== 'lobby' || !r.players.has(m.id)) return;
+      r.hostId = m.id;
       roomUpdate(r);
       break;
     }
@@ -417,7 +560,12 @@ function handle(c, m) {
       });
       const all = [...humans, ...bots];
       if (all.length < 3) return;
-      const roles = ['impostor', 'sheriff', ...Array(all.length - 2).fill('crewmate')];
+      const cfg = r.cfg || defaultCfg();
+      // Kurucu katil/şerif sayısı seçtiyse onu kullan (en az 1 katil, katiller oyuncuların yarısından az)
+      const maxImp = Math.max(1, Math.ceil(all.length / 2) - 1);
+      const nImp = cfg.imps ? Math.min(cfg.imps, maxImp) : impCount(all.length);
+      const nSh = Math.max(0, Math.min(cfg.sheriffs ? cfg.sheriffs : sheriffCount(all.length), all.length - nImp - 1));
+      const roles = [...Array(nImp).fill('impostor'), ...Array(nSh).fill('sheriff'), ...Array(all.length - nImp - nSh).fill('crewmate')];
       for (let i = roles.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [roles[i], roles[j]] = [roles[j], roles[i]]; }
       all.forEach((p, i) => { p.role = roles[i]; });
       r.state = 'game';
@@ -429,8 +577,10 @@ function handle(c, m) {
         r.match.roster[sp.id] = { key: pl.client.account, role: sp.role, left: false };
       });
       r.players.forEach((pl) => {
-        const view = all.map((p) => (pl.id === r.hostId || p.id === pl.id) ? p : { ...p, role: null });
-        send(pl.client, { t: 'start', setup: { players: view } });
+        // Katiller birbirini bilir (ekip); diğer herkes sadece kendi rolünü görür
+        const meImp = (all.find((p) => p.id === pl.id) || {}).role === 'impostor';
+        const view = all.map((p) => (pl.id === r.hostId || p.id === pl.id || (meImp && p.role === 'impostor')) ? p : { ...p, role: null });
+        send(pl.client, { t: 'start', setup: { players: view, cfg } });
       });
       roomUpdate(r);
       break;
@@ -467,6 +617,7 @@ function handle(c, m) {
         if (won) { st.wins++; if (winner === 'impostor') st.winsImpostor++; else st.winsCrew++; st.streak++; st.bestStreak = Math.max(st.bestStreak, st.streak); }
         else { st.losses++; st.streak = 0; }
         ensureWallet(u);
+        addWeekXp(u, calcXp(st) - before.xp);
         const coins = COIN.played + (won ? COIN.win : 0) + tasks * COIN.task + kills * COIN.kill;
         u.coins += coins;
         const after = publicAcc(u);
@@ -484,6 +635,13 @@ function handle(c, m) {
       // HİLE KORUMASI: oyun olaylarını (ev) ve bot konumlarını (bp) sadece host yollayabilir
       const k = m.d && m.d.k;
       if ((k === 'ev' || k === 'bp') && r.hostId !== c.id) return;
+      // SUNUCU TASARRUFU: oyuncu konumları (p: oyunda, lp: lobide) tek tek herkese gitmez; odada biriktirilip
+      // saniyede 10 kez TEK toplu mesajla gönderilir (25 kişide mesaj sayısı ~24 kat azalır).
+      if ((k === 'p' || k === 'lp') && !m.to) {
+        const d = m.d;
+        (r.pos || (r.pos = new Map())).set(c.id, [c.id, d.x | 0, d.y | 0, d.f ? 1 : 0, d.m ? 1 : 0, k === 'lp' ? 1 : 0]);
+        return;
+      }
       const msg = { t: 'relay', from: c.id, d: m.d };
       if (m.to === 'host') { const h = r.players.get(r.hostId); if (h && h.id !== c.id) send(h.client, msg); }
       else if (m.to) { const p = r.players.get(m.to); if (p) send(p.client, msg); }
@@ -500,7 +658,7 @@ function handle(c, m) {
       const text = String(m.text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 120);
       if (!text) return;
       const pl = r.players.get(c.id);
-      broadcast(r, { t: 'chat', from: c.id, name: pl ? pl.name : '?', flag: pl ? pl.flag : '', text, ch: m.ch === 'meet' ? 'meet' : 'lobby', dead: !!m.dead });
+      broadcast(r, { t: 'chat', from: c.id, name: pl ? pl.name : '?', flag: pl ? pl.flag : '', text, ch: m.ch === 'meet' ? 'meet' : m.ch === 'ghost' ? 'ghost' : 'lobby', dead: !!m.dead || m.ch === 'ghost' });
       break;
     }
     case 'ping':

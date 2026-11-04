@@ -7,6 +7,8 @@
 // Ayar/bayrak/başlat butonları HTML'de (ui/Lobby.js). Lobi değişince
 // GameFlow -> applyState(state) çağırır.
 // Kamera: dünya kamerası + arayüz kamerası (joystick için, CSS pikseli koordinat).
+import { isMobile } from '../systems/Device.js';
+import { tiled } from '../systems/Tiled.js';
 import { i18n } from '../systems/I18n.js';
 import { InputController } from '../systems/InputController.js';
 import { Joystick } from '../systems/Joystick.js';
@@ -61,14 +63,19 @@ export class LobbyScene extends Phaser.Scene {
     this.lobbyStand = lobbyStand;
     const sp = lobbySpawn(0);
     this.player = new CountryBall(this, sp.x, sp.y, state.myFlag || 'TR', { isMe: true, hat: loadHat() });
-    this.player.showTag(i18n.t('ui.you'), '#ffffff');
+    this.player.showTag(net.profile.name || i18n.t('countries.' + this.player.flag), '#ffffff');
     this.bots = [];
     this.online = !!state.online;
     this.remotes = new Map();
     this.posT = 0;
     if (this.online) {
       // Çevrimiçi oda: diğer oyuncular ağdan gelir, botlar yok
-      const onRelay = (m) => { const d = m.d || {}; if (d.k === 'lp') { const b = this.remotes.get(m.from); if (b) b.net = { x: d.x, y: d.y, f: d.f, m: d.m }; } };
+      const setPos = (id, x, y, f, mv) => { const b = this.remotes.get(id); if (b) b.net = { x, y, f, m: mv }; };
+      const onRelay = (m) => {
+        const d = m.d || {};
+        if (d.k === 'lp') setPos(m.from, d.x, d.y, d.f, d.m);
+        else if (d.k === 'pp') (d.a || []).forEach(([id, x, y, f, mv, lobby]) => { if (lobby && id !== net.id) setPos(id, x, y, f, mv); });
+      };
       net.on('relay', onRelay);
       this.events.once('shutdown', () => net.off('relay', onRelay));
       // Sohbet balonu: yazan oyuncunun başının üstünde birkaç saniye
@@ -96,7 +103,7 @@ export class LobbyScene extends Phaser.Scene {
 
     // Arayüz kamerası (joystick): CSS pikseli koordinat
     this.uiCam = this.cameras.add(0, 0, this.scale.width, this.scale.height).setOrigin(0, 0).setZoom(RES.k);
-    const touch = this.sys.game.device.input.touch || /[?&]joystick=1/.test(location.search);
+    const touch = isMobile() || /[?&]joystick=1/.test(location.search);   // oyuncunun seçtiği cihaz
     this.joystick = new Joystick(this, { enabled: touch, camera: this.uiCam });
     this.uiObjects.push(this.joystick.base, this.joystick.thumb);
     this.input.addPointer(2);
@@ -157,7 +164,7 @@ export class LobbyScene extends Phaser.Scene {
     const tex = (k, c) => { if (!s.textures.exists(k)) s.textures.addCanvas(k, typeof c === 'function' ? c() : c); return k; };
     const fit = (o, k) => { const sc = 1 / (s.textures.get(k).getSourceImage()._s || 1); if (o.setTileScale) o.setTileScale(sc, sc); else o.setScale(sc); return o; };
     // Gökyüzü yok: her yer çimen, kenarlarda koyu orman
-    fit(s.add.tileSprite(0, 0, LOBBY.w, LOBBY.h, tex('lobbygrass', paintGrassTile)).setOrigin(0).setDepth(-20), 'lobbygrass');
+    tiled(s, 0, 0, LOBBY.w, LOBBY.h, tex('lobbygrass', paintGrassTile), -20, 4);   // bellek dostu (TileSprite yerine)
     const edge = s.add.graphics().setDepth(-19);
     edge.fillStyle(0x0f2a12, 0.55); edge.fillRect(0, 0, LOBBY.w, FIELD.y - 30); edge.fillRect(0, FIELD.y + FIELD.h + 30, LOBBY.w, LOBBY.h);
     edge.fillRect(0, 0, FIELD.x - 30, LOBBY.h); edge.fillRect(FIELD.x + FIELD.w + 30, 0, LOBBY.w, LOBBY.h);
@@ -229,7 +236,7 @@ export class LobbyScene extends Phaser.Scene {
     if (this.hint) this.hint.setText(i18n.t(this.inZone ? (this.online && !net.isHost ? 'online.waitHost' : 'lobby.pressStart') : 'lobby.goToDoor'));
     if (this.poleHint) this.poleHint.setText(i18n.t(this.inFlag ? 'lobby.poleHintNear' : 'lobby.poleHint'));
     if (this.wardHint) this.wardHint.setText(i18n.t(this.inHat ? 'lobby.wardHintNear' : 'lobby.wardHint'));
-    if (this.player) this.player.showTag(i18n.t('ui.you'), '#ffffff');
+    if (this.player) this.player.showTag(net.profile.name || i18n.t('countries.' + this.player.flag), '#ffffff');   // "Sen" yerine adın
   }
 
   // Çevrimiçi oda: oyuncu listesi değişti (gelen/giden/bayrak)
@@ -258,7 +265,7 @@ export class LobbyScene extends Phaser.Scene {
 
   // Bayrak / bot listesi değişti
   applyState(state) {
-    if (state.myFlag && this.player) this.player.setFlag(state.myFlag);
+    if (state.myFlag && this.player) { this.player.setFlag(state.myFlag); this.refreshTexts(); }
     const want = state.botFlags || [];
     // Artık listede olmayan botları kaldır, yenileri ekle
     this.bots = this.bots.filter((b) => {
@@ -286,7 +293,7 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    const dt = Math.min(delta, 100) / 1000;
+    const dt = Math.min(delta, 250) / 1000;   // gerçek süre (kasınca ağır çekim olmasın)
     this.player.move(flagPicker.isOpen ? { x: 0, y: 0 } : this.controls.update(), dt, lobbyStand);
     if (this.online) {
       this.remotes.forEach((b) => b.netStep(dt));
@@ -294,7 +301,12 @@ export class LobbyScene extends Phaser.Scene {
       if (this.posT <= 0) {
         this.posT = 0.1;
         const p = this.player;
-        net.relay({ k: 'lp', x: Math.round(p.x), y: Math.round(p.y), f: p.facing === 'left' ? 1 : 0, m: p.isMoving ? 1 : 0 });
+        const key = `${Math.round(p.x)},${Math.round(p.y)},${p.facing},${p.isMoving}`;
+        this.lpIdle = (this.lpIdle || 0) + 0.1;
+        if (key !== this.lpKey || this.lpIdle >= 1.5) {     // sadece değişince (+ ara sıra)
+          this.lpKey = key; this.lpIdle = 0;
+          net.relay({ k: 'lp', x: Math.round(p.x), y: Math.round(p.y), f: p.facing === 'left' ? 1 : 0, m: p.isMoving ? 1 : 0 });
+        }
       }
     }
     // Başlat bölgesi: kapıdaki direğin yanına gelince "BAŞLAT" belirir (E veya buton)

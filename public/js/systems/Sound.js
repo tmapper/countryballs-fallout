@@ -44,16 +44,26 @@ const url = (name) => assetUrl(`assets/sounds/${name}.mp3`);
 const vol = (name, base, k = 1) => Math.max(0, Math.min(1, base * (LEVEL[name] ?? 1) * k));
 const tryPlay = (a) => { const p = a.play(); if (p && p.catch) p.catch(() => {}); };
 
+// Ses yumuşak geçişi. setTimeout ile (requestAnimationFrame değil): sekme arka plandayken de biter.
+// Eskiden sekme gizlenince geçiş hiç bitmiyor, eski müzik/alarm kapanmadan çalmaya devam ediyor,
+// uzun oynayınca sesler üst üste binip "cinlenme" yapıyordu.
 function fade(a, to, ms, then) {
+  clearInterval(a._fadeT);
   const from = a.volume;
   const t0 = performance.now();
-  const tick = () => {
+  a._fadeT = setInterval(() => {
     const k = Math.min(1, (performance.now() - t0) / ms);
     a.volume = Math.max(0, Math.min(1, from + (to - from) * k));
-    if (k < 1) requestAnimationFrame(tick); else if (then) then();
-  };
-  requestAnimationFrame(tick);
+    if (k >= 1) { clearInterval(a._fadeT); a._fadeT = 0; if (then) then(); }
+  }, 30);
 }
+
+// Tamamen kapat ve belleği bırak
+function kill(a) {
+  try { clearInterval(a._fadeT); a.pause(); a.removeAttribute('src'); a.load(); } catch (e) { /* yoksay */ }
+  live.delete(a);
+}
+const live = new Set();          // çalan tüm müzik/döngü sesleri (yetim kalan var mı diye kontrol)
 
 // Her ses için küçük bir havuz: her çalışta yeni Audio oluşturmak (özellikle adım sesi) kasma yapıyordu
 const pools = {};
@@ -78,6 +88,7 @@ export function playMusic(name) {
   }
   stopMusic();
   const a = new Audio(url(name));
+  live.add(a);
   a.loop = true;
   a.volume = 0;
   music = a;
@@ -90,12 +101,13 @@ export function stopMusic(ms = 600) {
   const a = music;
   music = null;
   musicName = null;
-  if (a) fade(a, 0, ms, () => a.pause());
+  if (a) fade(a, 0, ms, () => kill(a));
 }
 
 export function startLoop(name, k = 1) {
   if (loops[name]) return;
   const a = new Audio(url(name));
+  live.add(a);
   a.loop = true;
   a.volume = vol(name, SFX_VOL, k);
   loops[name] = a;
@@ -106,7 +118,7 @@ export function stopLoop(name, ms = 250) {
   const a = loops[name];
   if (!a) return;
   delete loops[name];
-  fade(a, 0, ms, () => a.pause());
+  fade(a, 0, ms, () => kill(a));
 }
 
 export function stopAllLoops() {
@@ -143,4 +155,16 @@ window.addEventListener('keydown', (e) => {
   const t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
   toggleMute();
+});
+
+// Bekçi: 2 sn'de bir, şu an çalması gerekmeyen (yetim) müzik/döngü seslerini kapat
+setInterval(() => {
+  const keep = new Set([music, ...Object.values(loops)]);
+  live.forEach((a) => { if (!keep.has(a) && !a._fadeT) kill(a); });
+}, 2000);
+// Sekme gizlenince döngü sesleri sustur, geri gelince devam et
+document.addEventListener('visibilitychange', () => {
+  const all = [music, ...Object.values(loops)].filter(Boolean);
+  if (document.hidden) all.forEach((a) => a.pause());
+  else if (!muted) all.forEach((a) => tryPlay(a));
 });

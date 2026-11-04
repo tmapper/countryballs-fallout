@@ -24,7 +24,7 @@ import { SPEED } from '../entities/CountryBall.js';
 const TASK_MIN_GAP = 1500;      // iki görev arası en az (ms): en kısa mini oyun bile bundan uzun
 const TASK_RANGE = 230;
 
-const POS_RATE = 1 / 12;       // saniyede 12 konum
+const POS_RATE = 1 / 10;       // saniyede en fazla 10 konum (sadece değişince)
 const SLACK = 90;               // ağ gecikmesi payı (menzil kontrolünde)
 
 export function installNet(GameScene) {
@@ -63,19 +63,40 @@ export function installNet(GameScene) {
     if (!this.online) return;
     this.balls.forEach((b) => { if (b.net && !b.isMe) b.netStep(dt); });
     this.posT -= dt;
+    this.idleT = (this.idleT || 0) + dt;
     if (this.posT > 0) return;
     this.posT = POS_RATE;
+    // SUNUCU TASARRUFU: konum sadece değişince gönderilir; duran oyuncu saniyede bir "buradayım" der
     const me = this.player;
-    net.relay({ k: 'p', x: Math.round(me.x), y: Math.round(me.y), f: me.facing === 'left' ? 1 : 0, m: me.isMoving ? 1 : 0 });
+    const cur = [Math.round(me.x), Math.round(me.y), me.facing === 'left' ? 1 : 0, me.isMoving ? 1 : 0];
+    const key = cur.join(',');
+    if (key !== this.lastPosKey || this.idleT >= 1) {
+      this.lastPosKey = key; this.idleT = 0;
+      net.relay({ k: 'p', x: cur[0], y: cur[1], f: cur[2], m: cur[3] });
+    }
     if (this.isHost) {
-      const bots = this.balls.filter((b) => b.brain);
-      if (bots.length) net.relay({ k: 'bp', b: bots.map((b) => [b.id, Math.round(b.x), Math.round(b.y), b.facing === 'left' ? 1 : 0, b.isMoving ? 1 : 0]) });
+      // sadece yeri değişen botlar (+ 2 sn'de bir hepsi)
+      this.botFull = (this.botFull || 0) - POS_RATE;
+      const full = this.botFull <= 0;
+      if (full) this.botFull = 2;
+      const rows = [];
+      this.balls.forEach((b) => {
+        if (!b.brain) return;
+        const r = [b.id, Math.round(b.x), Math.round(b.y), b.facing === 'left' ? 1 : 0, b.isMoving ? 1 : 0];
+        const k = r.join(',');
+        if (full || k !== b.lastSent) { b.lastSent = k; rows.push(r); }
+      });
+      if (rows.length) net.relay({ k: 'bp', b: rows });
     }
   };
 
   // ---------- Gelen mesajlar ----------
   P.onRelay = function (from, d) {
     const fromHost = net.room && from === net.room.hostId;
+    if (d.k === 'pp') {                               // sunucunun toplu konum mesajı
+      (d.a || []).forEach(([id, x, y, f, m, lobby]) => { if (!lobby && id !== net.id) this.onRelay(id, { k: 'p', x, y, f, m }); });
+      return;
+    }
     if (d.k === 'p') {
       const b = this.ball(from);
       if (b && !b.isMe && !b.brain && this.validPos(b, d)) b.net = { x: d.x, y: d.y, f: d.f ? 1 : 0, m: d.m ? 1 : 0 };
@@ -99,7 +120,8 @@ export function installNet(GameScene) {
     const last = b.netValid || { x: b.x, y: b.y, t: now - 100 };
     const dt = Math.min(2, Math.max(0.1, (now - last.t) / 1000));
     const dist = Math.hypot(x - last.x, y - last.y);
-    let ok = dist <= SPEED * 1.5 * dt + 80;
+    const mul = (b.speedMul || 1) * (b.alive ? 1 : 1.6);              // hayalet ve kurucu hız ayarı
+    let ok = dist <= SPEED * 1.5 * mul * dt + 80;
     // Katil tüneli: iki ucu da tünel olmalı
     if (!ok && b.alive && nearestTunnel(TUNNELS, last.x, last.y) && nearestTunnel(TUNNELS, x, y)) ok = true;
     // Canlılar duvarın içinde duramaz (hayaletler serbest)
@@ -115,7 +137,7 @@ export function installNet(GameScene) {
     switch (d.a) {
       case 'kill': {
         const t = this.ball(d.t);
-        if (!this.meeting && who.alive && who.role === 'impostor' && who.cooldown <= 0 && t && t.alive && near(who, t, KILL_RANGE)) this.kill(who, t);
+        if (!this.meeting && who.alive && who.role === 'impostor' && t && t.role !== 'impostor' && who.cooldown <= 0 && t.alive && near(who, t, KILL_RANGE)) this.kill(who, t);
         break;
       }
       case 'shoot': {

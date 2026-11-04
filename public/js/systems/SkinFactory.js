@@ -12,10 +12,15 @@
 //   Sprite çevrilince bayrak da ters dönmesin diye bayrağı ÖNCEDEN ters çizeriz.
 import { getFlagCanvas } from './Flags.js';
 
+// BELLEK: skin'ler yarı çözünürlükte üretilir. Bir bayrağın yürüme dokusu eskiden ~20 MB'tı (iki yön),
+// 25 kişilik maçta ~500 MB ediyordu (telefon kasıyor/çöküyordu). Top ekranda en fazla ~130 px göründüğü
+// için 0.5 ölçek gözle fark edilmez, bellek 4'te 1. Sprite ölçeği bunu telafi eder (CountryBall).
+export const SKIN_SCALE = 0.5;
+
 export function createSkinCanvas(info) {
   const cv = document.createElement('canvas');
-  cv.width = info.layers.overlay.width;
-  cv.height = info.layers.overlay.height;
+  cv.width = Math.ceil(info.layers.overlay.width * SKIN_SCALE);
+  cv.height = Math.ceil(info.layers.overlay.height * SKIN_SCALE);
   return cv;
 }
 
@@ -26,6 +31,8 @@ export function composeFrame(c, info, i, flagCode, mirrorFlag = false) {
   const f = info.frames[i];
   const b = info.bboxes[i];
   c.save();
+  c.setTransform(SKIN_SCALE, 0, 0, SKIN_SCALE, 0, 0);   // tüm çizim orijinal birimlerde, tuvale yarı boyda
+  c.imageSmoothingQuality = 'high';
   c.beginPath();
   c.rect(f.x, f.y, f.w, f.h);
   c.clip();

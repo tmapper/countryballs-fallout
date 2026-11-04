@@ -27,6 +27,7 @@ import { flagPicker } from '../ui/FlagPicker.js';
 import { saveFlag } from './Flags.js';
 import { lobbyChat } from '../ui/Chat.js';
 import { hatPicker } from '../ui/HatPicker.js';
+import { social } from '../ui/Social.js';
 import { loadHat, saveHat, botHat } from './Looks.js';
 
 let game = null;
@@ -50,6 +51,14 @@ export function initFlow(phaserGame) {
   game.events.on('lobby-flag-zone', (z) => { lobby.setFlagReady(z); roomHud.setFlagReady(z); });
   game.events.on('lobby-hat-zone', (z) => { lobby.setHatReady(z); roomHud.setHatReady(z); });
   net.profile.hat = loadHat();
+  // Arkadaş odasına katıl (arkadaş listesi ya da davet kartı)
+  social.ensure();
+  social.onJoin = (code) => {
+    if (match) { flash(i18n.t('social.busy')); return; }
+    net.connect(); net.join(code);
+  };
+  document.addEventListener('cfs-social', (e) => menu.setSocialBadge && menu.setSocialBadge(e.detail));
+  net.on('account', () => net.social());
   // Giriş yapınca alınmış şapkalar açılır: kayıtlı şapkayı sunucuya tekrar bildir
   net.on('account', () => { net.profile.hat = loadHat(); if (net.inRoom) net.setHat(net.profile.hat); else net.setProfile(); });
   lobby = new Lobby({
@@ -68,6 +77,7 @@ export function initFlow(phaserGame) {
     if (mode === 'online' && !match && game.scene.isActive('LobbyScene')) game.scene.getScene('LobbyScene').applyRoom(net.room);
   });
   net.on('start', (m) => { if (m.setup) startOnline(m.setup); });
+  net.on('kicked', () => { flash(i18n.t('online.kicked')); match = null; reveal.stop(); cutscene.stop(); result.hide(); stopScenes(); roomHud.hide(); lobbyChat.hide(); showBrowser(false); });
   net.on('hostLeft', () => { if (mode === 'online') { flash(i18n.t('online.hostLeft')); returnToRoom(); } });
   net.on('disconnected', () => { if (mode === 'online') { flash(i18n.t('online.disconnected')); showMainMenu(); } });
 }
@@ -160,7 +170,7 @@ function enterRoom() {
   playMusic('music_lobby');
   const me = net.room.players.find((p) => p.id === net.id);
   game.scene.start('LobbyScene', { online: true, myFlag: me ? me.flag : net.profile.flag, myName: net.profile.name, room: net.room });
-  roomHud.show({ onLeave: leaveRoom, onStart: hostStart, onFlag: openLobbyFlagPicker, onHat: openLobbyHatPicker });
+  roomHud.show({ onLeave: leaveRoom, onStart: hostStart, onFlag: openLobbyFlagPicker, onHat: openLobbyHatPicker, onInvite: () => social.openInvite() });
   lobbyChat.show();
   ensureFreeFlag();
 }
@@ -203,7 +213,7 @@ function startOnline(setup) {
   roomHud.hide(); lobbyChat.hide();
   const players = setup.players.map((p) => ({ ...p, me: p.id === net.id, hat: p.bot ? botHat(p.flag) : (p.hat || 'none') }));
   if (!players.some((p) => p.me)) return;
-  startWith(players, net.isHost ? 'host' : 'client');
+  startWith(players, net.isHost ? 'host' : 'client', setup.cfg || null);
 }
 
 // Yürünen lobi odası (LobbyScene) + üstündeki HTML butonlar
@@ -232,7 +242,7 @@ function buildGame(m) {
   game.scene.getScene('GameScene').events.once('create', (scene) => {
     if (match === m && !m.revealDone) scene.scene.sleep();
   });
-  game.scene.start('GameScene', { players: m.players, net: m.net });
+  game.scene.start('GameScene', { players: m.players, net: m.net, cfg: m.cfg });
 }
 
 function enterGame(m) {
@@ -267,13 +277,13 @@ export function startMatch(settings) {
 }
 
 // players: [{ id, flag, role, me, name, bot }]   netMode: 'offline' | 'host' | 'client'
-function startWith(players, netMode) {
+function startWith(players, netMode, cfg = null) {
   net.lastReward = null;
   result.hide();
   cutscene.stop();
   preloadKills();
   const me = players.find((p) => p.me);
-  const m = match = { players, net: netMode, flags: players.map((p) => p.flag), built: false, revealDone: false };
+  const m = match = { players, net: netMode, cfg, flags: players.map((p) => p.flag), built: false, revealDone: false };
   if (!game.loop.running) game.loop.wake();
   requestSkins(m.flags);
   lobby.hide();
@@ -304,6 +314,9 @@ export function playKillCutscene(clip, killerFlag, victimFlag, caption, tone) {
   // Animasyon bitince ölen tekrar "kill" sesini duyar (bu animasyon sadece ölene oynar)
   setTimeout(() => cutscene.whenIdle(() => sfx('kill')), 200);
 }
+
+// Toplantı başlarken öldürme animasyonu varsa kapat (üst üste binmesin)
+export function stopKillCutscene() { if (cutscene.busy) cutscene.stop(); }
 
 // Maç bitti: animasyon varsa bitmesini bekle, sonra sonuç ekranı
 export function gameOver(res) {

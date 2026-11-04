@@ -4,11 +4,14 @@
 // Asıl çizimi MapPainter.js yapar (Canvas). Burada o canvas'ları doku (texture)
 // yapıp doğru yerlere koyuyoruz. Katman sırası (depth): toprak -20 < duvar -19 <
 // zemin -8 < eşyalar -7 < kapı/kapaklar -6 < oyuncular (depth = y) < sis.
+import { isMobile } from '../systems/Device.js';
+import { tiled } from '../systems/Tiled.js';
+import { getQuality } from '../systems/Resolution.js';
 import { i18n } from '../systems/I18n.js';
 import { RES } from '../systems/Resolution.js';
-import { WORLD, ROOMS, CORRIDORS, TUNNELS, WALKABLE, START_POINT, WALL_FACE, WALL_THICK, BUNKER_DOOR_X, PROPS } from './BunkerMap.js';
+import { WORLD, ROOMS, CORRIDORS, TUNNELS, WALKABLE, START_POINT, WALL_FACE, WALL_THICK, MAP, PROPS } from './BunkerMap.js';
 import {
-  WALL_BANDS, FLOOR_TYPES, paintVoidTile, paintGrassTile, paintFloorTile,
+  WALL_BANDS, FLOOR_TYPES, paintVoidTile, paintSoilTile, paintGrassTile, paintFloorTile,
   paintRoomDecor, paintBunkerDoor, paintSealedDoor, paintStartPad, paintTunnelHatch,
   paintCorridorDecor, paintWallFaceTile, setTexScale, texScale
 } from './MapPainter.js';
@@ -40,11 +43,13 @@ export class MapRenderer {
     const s = this.scene;
     // Ekranda dünyanın 1 pikseli kaç piksel görünecek -> dokuları ona göre net üret
     const base = Phaser.Math.Clamp(RES.cssH / 1000, 0.5, 1.2) * RES.k;
-    const mobile = matchMedia('(pointer: coarse)').matches;
-    setTexScale(mobile ? 1 : Math.max(1, Math.min(1.5, Math.round(base * 2) / 2)));
+    const mobile = isMobile();
+    setTexScale(mobile || getQuality() === 'low' ? 1 : Math.max(1, Math.min(1.5, Math.round(base * 2) / 2)));   // Düşük grafik: harita dokuları 1x (bellek)
 
     // 1) Binanın dışı: koyu boşluk (Among Us tarzı)
-    this.fit(s.add.tileSprite(-600, -600, WORLD.w + 1200, WORLD.h + 1200, this.tex('void', paintVoidTile)).setOrigin(0).setDepth(-20), 'void');
+    // Duvarların arkası: TOPRAK (sığınak yerin altında). Bellek dostu büyük karolar (Tiled.js).
+    s.cameras.main.setBackgroundColor('#3a2a1c');
+    tiled(s, -600, -600, WORLD.w + 1200, WORLD.h + 1200, this.tex('soil', paintSoilTile), -20, 2);
 
     // 2) Duvarlar: yürünebilir alanları büyüterek katman katman çiz (gölge -> koyu -> açık kenar).
     //    Her katman TÜM dikdörtgenler için ayrı çizilir ki birleşim yerleri düzgün çıksın.
@@ -67,7 +72,7 @@ export class MapRenderer {
     WALKABLE.forEach((r) => caps.fillRect(r.x - T, r.y - WALL_FACE - T, r.w + T * 2, T));
     caps.fillStyle(0x8d97a4, 1);
     WALKABLE.forEach((r) => caps.fillRect(r.x - T + 6, r.y - WALL_FACE - T + 4, r.w + (T - 6) * 2, T - 10));
-    WALKABLE.forEach((r) => this.fit(s.add.tileSprite(r.x, r.y - WALL_FACE, r.w, WALL_FACE, faceKey).setOrigin(0).setDepth(-18.5), faceKey));
+    WALKABLE.forEach((r) => tiled(s, r.x, r.y - WALL_FACE, r.w, WALL_FACE, faceKey, -18.5, 3));
 
     // 3) Zeminler: tekrar eden doku (TileSprite)
     FLOOR_TYPES.forEach((t) => this.tex('floor_' + t, () => paintFloorTile(t)));
@@ -90,10 +95,10 @@ export class MapRenderer {
     if (opts.sealed) {
       // Bomba düştü: kapı kapalı, dışarısı kavruk. Bu nesneler GameScene'de bomba anında görünür.
       const scorch = s.add.rectangle(e.x - 40, e.y - 10, e.w + 80, e.h + 60, 0x1a0a04, 0.55).setOrigin(0).setDepth(-4).setVisible(false);
-      const door = this.fit(s.add.image(BUNKER_DOOR_X - 110, e.y - 100, this.tex('sealeddoor', paintSealedDoor)).setOrigin(0).setDepth(-3).setVisible(false), 'sealeddoor');
+      const door = this.fit(s.add.image(MAP.doorX - 110, e.y - 100, this.tex('sealeddoor', paintSealedDoor)).setOrigin(0).setDepth(-3).setVisible(false), 'sealeddoor');
       this.sealedObjs.push(scorch, door);
     } else {
-      this.fit(s.add.image(BUNKER_DOOR_X - 210, e.y - 60, this.tex('bunkerdoor', paintBunkerDoor)).setOrigin(0).setDepth(-6), 'bunkerdoor');
+      this.fit(s.add.image(MAP.doorX - 210, e.y - 60, this.tex('bunkerdoor', paintBunkerDoor)).setOrigin(0).setDepth(-6), 'bunkerdoor');
     }
     this.tex('hatch', paintTunnelHatch);
     // Tünel kapakları: Aşama 5'te Katil dışındakilere setVisible(false) yapılacak
@@ -149,7 +154,7 @@ export class MapRenderer {
   }
 
   floor(r, key) {
-    this.fit(this.scene.add.tileSprite(r.x, r.y, r.w, r.h, key).setOrigin(0).setDepth(-8), key);
+    tiled(this.scene, r.x, r.y, r.w, r.h, key, -8, 4);
   }
 
   refreshLabels() {

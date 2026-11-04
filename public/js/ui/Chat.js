@@ -43,11 +43,12 @@ export function msgHtml(flag, name, text, extra = '') {
 }
 
 class LobbyChat {
-  constructor() { this.root = null; this.open = false; this.unread = 0; }
+  // ch: 'lobby' (çevrimiçi oda) | 'ghost' (oyunda ölüler arası; yaşayanlar görmez)
+  constructor(ch = 'lobby') { this.ch = ch; this.root = null; this.open = false; this.unread = 0; this.local = false; }
 
   build() {
     const r = this.root = document.createElement('div');
-    r.className = 'lchat hidden';
+    r.className = 'lchat hidden' + (this.ch === 'ghost' ? ' ghost' : '');
     r.innerHTML = `
       <button class="lc-toggle" type="button">💬<span class="lc-badge hidden"></span></button>
       <div class="lc-box">
@@ -60,7 +61,7 @@ class LobbyChat {
     r.querySelector('.lc-toggle').addEventListener('click', () => this.setOpen(!this.open));
     r.querySelector('.lc-send').addEventListener('click', () => { const v = this.input.value.trim(); if (v) { this.send(v); this.input.value = ''; } this.input.focus(); });
     wireChatInput(this.input, (v) => this.send(v), () => {});
-    net.on('chat', (m) => { if (m.ch === 'lobby') this.receive(m); });
+    net.on('chat', (m) => { if (m.ch === this.ch && this.visible) this.receive(m); });
     // T / Enter: yazmaya başla (lobi sahnesi Enter'ı başlatma için kullanıyorsa o önce çalışır)
     window.addEventListener('keydown', (e) => {
       if (!this.visible || e.repeat) return;
@@ -72,7 +73,7 @@ class LobbyChat {
     this.texts();
   }
 
-  texts() { if (this.input) this.input.placeholder = i18n.t('chat.placeholder'); }
+  texts() { if (this.input) this.input.placeholder = i18n.t(this.ch === 'ghost' ? 'chat.ghostPlaceholder' : 'chat.placeholder'); }
 
   setOpen(on) {
     this.open = on;
@@ -87,27 +88,36 @@ class LobbyChat {
     b.classList.toggle('hidden', !this.unread);
   }
 
-  send(text) { net.chat(text, 'lobby'); }
+  send(text) {
+    if (this.local) { this.receive({ from: 'me', name: this.me ? this.me.name : '', flag: this.me ? this.me.flag : 'TR', text: String(text).slice(0, CHAT_MAX) }); return; }
+    net.chat(text, this.ch, this.ch === 'ghost');
+  }
 
   receive(m) {
     const d = document.createElement('div');
-    d.className = 'mt-msg' + (m.from === net.id ? ' mine' : '');
-    d.innerHTML = msgHtml(m.flag, m.name, m.text);
+    const mine = m.from === net.id || m.from === 'me';
+    d.className = 'mt-msg' + (mine ? ' mine' : '') + (this.ch === 'ghost' ? ' ghost' : '');
+    d.innerHTML = msgHtml(m.flag, m.name, m.text, this.ch === 'ghost' ? ' 👻' : '');
     this.list.appendChild(d);
     while (this.list.children.length > 60) this.list.firstChild.remove();
     this.list.scrollTop = this.list.scrollHeight;
-    if (!this.open && m.from !== net.id) { this.unread++; this.badge(); }
+    if (!this.open && !mine) { this.unread++; this.badge(); }
     const g = GAME;
-    if (g) g.events.emit('chat-bubble', { from: m.from, text: m.text });
+    if (g && this.ch === 'lobby') g.events.emit('chat-bubble', { from: m.from, text: m.text });
   }
 
-  show() {
+  // opts (ghost): { local: true (çevrimdışı), me: {name, flag} }
+  show(opts = {}) {
     if (!this.root) this.build();
+    this.local = !!opts.local; this.me = opts.me || null;
     this.visible = true;
     this.root.classList.remove('hidden');
     // Büyük ekranda açık başlasın, telefonda kapalı (oyunu kapatmasın)
     this.setOpen(window.innerWidth > 900 && window.innerHeight > 560);
   }
+
+  // Geçici gizle (toplantı sırasında), geçmişi silme
+  suspend(on) { if (this.root && this.visible) { this.root.classList.toggle('hidden', !!on); if (on) this.input.blur(); } }
 
   hide() {
     this.visible = false;
@@ -119,4 +129,5 @@ class LobbyChat {
   }
 }
 
-export const lobbyChat = new LobbyChat();
+export const lobbyChat = new LobbyChat('lobby');
+export const ghostChat = new LobbyChat('ghost');

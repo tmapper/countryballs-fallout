@@ -10,6 +10,7 @@
 // RES.cssW / RES.cssH : ekranın CSS boyutu (arayüz yerleşimi bununla yapılır)
 // RES.k               : CSS pikseli başına çizilen piksel
 
+import { isMobile } from './Device.js';
 export const MIN_LONG_SIDE = 1920;
 export const MAX_LONG_SIDE = 1920;   // 1080p: net ve akıcı (2K çok kasıyordu)
 export const MAX_K = 3;
@@ -18,7 +19,11 @@ export const RES = { k: 1, cssW: 800, cssH: 600 };
 // Grafik kalitesi: 'high' = 1080p, 'low' = 720p (zayıf cihazlar). Oyun içi Ayarlar'dan.
 const Q_KEY = 'cfs.quality';
 let quality = 'high';
-try { if (localStorage.getItem(Q_KEY) === 'low') quality = 'low'; } catch (e) { /* yoksay */ }
+try {
+  const q = localStorage.getItem(Q_KEY);
+  // Telefonda (ayar yapılmadıysa) Düşük ile başla: daha az kasar, pil daha az ısınır
+  if (q === 'low' || (!q && isMobile())) quality = 'low';
+} catch (e) { /* yoksay */ }
 export const getQuality = () => quality;
 export function setQuality(q) {
   quality = q === 'low' ? 'low' : 'high';
@@ -44,7 +49,7 @@ export function measure() {
   const long = Math.max(RES.cssW, RES.cssH);
   const phys = long * Math.min(3, window.devicePixelRatio || 1);
   // Telefon/tablette 1080p yeter (pil ve ısınma)
-  const mobile = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  const mobile = isMobile();
   let target = Math.max(MIN_LONG_SIDE, Math.min(mobile ? MIN_LONG_SIDE : MAX_LONG_SIDE, phys));
   if (quality === 'low') target = 1280;
   RES.k = Math.min(MAX_K, target / long);

@@ -5,6 +5,7 @@
 // tüm konumlar/boyutlar ekranın CSS pikseliyle yazılır (16px = telefonda 16px).
 // Yazılar resolution: RES.k ile çizilir ki bulanık olmasın.
 // GameScene her karede registry 'hud' = { action, ready, cooldown, tunnel } yazar.
+import { isMobile } from '../systems/Device.js';
 import { gameSettings } from '../ui/GameSettings.js';
 import { i18n } from '../systems/I18n.js';
 import { Joystick } from '../systems/Joystick.js';
@@ -62,7 +63,7 @@ export class UIScene extends Phaser.Scene {
     });
 
     // Joystick sadece dokunmatik cihazda (veya adres sonuna ?joystick=1 yazılırsa)
-    const touch = this.sys.game.device.input.touch || /[?&]joystick=1/.test(location.search);
+    const touch = isMobile() || /[?&]joystick=1/.test(location.search);   // oyuncunun seçtiği cihaz
     this.isTouch = touch;
     this.joystick = new Joystick(this, { enabled: touch });
     this.input.addPointer(2); // en fazla 3 parmak (joystick + aksiyon)
@@ -78,7 +79,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     // Sağ alt: aksiyon butonları (Öldür / Vur) ve Tünel
-    const R = small ? 46 : 54;
+    const R = (small ? 46 : 54) * (isMobile() ? 1.2 : 1);   // mobilde büyük butonlar (parmak)
     this.actionBtn = this.makeRoundButton(R, () => this.gameScene().doAction());
     this.tunnelBtn = this.makeRoundButton(R * 0.78, () => this.gameScene().useTunnel());
     this.useBtn = this.makeRoundButton(R * 0.78, () => this.gameScene().interact());
@@ -156,9 +157,12 @@ export class UIScene extends Phaser.Scene {
     const cd = this.add.text(0, -r * 0.1, '', { ...this.baseStyle, fontSize: Math.round(r * 0.62) + 'px', fontStyle: 'bold', strokeThickness: 5 }).setOrigin(0.5);
     c.add([g, icon, label, cd]);
     c.setSize(r * 2, r * 2).setInteractive(new Phaser.Geom.Circle(r, r, r), Phaser.Geom.Circle.Contains);
+    c.input.cursor = 'pointer';                       // fareyle de basılır
+    c.on('pointerover', () => { c.hover = true; });
+    c.on('pointerout', () => { c.hover = false; });
     c.on('pointerdown', (pointer, lx, ly, event) => {
       event.stopPropagation();
-      if (!c.ready) return;
+      if (!c.ready) { this.tweens.add({ targets: c, angle: { from: -6, to: 0 }, duration: 180, ease: 'Back.easeOut' }); return; }
       this.tweens.add({ targets: c, scale: { from: 0.86, to: 1 }, duration: 220, ease: 'Back.easeOut' });
       onPress();
     });
@@ -188,21 +192,24 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
+  // Buton rolüne aitse HEP görünür; kullanılamıyorsa %50 şeffaf ve basılmaz (kaybolmaz)
   setButton(b, visible, text, color, ready, cooldown, frac = 0, iconKey = '') {
-    // Görünür olunca "pop" ile büyüyerek gelir
     if (visible && !b.visible) {
-      b.setVisible(true).setScale(0.3).setAlpha(0);
-      this.tweens.add({ targets: b, scale: 1, alpha: 1, duration: 260, ease: 'Back.easeOut' });
+      b.setVisible(true).setScale(0.3);
+      b.appearing = true;
+      this.tweens.add({ targets: b, scale: 1, duration: 260, ease: 'Back.easeOut', onComplete: () => { b.appearing = false; } });
     } else if (!visible) b.setVisible(false);
     if (!visible) return;
-    if (ready && !b.wasReady) this.tweens.add({ targets: b, scale: { from: 1.15, to: 1 }, duration: 320, ease: 'Back.easeOut' });
+    if (ready && !b.wasReady && !b.appearing) this.tweens.add({ targets: b, scale: { from: 1.15, to: 1 }, duration: 320, ease: 'Back.easeOut' });
     b.wasReady = ready;
-    b.ready = ready || cooldown <= 0;
+    b.ready = !!ready && !(cooldown > 0);
+    const target = b.ready ? (b.hover ? 1 : 0.96) : 0.5;
+    b.setAlpha(b.alpha + (target - b.alpha) * 0.25);
     this.drawButton(b, color, ready, cooldown > 0 ? frac : 0);
     b.label.setText(text);
-    b.icon.setText(ICONS[iconKey] || '').setAlpha(cooldown > 0 ? 0.25 : ready ? 1 : 0.55);
+    b.icon.setText(ICONS[iconKey] || '').setAlpha(cooldown > 0 ? 0.25 : 1);
     b.cd.setText(cooldown > 0 ? String(cooldown) : '');
-    b.label.setAlpha(ready ? 1 : 0.6);
+    b.label.setAlpha(1);
   }
 
   showToast(text, color) {
@@ -225,10 +232,13 @@ export class UIScene extends Phaser.Scene {
     this.setButton(this.actionBtn, !!h.action, label, ACTION_COLORS[h.action], h.ready, h.cooldown, h.cdFrac, h.action);
     this.setButton(this.tunnelBtn, h.action === 'kill', i18n.t('actions.tunnel'), ACTION_COLORS.tunnel, h.tunnel, 0, 0, 'tunnel');
     const ul = h.useLabel || 'use';
-    this.setButton(this.useBtn, !!h.task, i18n.t('actions.' + ul), ACTION_COLORS[ul], true, 0, 0, ul);
-    this.useBtn.setPosition(h.action ? this.tunnelBtn.x : this.actionBtn.x, h.action ? this.tunnelBtn.y : this.actionBtn.y);
-    // BİLDİR: cesede yakınken, aksiyon butonunun üstünde
-    this.setButton(this.reportBtn, !!h.report, i18n.t('actions.report'), ACTION_COLORS.report, true, 0, 0, 'report');
+    const inGame = !!h.inGame, isDead = !!this.registry.get('dead');
+    // KULLAN: hep görünür (görev yanındayken parlar). Katilde tünelin solunda, şerifte tünelin yerinde.
+    this.setButton(this.useBtn, inGame, i18n.t('actions.' + ul), ACTION_COLORS[ul], !!h.task, 0, 0, ul);
+    if (h.action === 'kill') this.useBtn.setPosition(this.tunnelBtn.x - this.tunnelBtn.r - 16 - this.useBtn.r, this.tunnelBtn.y);
+    else this.useBtn.setPosition(h.action ? this.tunnelBtn.x : this.actionBtn.x, h.action ? this.tunnelBtn.y : this.actionBtn.y);
+    // BİLDİR: canlıyken hep görünür, cesede yakınken parlar
+    this.setButton(this.reportBtn, inGame && !isDead, i18n.t('actions.report'), ACTION_COLORS.report, !!h.report, 0, 0, 'report');
     this.reportBtn.setPosition(this.actionBtn.x, this.actionBtn.y - this.actionBtn.r - 16 - this.reportBtn.r);
     // SABOTAJ: sadece Katil, tünel butonunun üstünde
     this.setButton(this.sabBtn, !!h.sabotage, i18n.t('actions.sabotage'), ACTION_COLORS.sabotage, !!h.sabReady, h.sabCd || 0, h.sabFrac || 0, 'sabotage');

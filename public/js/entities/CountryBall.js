@@ -7,12 +7,14 @@
 //   - Duvar/oda çarpışmaları ve "önde/arkada" sıralama (depth = y) doğru olur
 // Görünüm: duruyorsa 'idle' (SabitDurma), yürüyorsa 'walk_r' / 'walk_l'
 import { baked, ensureIdle, hasSkin, skinKey, wantSkin } from '../systems/CharacterAtlas.js';
+import { SKIN_SCALE } from '../systems/SkinFactory.js';
 import { RES } from '../systems/Resolution.js';
 import { sfx } from '../systems/Sound.js';
 import { ensureLookTextures, ensureHatTexture, hatDef } from '../systems/Looks.js';
 
 export const SPEED = 290;        // saniyede piksel
-export const BALL_WIDTH = 96;    // dünyada topun genişliği (piksel)
+export const BALL_WIDTH = 96;
+export const GHOST_SPEED = 1.5;   // hayaletler %50 hızlı    // dünyada topun genişliği (piksel)
 
 export class CountryBall extends Phaser.GameObjects.Container {
   // opts: { isMe, role, name }
@@ -35,7 +37,7 @@ export class CountryBall extends Phaser.GameObjects.Container {
     // Gölge: konteynerin (0,0) noktası = ayak, gölge tam orada
     this.shadow = scene.add.ellipse(0, -4, BALL_WIDTH * 0.85, 18, 0x000000, 0.3);
     this.sprite = scene.add.sprite(0, 0, skinKey('idle', flag), 0);
-    this.sprite.setScale(this.scaleFactor);
+    this.sprite.setScale(this.scaleFactor / SKIN_SCALE);   // skin dokusu yarı çözünürlükte
 
     // Başının üstündeki etiket (rol testi için "Rolleri göster")
     const top = -baked.walk.ballHeight * this.scaleFactor - 6;
@@ -60,7 +62,7 @@ export class CountryBall extends Phaser.GameObjects.Container {
     this.refreshVisual();
     this.setHat(opts.hat || 'none');
     this.setDepth(y);
-    this.onLooks = (time, delta) => this.updateLooks(Math.min(delta, 100) / 1000, time);
+    this.onLooks = (time, delta) => this.updateLooks(Math.min(delta, 250) / 1000, time);
     scene.events.on('postupdate', this.onLooks);
     this.once('destroy', () => scene.events.off('postupdate', this.onLooks));
     this.updateLooks(0, 0);
@@ -95,7 +97,7 @@ export class CountryBall extends Phaser.GameObjects.Container {
     if (!info || !info.eyes) return;
     const fi = Math.min(info.eyes.length - 1, Math.max(0, Number(this.sprite.frame && this.sprite.frame.name) || 0));
     const p = info.pivot, sp = this.sprite, flip = sp.flipX ? -1 : 1;
-    const sx = sp.scaleX, sy = sp.scaleY;
+    const sx = sp.scaleX * SKIN_SCALE, sy = sp.scaleY * SKIN_SCALE;   // kare birimi -> dünya
     const L = (u, v) => [sp.x + (u - p.x) * sx * flip, sp.y + (v - p.y) * sy];
     const pair = info.eyes[fi];
     const look = this.isMoving ? this.lookY * 5 : 0;
@@ -169,9 +171,17 @@ export class CountryBall extends Phaser.GameObjects.Container {
   // dir: yön vektörü (uzunluk <= 1), dt: geçen süre (saniye)
   // canStand(x, y): o noktaya basılabilir mi? (duvar kontrolü). Verilmezse serbest hareket.
   move(dir, dt, canStand = () => true) {
+    // Büyük adımı küçük parçalara böl: kasma anında duvarın/eşyanın içinden geçmesin
+    if (dt > 0.04) {
+      const n = Math.ceil(dt / 0.04);
+      let moved = false;
+      for (let i = 0; i < n; i++) moved = this.move(dir, dt / n, canStand) || moved;
+      return moved;
+    }
     this.lookY = dir.y;
-    const nx = this.x + dir.x * SPEED * dt;
-    const ny = this.y + dir.y * SPEED * dt;
+    const sp = SPEED * (this.speedMul || 1) * (this.alive ? 1 : GHOST_SPEED);   // hayalet daha hızlı; kurucu hız ayarı
+    const nx = this.x + dir.x * sp * dt;
+    const ny = this.y + dir.y * sp * dt;
     const ox = this.x, oy = this.y;
     // X ve Y'yi AYRI AYRI dene: duvara çapraz çarpınca durmak yerine duvar boyunca kayarız
     if (canStand(nx, this.y)) this.x = nx;
@@ -210,7 +220,7 @@ export function staticBall(scene, flag, hat, eyeStyle, scale) {
   ensureIdle(scene, flag); ensureLookTextures(scene);
   const info = baked.idle, cx = info.fw / 2, cy = info.fh / 2;
   const c = scene.add.container(0, 0);
-  const s = scene.add.sprite(0, 0, skinKey('idle', flag), 0).setScale(scale);
+  const s = scene.add.sprite(0, 0, skinKey('idle', flag), 0).setScale(scale / SKIN_SCALE);
   c.add(s);
   info.eyes[0].map((e) => e).sort((a, b) => a[0] - b[0]).forEach((e, i) => {
     c.add(scene.add.image((e[0] - cx) * scale, (e[1] - cy) * scale, 'eye_' + eyeStyle).setDisplaySize(e[2] * scale, e[3] * scale).setFlipX(i === 1));

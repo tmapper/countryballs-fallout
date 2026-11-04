@@ -6,6 +6,7 @@ import { i18n } from '../systems/I18n.js';
 import { getVolumes, setMusicVolume, setSfxVolume, isMuted, toggleMute, sfx } from '../systems/Sound.js';
 import { getQuality, setQuality } from '../systems/Resolution.js';
 import { releaseGameKeys } from './Chat.js';
+import { setDevice, isMobile } from '../systems/Device.js';
 
 class GameSettings {
   constructor() { this.root = null; this.isOpen = false; }
@@ -20,6 +21,7 @@ class GameSettings {
       <div class="gs-row"><span data-t="ui.mute"></span><button class="gs-tog gs-mute" type="button"></button></div>
       <div class="gs-row"><span data-t="ui.language"></span><div class="gs-seg gs-lang"><button type="button" data-v="tr">Türkçe</button><button type="button" data-v="en">English</button></div></div>
       <div class="gs-row"><span data-t="ui.quality"></span><div class="gs-seg gs-q"><button type="button" data-v="high" data-t="ui.qHigh"></button><button type="button" data-v="low" data-t="ui.qLow"></button></div></div>
+      <div class="gs-row"><span data-t="ui.device"></span><div class="gs-seg gs-dev"><button type="button" data-v="mobile">📱</button><button type="button" data-v="pc">🖥</button></div></div>
       <div class="gs-row gs-fsrow"><span data-t="ui.fullscreen"></span><button class="gs-tog gs-fs" type="button"></button></div>
       <div class="gs-foot"><button class="gs-btn gs-resume" type="button" data-t="ui.resume"></button><button class="gs-btn danger gs-leave" type="button" data-t="ui.backToLobby"></button></div>
     </div>`;
@@ -35,6 +37,7 @@ class GameSettings {
     q('.gs-mute').addEventListener('click', () => { toggleMute(); this.render(); });
     r.querySelectorAll('.gs-lang button').forEach((b) => b.addEventListener('click', () => { i18n.setLanguage(b.dataset.v); this.render(); }));
     r.querySelectorAll('.gs-q button').forEach((b) => b.addEventListener('click', () => { setQuality(b.dataset.v); this.render(); }));
+    r.querySelectorAll('.gs-dev button').forEach((b) => b.addEventListener('click', () => { setDevice(b.dataset.v); this.render(); this.msgDev = true; }));
     q('.gs-fs').addEventListener('click', () => {
       const d = document;
       if (d.fullscreenElement) d.exitFullscreen && d.exitFullscreen();
@@ -55,6 +58,7 @@ class GameSettings {
     q('.gs-mute').textContent = i18n.t(m ? 'ui.on' : 'ui.off'); q('.gs-mute').classList.toggle('on', m);
     r.querySelectorAll('.gs-lang button').forEach((b) => b.classList.toggle('on', b.dataset.v === i18n.lang));
     r.querySelectorAll('.gs-q button').forEach((b) => b.classList.toggle('on', b.dataset.v === getQuality()));
+    r.querySelectorAll('.gs-dev button').forEach((b) => b.classList.toggle('on', b.dataset.v === (isMobile() ? 'mobile' : 'pc')));
     const fs = !!document.fullscreenElement;
     q('.gs-fsrow').classList.toggle('hidden', !document.fullscreenEnabled);
     q('.gs-fs').textContent = i18n.t(fs ? 'ui.on' : 'ui.off'); q('.gs-fs').classList.toggle('on', fs);

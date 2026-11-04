@@ -14,7 +14,8 @@ export const FIRST_SABOTAGE_DELAY = 20;  // maç başında ilk sabotaj için bek
 export const FIX_RANGE = 120;            // tamir noktasına bu kadar yakın olunca tamir edilebilir
 export const BOT_FIX_TIME = 1.6;         // bot tamir noktasında bu kadar durunca tamir eder
 
-const station = (id) => { const s = STATIONS.find((x) => x.id === id); return { x: s.x, y: s.y, room: s.room }; };
+// İstasyon nesnesinin KENDİSİ (kopya değil): harita değişince tamir noktası da taşınır
+const station = (id) => STATIONS.find((x) => x.id === id);
 
 export const SABOTAGES = {
   lights:  { time: 0,  fix: station('levers_electrical'), fixers: 1 },
