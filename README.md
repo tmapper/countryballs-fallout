@@ -22,6 +22,11 @@ npm start          # http://localhost:3000
 - **Botlar**: odalar arasında koridorlardan gezer (`systems/BotBrain.js`)
 - Duran karakter `SabitDurma` karesiyle, yürüyen karakter yürüme klibiyle gösterilir
 
+## Sürüm 0.9.15: Joystick donma düzeltmesi, çıkış butonu, joystik resetle
+- **Görev sonrası joystick donması**: görev paneli ekranı kapladığı için parmak panelin üstünde kalkınca oyun "parmak kalktı" olayını almıyor, joystick eski parmağa bağlı kalıp yeni dokunuşları yok sayıyordu. Artık yeni dokunuş eskisini bırakıp joystick'i devralır (`systems/Joystick.js > onDown`), görev açılırken ve kapanırken joystick kesin sıfırlanır (`GameScene.releaseControls`). Görev tamamlanırken bir hata çıksa bile hareket kilidi açılır (`ui/TaskPanel.js`).
+- **Joystik resetle**: sadece mobilde, sağ üstte küçük buton (`UIScene.resetControls`). Joystick, basılı tuşlar ve hareket kilidini sıfırlar.
+- **Çıkış**: Ayarlar penceresinde ve ana menüde ÇIKIŞ butonu (`systems/ExitGame.js`). EXE'de pencereyi kapatır, APK'da Capacitor App eklentisi varsa uygulamayı kapatır, tarayıcıda sekmeyi kapatmayı hatırlatır.
+
 ## Sürüm 0.9.14: Gerçek tarihi bayraklar + uzaktan sunucu adresi
 **Tarihi bayraklar**: 12 bayrak artık `public/assets/flags/<KOD>.webp` resimlerinden çizilir (`Flags.js > loadFlagImages`, açılışta yüklenir). Resim bulunamazsa eski kodla çizilmiş hali yedek olur. Bayrak değiştirmek için aynı adlı 900x600 webp'yi değiştirmen yeter.
 

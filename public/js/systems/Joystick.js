@@ -36,10 +36,14 @@ export class Joystick {
   }
 
   onDown(pointer) {
-    if (!this.enabled || this.pointerId !== null) return;
+    if (!this.enabled) return;
     const p = this.pos(pointer);
     // Sadece ekranın sol yarısı joystick alanı
     if (p.x > RES.cssW * 0.5) return;
+    // DONMA DÜZELTMESİ: görev paneli gibi bir katmanın üstünde parmak kalkınca oyun "kalktı" olayını
+    // göremiyor ve joystick eski parmağa bağlı kalıp yeni dokunuşları yok sayıyordu. Artık yeni
+    // dokunuş her zaman eskisini bırakıp joystick'i devralır.
+    if (this.pointerId !== null) this.reset();
     this.pointerId = pointer.id;
     this.origin = new Phaser.Math.Vector2(p.x, p.y);
     this.base.setPosition(p.x, p.y).setVisible(true);

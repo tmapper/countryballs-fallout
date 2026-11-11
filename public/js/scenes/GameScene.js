@@ -244,6 +244,7 @@ export class GameScene extends Phaser.Scene {
     const t = this.nearTask();
     if (!t) { if (this.nearEmergency()) this.pressEmergency(); return; }
     this.taskOpen = true;
+    this.releaseControls();   // panel açılırken parmak/tuş durumu temiz olsun (panel üstünde parmak kalkınca olay kaybolur)
     this.taskPanel.open(t.type, { onDone: () => this.completeTask(t), onClose: () => { this.taskOpen = false; this.releaseControls(); } });
   }
 
@@ -583,10 +584,10 @@ export class GameScene extends Phaser.Scene {
   // Görev/panel kapanınca: tüm sahnelerde basılı tuşları ve joystick'i bırak (takılı kalıp yürüyememe hatası)
   releaseControls() {
     this.game.scene.getScenes(true).forEach((sc) => { try { sc.input.keyboard.resetKeys(); } catch (e) { /* yoksay */ } });
-    // Joystick'i KÖRÜ KÖRÜNE bırakma: başparmak hâlâ üstündeyse bırakmak "donma" yapıyordu.
-    // Sadece parmak gerçekten kalktıysa bırakılır (check).
+    // Joystick'i kesin bırak: panel açıkken parmak kalkma olayı kaybolabildiği için "basılı" bilgisi güvenilmez.
+    // Joystick artık yeni dokunuşu devraldığı için (Joystick.onDown) bırakmak donma yapmaz.
     const ui = this.scene.get('UIScene');
-    if (ui && ui.joystick && ui.joystick.check) ui.joystick.check();
+    if (ui && ui.joystick && ui.joystick.reset) ui.joystick.reset();
     this.unstick(this.player);
   }
 

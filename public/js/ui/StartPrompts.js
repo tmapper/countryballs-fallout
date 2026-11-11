@@ -6,19 +6,25 @@ import { i18n } from '../systems/I18n.js';
 import { getDevice, setDevice, applyDeviceClass } from '../systems/Device.js';
 
 export const UPDATE = {
-  id: '0.9.14',
+  id: '0.9.15',
   tr: {
     title: 'Yeni Güncelleme!',
     items: [
-      '🚩 12 tarihi bayrak artık gerçek bayrak resimleriyle çiziliyor: Osmanlı, Britanya İmparatorluğu, Roma, Kutsal Roma, Bizans, SSCB, Japon İmparatorluğu, Fransa Krallığı, Rus İmparatorluğu, Bulgar Krallığı, İspanya İmparatorluğu, Ceneviz',
-      '🌐 Sunucu adresi artık uzaktan güncellenebiliyor: sunucu değişince uygulamayı yeniden indirmen gerekmez'
+      '🛠 Görev yaptıktan sonra joystick\'in donması düzeltildi',
+      '🎮 Mobilde sağ üstte küçük "Joystik resetle" butonu: joystick takılırsa basman yeter',
+      '⏻ Ayarlar\'a ve ana menüye ÇIKIŞ butonu eklendi',
+      '🚩 12 tarihi bayrak artık gerçek bayrak resimleriyle çiziliyor',
+      '🌐 Sunucu adresi uzaktan güncellenebiliyor: sunucu değişince uygulamayı yeniden indirmen gerekmez'
     ]
   },
   en: {
     title: 'New Update!',
     items: [
-      '🚩 The 12 historical flags are now drawn from real flag images: Ottoman, British Empire, Rome, Holy Roman, Byzantine, USSR, Japanese Empire, Kingdom of France, Russian Empire, Bulgarian Kingdom, Spanish Empire, Genoa',
-      '🌐 The server address can now be updated remotely: no need to re-download the app when the server changes'
+      '🛠 Fixed the joystick freezing after finishing a task',
+      '🎮 Small "Reset joystick" button at the top right on mobile: tap it if the joystick gets stuck',
+      '⏻ Added an EXIT button to Settings and the main menu',
+      '🚩 The 12 historical flags are now drawn from real flag images',
+      '🌐 The server address can be updated remotely: no re-download when the server changes'
     ]
   }
 };

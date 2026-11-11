@@ -78,6 +78,15 @@ export class UIScene extends Phaser.Scene {
       });
     }
 
+    // Mobil: küçük "Joystik resetle" butonu (joystick takılırsa basılır)
+    this.joyResetBtn = null;
+    if (touch) {
+      this.joyResetBtn = this.add.text(0, small ? 126 : 146, '', { ...style, fontSize: '12px', strokeThickness: 0, backgroundColor: 'rgba(40,60,90,0.85)', padding: { x: 8, y: 5 } })
+        .setOrigin(1, 0).setInteractive().setDepth(600);
+      this.joyResetBtn.on('pointerdown', (pointer, lx, ly, event) => event.stopPropagation());
+      this.joyResetBtn.on('pointerup', () => this.resetControls());
+    }
+
     // Sağ alt: aksiyon butonları (Öldür / Vur) ve Tünel
     const R = (small ? 46 : 54) * (isMobile() ? 1.2 : 1);   // mobilde büyük butonlar (parmak)
     this.actionBtn = this.makeRoundButton(R, () => this.gameScene().doAction());
@@ -127,6 +136,15 @@ export class UIScene extends Phaser.Scene {
   }
 
   gameScene() { return this.scene.get('GameScene'); }
+
+  // Joystik resetle: joystick, basılı tuşlar ve hareket kilidi sıfırlanır
+  resetControls() {
+    if (this.joystick) this.joystick.reset();
+    try { this.input.keyboard.resetKeys(); } catch (e) { /* yoksay */ }
+    const g = this.gameScene();
+    if (g && g.releaseControls) g.releaseControls();
+    this.game.events.emit('toast', i18n.t('ui.joyResetDone'), '#6be38a');
+  }
 
   toggleInfo() {
     this.infoOpen = !this.infoOpen;
@@ -302,6 +320,7 @@ export class UIScene extends Phaser.Scene {
     this.lobbyBtn.x = W - 16;
     this.rolesBtn.x = W - 16;
     if (this.fsBtn) this.fsBtn.x = W - 16;
+    if (this.joyResetBtn) this.joyResetBtn.x = W - 16;
     const a = this.actionBtn, t = this.tunnelBtn;
     a.setPosition(W - 24 - a.r, H - 24 - a.r);
     t.setPosition(a.x - a.r - 18 - t.r, H - 24 - t.r);
@@ -314,6 +333,7 @@ export class UIScene extends Phaser.Scene {
     this.applyInfo();
     this.help.setText(this.isTouch ? i18n.t('ui.controlsMobile') : i18n.t('ui.controlsPc'));
     this.lobbyBtn.setText('⚙ ' + i18n.t('ui.settings'));
+    if (this.joyResetBtn) this.joyResetBtn.setText('🎮 ' + i18n.t('ui.joyReset'));
     this.rolesBtn.setText(`${i18n.t('ui.showRoles')}: ${this.registry.get('showRoles') ? i18n.t('ui.on') : i18n.t('ui.off')}`);
     const role = this.registry.get('role');
     const dead = !!this.registry.get('dead');

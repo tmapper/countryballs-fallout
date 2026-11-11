@@ -2,6 +2,7 @@
 // GameSettings.js - Oyun içi Ayarlar paneli (⚙ butonu ya da Esc)
 // ============================================================
 // Müzik / efekt sesi, sessiz, dil, grafik kalitesi, tam ekran, lobiye dön.
+import { exitGame } from '../systems/ExitGame.js';
 import { i18n } from '../systems/I18n.js';
 import { getVolumes, setMusicVolume, setSfxVolume, isMuted, toggleMute, sfx } from '../systems/Sound.js';
 import { getQuality, setQuality } from '../systems/Resolution.js';
@@ -23,13 +24,14 @@ class GameSettings {
       <div class="gs-row"><span data-t="ui.quality"></span><div class="gs-seg gs-q"><button type="button" data-v="high" data-t="ui.qHigh"></button><button type="button" data-v="low" data-t="ui.qLow"></button></div></div>
       <div class="gs-row"><span data-t="ui.device"></span><div class="gs-seg gs-dev"><button type="button" data-v="mobile">📱</button><button type="button" data-v="pc">🖥</button></div></div>
       <div class="gs-row gs-fsrow"><span data-t="ui.fullscreen"></span><button class="gs-tog gs-fs" type="button"></button></div>
-      <div class="gs-foot"><button class="gs-btn gs-resume" type="button" data-t="ui.resume"></button><button class="gs-btn danger gs-leave" type="button" data-t="ui.backToLobby"></button></div>
+      <div class="gs-foot"><button class="gs-btn gs-resume" type="button" data-t="ui.resume"></button><button class="gs-btn danger gs-leave" type="button" data-t="ui.backToLobby"></button><button class="gs-btn danger gs-exit" type="button" data-t="ui.exit"></button></div>
     </div>`;
     document.body.appendChild(r);
     const q = (s) => r.querySelector(s);
     r.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (e.target === r) this.close(); });
     q('.gs-x').addEventListener('click', () => this.close());
     q('.gs-resume').addEventListener('click', () => this.close());
+    q('.gs-exit').addEventListener('click', () => exitGame());
     q('.gs-leave').addEventListener('click', () => { this.close(); if (this.onLeave) this.onLeave(); });
     q('.gs-music').addEventListener('input', (e) => { setMusicVolume(e.target.value / 100); this.render(); });
     q('.gs-sfx').addEventListener('input', (e) => { setSfxVolume(e.target.value / 100); this.render(); });

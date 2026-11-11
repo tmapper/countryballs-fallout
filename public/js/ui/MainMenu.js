@@ -7,6 +7,7 @@
 //   menu.show({ onOnline, onCreate, onSolo })   menu.hide()
 // İsteğe bağlı görseller (yoksa kodla çizilir): assets/menu/menu_bg.jpg, assets/menu/logo.png
 import { social } from './Social.js';
+import { exitGame } from '../systems/ExitGame.js';
 import { shelterPass } from './ShelterPass.js';
 import { passStatus } from '../systems/Pass.js';
 import { i18n } from '../systems/I18n.js';
@@ -28,7 +29,8 @@ const ITEMS = [
   { act: 'pass', key: 'menu.pass', icon: '🎟' },
   { act: 'solo', key: 'menu.solo', icon: '◎' },
   { act: 'settings', key: 'menu.settings', icon: '⚙' },
-  { act: 'howto', key: 'menu.howto', icon: '?' }
+  { act: 'howto', key: 'menu.howto', icon: '?' },
+  { act: 'exit', key: 'menu.exit', icon: '⏻' }
 ];
 
 export class MainMenu {
@@ -162,6 +164,7 @@ export class MainMenu {
   act(a) {
     if (a === 'settings') { this.openModal('settings'); return; }
     if (a === 'howto') { this.openModal('howto'); return; }
+    if (a === 'exit') { exitGame(); return; }
     if (a === 'pass') {
       const open = () => shelterPass.open();
       if (!net.account) { this.authPending = open; this.openAuth('login'); return; }
