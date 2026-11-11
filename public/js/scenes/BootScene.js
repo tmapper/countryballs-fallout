@@ -8,6 +8,7 @@ import { loadRoleMeta } from '../ui/RoleReveal.js';
 import { loadKillMeta } from '../ui/KillCutscene.js';
 import { showMainMenu } from '../systems/GameFlow.js';
 import { loadPropImages } from '../map/PropImages.js';
+import { loadFlagImages } from '../systems/Flags.js';
 import { RES } from '../systems/Resolution.js';
 
 export class BootScene extends Phaser.Scene {
@@ -23,7 +24,7 @@ export class BootScene extends Phaser.Scene {
       .then(([tr, en]) => {
         i18n.init({ tr, en });
         msg.setText(i18n.t('ui.loading'));
-        return Promise.all([loadCharacters(), loadRoleMeta(), loadKillMeta(), loadPropImages()]);
+        return Promise.all([loadCharacters(), loadRoleMeta(), loadKillMeta(), loadPropImages(), loadFlagImages()]);
       })
       .then(() => {
         msg.setVisible(false);

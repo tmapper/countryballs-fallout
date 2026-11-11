@@ -5,6 +5,8 @@
 // ki 2K ekranda ve rol animasyonunda net görünsün. İleride gerçek resim kullanmak
 // istersen sadece getFlagCanvas() fonksiyonunu değiştirmen yeter.
 
+import { assetUrl } from './Assets.js';
+
 const W = 450, H = 300, HD = 2;
 const STORAGE_KEY = 'cfs_flag';
 
@@ -159,8 +161,117 @@ const DRAW = {
     }
     c.stroke();
     circle(c, W / 2, H / 2, 6, '#000080');
+  },
+
+  // ---------- TARİHİ BAYRAKLAR (Sığınak Bileti kasalarından çıkar) ----------
+  OTT: (c) => {                                     // Osmanlı İmparatorluğu
+    c.fillStyle = '#e30a17'; c.fillRect(0, 0, W, H);
+    circle(c, W * 0.38, H / 2, H * 0.25, '#fff');
+    circle(c, W * 0.43, H / 2, H * 0.2, '#e30a17');
+    star(c, W * 0.56, H / 2, H * 0.13, '#fff', 8, 0.55, 0);
+  },
+  BRE: (c) => {                                     // Britanya İmparatorluğu (Red Ensign)
+    c.fillStyle = '#c8102e'; c.fillRect(0, 0, W, H);
+    c.save(); c.beginPath(); c.rect(0, 0, W / 2, H / 2); c.clip(); c.scale(0.5, 0.5); DRAW.GB(c); c.restore();
+    c.strokeStyle = '#fff'; c.lineWidth = 3; c.strokeRect(1.5, 1.5, W / 2 - 3, H / 2 - 3);
+  },
+  ROM: (c) => {                                     // Roma İmparatorluğu (SPQR)
+    c.fillStyle = '#8c0b14'; c.fillRect(0, 0, W, H);
+    c.strokeStyle = '#f2c14e'; c.lineWidth = 8; c.strokeRect(14, 14, W - 28, H - 28);
+    c.fillStyle = '#f2c14e'; c.font = 'bold 104px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('SPQR', W / 2, H / 2 + 4);
+    c.textAlign = 'start'; c.textBaseline = 'alphabetic';
+  },
+  HRE: (c) => {                                     // Kutsal Roma İmparatorluğu (çift başlı kartal)
+    c.fillStyle = '#fcd116'; c.fillRect(0, 0, W, H);
+    const k = 1.35, cx = W / 2, cy = H / 2 + 6;
+    c.fillStyle = '#111'; c.strokeStyle = '#111'; c.lineCap = 'round';
+    const poly = (pts, m) => { c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(cx + m * x * k, cy + y * k) : c.moveTo(cx + m * x * k, cy + y * k))); c.closePath(); c.fill(); };
+    [-1, 1].forEach((m) => {
+      poly([[-22, -5], [-90, -45], [-82, -10], [-90, 10], [-72, 28], [-76, 48], [-50, 40], [-40, 62], [-22, 38]].map(([x, y]) => [-x, y]), m);
+      c.lineWidth = 13 * k; c.beginPath(); c.moveTo(cx + m * 8 * k, cy - 25 * k); c.lineTo(cx + m * 32 * k, cy - 58 * k); c.stroke();
+      c.beginPath(); c.arc(cx + m * 34 * k, cy - 62 * k, 11 * k, 0, Math.PI * 2); c.fill();
+      poly([[44, -66], [60, -58], [44, -56]], m);
+    });
+    poly([[0, -30], [25, -10], [20, 40], [0, 60], [-20, 40], [-25, -10]], 1);
+    poly([[-14, 45], [0, 85], [14, 45]], 1);
+    c.fillStyle = '#d62612'; c.beginPath(); c.arc(cx, cy + 4 * k, 9 * k, 0, Math.PI * 2); c.fill();
+  },
+  BYZ: (c) => {                                     // Bizans İmparatorluğu
+    c.fillStyle = '#6b1a3a'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#f2c14e'; c.fillRect(W / 2 - 14, 0, 28, H); c.fillRect(0, H / 2 - 14, W, 28);
+    c.font = 'bold 70px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    [[W * 0.25, H * 0.25], [W * 0.75, H * 0.25], [W * 0.25, H * 0.75], [W * 0.75, H * 0.75]].forEach(([x, y]) => c.fillText('β', x, y));
+    c.textAlign = 'start'; c.textBaseline = 'alphabetic';
+  },
+  SOV: (c) => {                                     // SSCB
+    c.fillStyle = '#cc0000'; c.fillRect(0, 0, W, H);
+    const g = '#ffd700', cx = W * 0.3, cy = H * 0.44;
+    c.save(); c.translate(cx, cy); c.scale(1.4, 1.4); c.translate(-cx, -cy);
+    c.strokeStyle = g; c.fillStyle = g; c.lineCap = 'round'; c.lineWidth = 9;
+    c.beginPath(); c.moveTo(cx - 36, cy + 46); c.lineTo(cx + 30, cy - 22); c.stroke();                       // çekiç sapı
+    c.save(); c.translate(cx + 26, cy - 26); c.rotate(-Math.PI / 4); c.fillRect(-26, -10, 52, 18); c.restore(); // çekiç başı
+    c.lineWidth = 8; c.beginPath(); c.arc(cx + 2, cy + 8, 40, Math.PI * 0.9, Math.PI * 2.05); c.stroke();     // orak
+    c.beginPath(); c.moveTo(cx + 36, cy + 26); c.lineTo(cx + 12, cy + 52); c.stroke();
+    star(c, cx, cy - 66, 22, g, 5, 0.4, 0);
+    c.restore();
+  },
+  JPE: (c) => {                                     // Japon İmparatorluğu (16 ışınlı doğan güneş)
+    c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
+    const cx = W * 0.4, cy = H / 2;
+    for (let i = 0; i < 16; i += 2) {
+      c.fillStyle = '#bc002d'; c.beginPath(); c.moveTo(cx, cy);
+      c.arc(cx, cy, W, (i * Math.PI) / 8, ((i + 1) * Math.PI) / 8); c.closePath(); c.fill();
+    }
+    circle(c, cx, cy, H * 0.17, '#bc002d'); circle(c, cx, cy, H * 0.12, '#bc002d');
+  },
+  FRK: (c) => {                                     // Fransız Krallığı (zambak)
+    c.fillStyle = '#0a3a8c'; c.fillRect(0, 0, W, H);
+    const s = 105, cx = W / 2, cy = H / 2 - 12; c.fillStyle = '#f2c14e';
+    c.beginPath(); c.moveTo(cx, cy - s); c.bezierCurveTo(cx + s * 0.35, cy - s * 0.55, cx + s * 0.3, cy - s * 0.1, cx, cy + s * 0.15); c.bezierCurveTo(cx - s * 0.3, cy - s * 0.1, cx - s * 0.35, cy - s * 0.55, cx, cy - s); c.fill();
+    [-1, 1].forEach((m) => { c.beginPath(); c.moveTo(cx + m * s * 0.05, cy + s * 0.1); c.bezierCurveTo(cx + m * s * 0.2, cy - s * 0.35, cx + m * s * 0.75, cy - s * 0.45, cx + m * s * 0.85, cy - s * 0.05); c.bezierCurveTo(cx + m * s * 0.9, cy + s * 0.2, cx + m * s * 0.55, cy + s * 0.3, cx + m * s * 0.25, cy + s * 0.15); c.closePath(); c.fill(); });
+    c.fillRect(cx - s * 0.5, cy + s * 0.2, s, s * 0.13);
+    c.beginPath(); c.moveTo(cx - s * 0.2, cy + s * 0.33); c.lineTo(cx + s * 0.2, cy + s * 0.33); c.lineTo(cx + s * 0.32, cy + s * 0.72); c.quadraticCurveTo(cx, cy + s * 0.5, cx - s * 0.32, cy + s * 0.72); c.closePath(); c.fill();
+  },
+  RUE: (c) => stripesH(c, ['#111', '#ffd700', '#fff']),   // Rus İmparatorluğu (siyah-sarı-beyaz)
+  BGK: (c) => {                                     // Bulgar Krallığı
+    stripesH(c, ['#fff', '#00966e', '#d62612']);
+    c.fillStyle = '#f2c14e'; c.fillRect(28, 46, 70, 22);
+    [[28, 46], [57, 46], [86, 46]].forEach(([x, y]) => { c.beginPath(); c.moveTo(x, y); c.lineTo(x + 6, y - 22); c.lineTo(x + 12, y); c.closePath(); c.fill(); });
+  },
+  ESE: (c) => {                                     // İspanya İmparatorluğu (Burgonya haçı)
+    c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
+    c.strokeStyle = '#c60b1e'; c.lineWidth = 30; c.lineCap = 'butt';
+    c.beginPath(); c.moveTo(0, 0); c.lineTo(W, H); c.moveTo(W, 0); c.lineTo(0, H); c.stroke();
+    c.fillStyle = '#c60b1e';
+    for (let i = 1; i <= 7; i++) {                  // budaklı gövde
+      [[i / 8, i / 8, 1], [1 - i / 8, i / 8, -1]].forEach(([u, v, d]) => {
+        c.save(); c.translate(u * W, v * H); c.rotate(d * Math.atan2(H, W) + Math.PI / 2); c.fillRect(-3, -24, 6, 48); c.restore();
+      });
+    }
+  },
+  GEN: (c) => {                                     // Ceneviz Cumhuriyeti (Aziz Yorgi haçı)
+    c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#d4002a'; c.fillRect(W / 2 - 24, 0, 48, H); c.fillRect(0, H / 2 - 24, W, 48);
   }
 };
+
+// Tarihi bayraklar: kasadan çıkar. Nadirlik sunucudaki HFLAGS ile AYNI olmalı.
+export const HIST_RARITY = { OTT: 'legendary', BRE: 'legendary', ROM: 'legendary', HRE: 'epic', BYZ: 'epic', SOV: 'epic', JPE: 'epic', FRK: 'epic', RUE: 'epic', BGK: 'rare', ESE: 'rare', GEN: 'rare' };
+export const HIST_FLAGS = Object.keys(HIST_RARITY);
+export const ALL_FLAGS = [...FLAG_LIST, ...HIST_FLAGS];
+
+// Tarihi bayraklar artık gerçek resimlerden çizilir: assets/flags/<KOD>.webp (900x600).
+// Resim yüklenemezse yukarıdaki kodla çizilmiş eski hali yedek olarak kullanılır.
+const FLAG_IMG = {};
+export function loadFlagImages() {
+  return Promise.all(HIST_FLAGS.map((code) => new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => { FLAG_IMG[code] = img; delete cache[code]; resolve(); };
+    img.onerror = () => resolve();      // yedek çizim kullanılır
+    img.src = assetUrl(`assets/flags/${code}.webp`);
+  })));
+}
 
 export function getFlagCanvas(code) {
   const key = DRAW[code] ? code : 'NONE';
@@ -169,7 +280,8 @@ export function getFlagCanvas(code) {
     cv.width = W * HD; cv.height = H * HD;
     const c = cv.getContext('2d');
     c.scale(HD, HD);
-    DRAW[key](c);
+    if (FLAG_IMG[key]) c.drawImage(FLAG_IMG[key], 0, 0, W, H);
+    else DRAW[key](c);
     cache[key] = cv;
   }
   return cache[key];
@@ -191,7 +303,7 @@ export function getFlagThumb(code, w = 60, h = 40) {
 export function getSavedFlag() {
   try {
     const f = localStorage.getItem(STORAGE_KEY);
-    if (FLAG_LIST.includes(f)) return f;
+    if (ALL_FLAGS.includes(f)) return f;
   } catch (e) { /* yoksay */ }
   return 'TR';
 }

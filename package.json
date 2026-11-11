@@ -1,11 +1,12 @@
 {
   "name": "countryballs-fallout-suspects",
-  "version": "0.1.0",
+  "version": "0.9.14",
   "description": "Countryballs: Fallout Suspects - 2D çok oyunculu sosyal çıkarım oyunu",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "node --watch server/index.js"
+    "dev": "node --watch server/index.js",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {}
 }

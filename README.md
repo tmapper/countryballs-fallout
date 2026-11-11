@@ -22,6 +22,41 @@ npm start          # http://localhost:3000
 - **Botlar**: odalar arasında koridorlardan gezer (`systems/BotBrain.js`)
 - Duran karakter `SabitDurma` karesiyle, yürüyen karakter yürüme klibiyle gösterilir
 
+## Sürüm 0.9.14: Gerçek tarihi bayraklar + uzaktan sunucu adresi
+**Tarihi bayraklar**: 12 bayrak artık `public/assets/flags/<KOD>.webp` resimlerinden çizilir (`Flags.js > loadFlagImages`, açılışta yüklenir). Resim bulunamazsa eski kodla çizilmiş hali yedek olur. Bayrak değiştirmek için aynı adlı 900x600 webp'yi değiştirmen yeter.
+
+**Sunucu değişince APK/EXE'yi yeniden indirtmeme** (`systems/RemoteConfig.js`, `systems/Net.js`):
+- APK/EXE/tek dosya HTML açılırken `server.json` dosyasını internetten okur ve adresi telefona kaydeder. Sunucu değişince SADECE bu dosyayı güncellersin.
+- `server.json` Render'da durmaz; GitHub Pages ya da siteni kullan. Biçim: `{ "servers": ["https://ana.onrender.com", "https://yedek.onrender.com"] }` (ilki esas, diğerleri yedek).
+- Bağlanamazsa oyun dosyayı yeniden okur ve yedek adrese geçer; internet yoksa son bilinen adres kullanılır.
+- Bir kere yapılacak kurulum: `RemoteConfig.js` içindeki `CONFIG_URLS` listesine `server.json` adresini yaz (isteğe bağlı `DEFAULT_SERVERS`), sonra APK/EXE'yi bir kez yeniden derleyip yükle.
+- Ayarlar'daki "Sunucu adresi" kutusu hâlâ çalışır ve en yüksek önceliklidir (elle yazılan adres uzaktan okunanı ezer). Eski sürümün kaydettiği adres artık okunmaz.
+
+## Sürüm 0.9.13: Sığınak Bileti, tarihi bayraklar, admin komutları
+**Sığınak Bileti (Shelter Pass)** (`ui/ShelterPass.js`, `systems/Pass.js`, sunucuda `server/index.js`):
+- 30 günlük sezon, 30 bar, bar başına 20 XP (en fazla 600 XP). Sezon tarihi sunucuda `SEASON_EPOCH`'tan hesaplanır; 30 gün dolunca yeni sezon otomatik başlar, bilet XP'si ve alınmamış ödüller sıfırlanır (kasa, bayrak ve jeton kalır).
+- Bilet XP'si maç sonunda yazılır: oynanan maç +8, kazanma +6, görev +1, öldürme +2, günün ilk maçı +10 (`PASS_XP`). Sayıları değiştirmek için `PASS_XP`'e bak.
+- Ödüller: her 3. bar kasa (9, 18, 24: Ender Kasa; 15, 30: Büyük Kasa; diğerleri Sığınak Kasası), diğer barlar jeton (50 ile başlar, 140'a kadar çıkar). Ödül alma ve kasa açma tamamen SUNUCUDA doğrulanır (`passClaim`, `passClaimAll`, `crateOpen`).
+- Kasalardan 12 tarihi bayrak çıkar: Efsanevi: Osmanlı, Britanya İmparatorluğu, Roma. Destansı: Kutsal Roma, Bizans, SSCB, Japon İmparatorluğu, Fransa Krallığı, Rus İmparatorluğu. Ender: Bulgar Krallığı, İspanya İmparatorluğu, Ceneviz. Mevcut 25 bayrak "Sıradan"dır. Çift çıkan bayrak jetona dönüşür (Ender 150, Destansı 400, Efsanevi 1000).
+- Tarihi bayrağı sadece sahibi seçebilir (sunucu `setFlag` ve `profile`'da kontrol eder); bayrak seçicide kilitli olanlar nadirlik rengiyle görünür.
+- Nadirlik/şans/ödül tablosu hem `server/index.js` (HFLAGS, CRATE_ODDS, passReward) hem `Flags.js` (HIST_RARITY) hem `Pass.js` içinde durur; değiştirirsen üçünü birlikte güncelle.
+
+**Admin sistemi:**
+- Admin listesi Upstash'te `cfs:admins` adlı bir HASH'tir. Upstash Console > Data Browser > yeni anahtar `cfs:admins` (tür Hash) > alan = hesap adı (küçük harfle, örn. `ahmet`), değer = `1`. Değer `0` yapılırsa ya da alan silinirse admin kalkar. Sunucu listeyi dakikada bir okur (yeniden başlatma gerekmez) ve hesaba `admin: 0/1` olarak yansıtır; giriş yapan adminin kimlik kartında ADMİN yazar.
+- Upstash yoksa (yerel deneme) `ADMINS=ahmet,ali` ortam değişkeni kullanılır.
+- Komutlar lobi sohbetine `/` ile yazılır, sadece admin için çalışır, kimseye gösterilmez (cevap sadece adminin sohbetinde SİSTEM olarak çıkar). Adminlik olmayan biri `/komut` yazarsa normal mesaj olur.
+  - `/imposter <hedef>`, `/sheriff <hedef>`, `/crew <hedef>`: sonraki maçta rol verir (ör. `/imposter finland`, `/sheriff turkey`). Hedef: bayrak kodu, Türkçe/İngilizce ülke adı ya da oyuncu adı. Botlar da hedef olabilir. Rol sayıları korunur (rol, eski sahibiyle takas edilir). `/roles`, `/clearroles`.
+  - `/coins <hedef> <±n>`, `/xp <hedef> <n>` (bilet XP), `/crate <hedef> <common|rare|grand> [adet]`, `/flag <hedef> <bayrak|all>`: hedef `ben`, hesap adı, odadaki oyuncunun bayrağı ya da adı.
+  - `/kick <hedef>`, `/say <metin>` (odaya YÖNETİM duyurusu), `/who` (oyuncu listesi, maç sırasında roller), `/season`, `/help`.
+
+## Sürüm 0.9.12: Tünel içi gezinme + temizlik + testler
+- **Tünelin içinde kalma** (`scenes/GameTunnel.js`): Katil tünele girince dışarı çıkmaz, tünelin içinde kalır. Yön tuşları / joystick ile ok yönündeki başka tünele geçer (`pickTunnelDir`, Combat.js), **E / ÇIK** ile bulunduğu tünelden çıkar. İçerideyken görünmez, öldürülemez, vurulamaz; öldüremez ve ceset bildiremez; sabotaj yapabilir. Toplantı başlayınca otomatik dışarı alınır. Giriş ve çıkışı gören botlar/oyuncular Katil'i tanır.
+- Ağ: konum mesajındaki `m` alanı artık 0 duruyor, 1 yürüyor, **2 tünelde**. Sunucu `m = 2` bilgisini sadece Katil rolündeki oyuncudan ve oyun sırasında kabul eder (host da öldürme/vurma/bildirmede tünel kontrolü yapar).
+- `canSee` (Combat.js) artık tünelin içindeki oyuncuyu hiç görmez (botlar, tanıklar, görüş alanı hep bu tek noktadan geçer).
+- Botlar tüneli eskisi gibi anlık ışınlanma ile kullanır (içeride kalmazlar).
+- `npm test`: bağımlılıksız birim testleri (`tests/combat.test.mjs`): kazanma kuralı, tünel menzili, yönlü tünel seçimi, tünelde görünmezlik.
+- Temizlik: `package.json` sürümü 0.9.12 oldu, `s8.log` silindi, `.gitignore`'a `*.log` eklendi.
+
 ## Aşama 9.2 (Parti 3): Adil ve zeki botlar
 
 - Botlar sadece kendi görüş alanında gördüklerini bilir (oyuncuyla aynı yarıçap, duvar arkası yok); hız, bekleme süresi ve menzil aynı.

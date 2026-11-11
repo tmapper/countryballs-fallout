@@ -7,7 +7,15 @@
 //   net.list() create(opts) join(code) leave() setFlag(f) roomSettings(o) start(setup) end()
 //   net.relay(data, to?)       -> odadakilere (ya da 'host'a / tek kişiye) mesaj
 // Gelen mesaj türleri: hello, list, joined, room, left, start, relay, playerLeft, hostLeft, error, status, account, matchReward
-const SERVER_KEY = 'cfs.server';
+import { ready as configReady, refresh as configRefresh, currentServer, nextServer, resetServer, hasServers } from './RemoteConfig.js';
+const SERVER_KEY = 'cfs.serverManual';   // elle yazılan adres (eski 'cfs.server' anahtarı artık okunmaz: eski adres takılı kalmasın)
+try { localStorage.removeItem('cfs.server'); } catch (e) { /* yoksay */ }
+
+// APK / EXE / tek dosya HTML mi? (sunucudan değil, cihazdan açıldıysa true)
+function isNativeShell() {
+  if (location.protocol !== 'http:' && location.protocol !== 'https:') return true;           // file://, app://
+  return location.hostname === 'localhost' && !location.port;                                  // Capacitor gibi (https://localhost)
+}
 const PROFILE_KEY = 'cfs.profile';
 const TOKEN_KEY = 'cfs.token';
 
@@ -38,13 +46,16 @@ class Net {
   static setServerSetting(v) { try { localStorage.setItem(SERVER_KEY, v || ''); } catch (e) { /* yoksay */ } }
 
   // ws(s)://adres/ws
+  // Öncelik: 1) Ayarlar'a elle yazılan adres  2) uzaktan okunan server.json (APK/EXE)  3) oyun hangi sunucudan açıldıysa o
   url() {
-    const saved = Net.serverSetting().trim();
+    let saved = Net.serverSetting().trim();
+    if (!saved && isNativeShell()) saved = currentServer();
     if (saved) {
       let u = saved.replace(/\/+$/, '');
       if (!/^\w+:\/\//.test(u)) u = 'https://' + u;
       return u.replace(/^http/, 'ws') + '/ws';
     }
+    if (isNativeShell()) return null;   // APK/EXE'de adres henüz bilinmiyor
     if (location.protocol === 'http:' || location.protocol === 'https:') return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
     return null;
   }
@@ -62,6 +73,14 @@ class Net {
   connect() {
     if (this.blocked) return false;
     if (this.ws && (this.ws.readyState === 0 || this.ws.readyState === 1)) return true;
+    // APK/EXE: önce server.json okunsun (en fazla birkaç saniye), sonra bağlan
+    if (isNativeShell() && !Net.serverSetting().trim() && !this.cfgReady) {
+      if (!this.cfgWait) {
+        this.setStatus('connecting');
+        this.cfgWait = configReady().then(() => { this.cfgReady = true; this.cfgWait = null; this.connect(); });
+      }
+      return true;
+    }
     const url = this.url();
     if (!url) { this.setStatus('noServer'); return false; }
     this.setStatus('connecting');
@@ -69,7 +88,7 @@ class Net {
     try { ws = new WebSocket(url); } catch (e) { this.setStatus('error'); return false; }
     this.ws = ws;
     ws.onopen = () => {
-      this.retry = 0;
+      this.retry = 0; this.everOpened = true; this.failCount = 0;
       this.setStatus('online');
       this.send({ t: 'profile', ...this.profile });
       if (this.token) this.send({ t: 'auth', token: this.token });
@@ -93,12 +112,27 @@ class Net {
     };
     ws.onclose = () => {
       const hadRoom = !!this.room;
-      this.ws = null; this.room = null;
+      const neverOpened = !this.everOpened;
+      this.ws = null; this.room = null; this.everOpened = false;
       this.setStatus('error');
+      // APK/EXE: bağlanamadıysa (sunucu taşınmış olabilir) server.json'u yeniden oku, yedek adrese geç, tekrar dene
+      if (neverOpened && isNativeShell() && !Net.serverSetting().trim() && !this.blocked) this.recoverServer();
       if (hadRoom) this.emit('disconnected', {});
     };
     ws.onerror = () => {};
     return true;
+  }
+
+  async recoverServer() {
+    if (this.recovering) return;
+    this.recovering = true;
+    try {
+      const before = currentServer();
+      await configRefresh();
+      if (currentServer() === before && !nextServer()) resetServer();   // aynı adres kaldıysa yedeğe, o da yoksa başa dön
+      this.failCount = (this.failCount || 0) + 1;
+      if (hasServers()) setTimeout(() => this.connect(), Math.min(1500 * 2 ** (this.failCount - 1), 30000));   // 1.5sn, 3sn, 6sn ... en çok 30sn
+    } finally { this.recovering = false; }
   }
 
   setStatus(s) { this.status = s; this.emit('status', { status: s }); }
