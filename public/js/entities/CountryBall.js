@@ -162,7 +162,7 @@ export class CountryBall extends Phaser.GameObjects.Container {
     const dx = n.x - this.x, dy = n.y - this.y;
     if (Math.abs(dx) + Math.abs(dy) > 600) { this.x = n.x; this.y = n.y; }      // ışınlanma (tünel, toplantı)
     else { this.x += dx * k; this.y += dy * k; }
-    const facing = n.f ? 'left' : 'right', moving = !!n.m;
+    const facing = n.f ? 'left' : 'right', moving = n.m === 1;
     const late = moving && this.shownSkin === 'idle' && hasSkin(this.scene, 'walk_r', this.flag);
     if (late || facing !== this.facing || moving !== this.isMoving) { this.facing = facing; this.isMoving = moving; this.refreshVisual(); }
     this.setDepth(this.y);

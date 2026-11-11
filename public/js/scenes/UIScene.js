@@ -230,7 +230,7 @@ export class UIScene extends Phaser.Scene {
     const h = this.registry.get('hud') || {};
     const label = h.action === 'kill' ? i18n.t('actions.kill') : h.action === 'shoot' ? i18n.t('actions.shoot') : '';
     this.setButton(this.actionBtn, !!h.action, label, ACTION_COLORS[h.action], h.ready, h.cooldown, h.cdFrac, h.action);
-    this.setButton(this.tunnelBtn, h.action === 'kill', i18n.t('actions.tunnel'), ACTION_COLORS.tunnel, h.tunnel, 0, 0, 'tunnel');
+    this.setButton(this.tunnelBtn, h.action === 'kill', i18n.t(h.tunnelExit ? 'actions.tunnelExit' : 'actions.tunnel'), ACTION_COLORS.tunnel, h.tunnel, 0, 0, 'tunnel');
     const ul = h.useLabel || 'use';
     const inGame = !!h.inGame, isDead = !!this.registry.get('dead');
     // KULLAN: hep görünür (görev yanındayken parlar). Katilde tünelin solunda, şerifte tünelin yerinde.

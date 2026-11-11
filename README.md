@@ -22,6 +22,16 @@ npm start          # http://localhost:3000
 - **Botlar**: odalar arasında koridorlardan gezer (`systems/BotBrain.js`)
 - Duran karakter `SabitDurma` karesiyle, yürüyen karakter yürüme klibiyle gösterilir
 
+## Sürüm 0.9.14: Gerçek tarihi bayraklar + uzaktan sunucu adresi
+**Tarihi bayraklar**: 12 bayrak artık `public/assets/flags/<KOD>.webp` resimlerinden çizilir (`Flags.js > loadFlagImages`, açılışta yüklenir). Resim bulunamazsa eski kodla çizilmiş hali yedek olur. Bayrak değiştirmek için aynı adlı 900x600 webp'yi değiştirmen yeter.
+
+**Sunucu değişince APK/EXE'yi yeniden indirtmeme** (`systems/RemoteConfig.js`, `systems/Net.js`):
+- APK/EXE/tek dosya HTML açılırken `server.json` dosyasını internetten okur ve adresi telefona kaydeder. Sunucu değişince SADECE bu dosyayı güncellersin.
+- `server.json` Render'da durmaz; GitHub Pages ya da siteni kullan. Biçim: `{ "servers": ["https://ana.onrender.com", "https://yedek.onrender.com"] }` (ilki esas, diğerleri yedek).
+- Bağlanamazsa oyun dosyayı yeniden okur ve yedek adrese geçer; internet yoksa son bilinen adres kullanılır.
+- Bir kere yapılacak kurulum: `RemoteConfig.js` içindeki `CONFIG_URLS` listesine `server.json` adresini yaz (isteğe bağlı `DEFAULT_SERVERS`), sonra APK/EXE'yi bir kez yeniden derleyip yükle.
+- Ayarlar'daki "Sunucu adresi" kutusu hâlâ çalışır ve en yüksek önceliklidir (elle yazılan adres uzaktan okunanı ezer). Eski sürümün kaydettiği adres artık okunmaz.
+
 ## Sürüm 0.9.13: Sığınak Bileti, tarihi bayraklar, admin komutları
 **Sığınak Bileti (Shelter Pass)** (`ui/ShelterPass.js`, `systems/Pass.js`, sunucuda `server/index.js`):
 - 30 günlük sezon, 30 bar, bar başına 20 XP (en fazla 600 XP). Sezon tarihi sunucuda `SEASON_EPOCH`'tan hesaplanır; 30 gün dolunca yeni sezon otomatik başlar, bilet XP'si ve alınmamış ödüller sıfırlanır (kasa, bayrak ve jeton kalır).

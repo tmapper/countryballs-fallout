@@ -68,7 +68,7 @@ export function installNet(GameScene) {
     this.posT = POS_RATE;
     // SUNUCU TASARRUFU: konum sadece değişince gönderilir; duran oyuncu saniyede bir "buradayım" der
     const me = this.player;
-    const cur = [Math.round(me.x), Math.round(me.y), me.facing === 'left' ? 1 : 0, me.isMoving ? 1 : 0];
+    const cur = [Math.round(me.x), Math.round(me.y), me.facing === 'left' ? 1 : 0, me.inTunnel ? 2 : (me.isMoving ? 1 : 0)];
     const key = cur.join(',');
     if (key !== this.lastPosKey || this.idleT >= 1) {
       this.lastPosKey = key; this.idleT = 0;
@@ -99,7 +99,7 @@ export function installNet(GameScene) {
     }
     if (d.k === 'p') {
       const b = this.ball(from);
-      if (b && !b.isMe && !b.brain && this.validPos(b, d)) b.net = { x: d.x, y: d.y, f: d.f ? 1 : 0, m: d.m ? 1 : 0 };
+      if (b && !b.isMe && !b.brain && this.validPos(b, d)) { b.net = { x: d.x, y: d.y, f: d.f ? 1 : 0, m: d.m === 2 ? 2 : (d.m ? 1 : 0) }; b.inTunnel = (d.m === 2 && b.alive) ? 'net' : null; }
     } else if (!fromHost && (d.k === 'bp' || d.k === 'ev')) {
       // sahte host mesajı: yok say (sunucu da engeller)
     } else if (d.k === 'bp' && this.isClient) {
@@ -137,17 +137,17 @@ export function installNet(GameScene) {
     switch (d.a) {
       case 'kill': {
         const t = this.ball(d.t);
-        if (!this.meeting && who.alive && who.role === 'impostor' && t && t.role !== 'impostor' && who.cooldown <= 0 && t.alive && near(who, t, KILL_RANGE)) this.kill(who, t);
+        if (!this.meeting && who.alive && !who.inTunnel && who.role === 'impostor' && t && !t.inTunnel && t.role !== 'impostor' && who.cooldown <= 0 && t.alive && near(who, t, KILL_RANGE)) this.kill(who, t);
         break;
       }
       case 'shoot': {
         const t = this.ball(d.t);
-        if (!this.meeting && who.alive && who.role === 'sheriff' && who.cooldown <= 0 && t && t.alive && near(who, t, SHOOT_RANGE)) this.shoot(who, t);
+        if (!this.meeting && who.alive && who.role === 'sheriff' && who.cooldown <= 0 && t && !t.inTunnel && t.alive && near(who, t, SHOOT_RANGE)) this.shoot(who, t);
         break;
       }
       case 'report': {
         const body = this.bodyOf(d.b);
-        if (who.alive && body && near(who, body, REPORT_RANGE)) this.callMeeting(who, body);
+        if (who.alive && !who.inTunnel && body && near(who, body, REPORT_RANGE)) this.callMeeting(who, body);
         break;
       }
       case 'emergency':

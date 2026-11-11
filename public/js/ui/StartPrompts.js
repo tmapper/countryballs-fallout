@@ -6,41 +6,19 @@ import { i18n } from '../systems/I18n.js';
 import { getDevice, setDevice, applyDeviceClass } from '../systems/Device.js';
 
 export const UPDATE = {
-  id: '0.9.11',
+  id: '0.9.14',
   tr: {
     title: 'Yeni Güncelleme!',
     items: [
-      '🗺 Büyük harita (HARİTA butonu) artık ekrana tam sığıyor',
-      '💬 Botlar toplantıda yazdıklarını okur: bir ülke/oyuncu adı yazarsan ona oy verirler, suçlanan bot kendini savunur',
-      '🧠 Botlar hafızalı: cesedin yanında kimi gördüklerini hatırlar, tünele gireni bilir, cinayeti görünce hemen bildirir ve kanıta göre oy verir',
-      '🤖 Daha zeki botlar: katil tenhada öldürür, tünel ve sabotaj kullanır; şerif katili görünce vurur (hile yok, aynı kurallar)',
-      '🗺 Yepyeni harita: çapraz halka, ortadan kestirme geçiş (eski harita da seçilebilir)',
-      '⚙ Kurucu ayarları: harita, hız, tartışma/oylama süresi, öldürme bekleme, katil/şerif sayısı, 25 kişi',
-      '👑 Kurucu oyuncu atabilir ve kuruculuğu devredebilir',
-      '👻 Hayaletler duvarlardan geçer, daha hızlıdır ve birbirini görür',
-      '💥 Öldürme animasyonunda patlama efekti',
-      '⛰ Duvarların arkasında artık toprak var',
-      '🎩 Botlar sadece ülkesine uygun şapka takar',
-      '📱 Mobil / PC seçimi (Ayarlar\'dan değiştirilebilir)',
-      '🛠 Görev sonrası donma ve bellek sorunları düzeltildi, oyun çok daha hafif'
+      '🚩 12 tarihi bayrak artık gerçek bayrak resimleriyle çiziliyor: Osmanlı, Britanya İmparatorluğu, Roma, Kutsal Roma, Bizans, SSCB, Japon İmparatorluğu, Fransa Krallığı, Rus İmparatorluğu, Bulgar Krallığı, İspanya İmparatorluğu, Ceneviz',
+      '🌐 Sunucu adresi artık uzaktan güncellenebiliyor: sunucu değişince uygulamayı yeniden indirmen gerekmez'
     ]
   },
   en: {
     title: 'New Update!',
     items: [
-      '🗺 The big map (MAP button) now fits the screen',
-      '💬 Bots read meeting chat: type a country/player name and they vote for them, the accused bot defends itself',
-      '🧠 Bots have memory: they remember who was near the body, know who vented, report kills instantly and vote on evidence',
-      '🤖 Smarter bots: impostors kill when alone, use vents and sabotage; sheriffs shoot the killer on sight (no cheating, same rules)',
-      '🗺 Brand new map: diagonal loop with a shortcut (old map still selectable)',
-      '⚙ Host settings: map, speed, discussion/vote time, kill cooldown, impostor/sheriff count, 25 players',
-      '👑 Host can kick players and transfer host',
-      '👻 Ghosts pass through walls, move faster and see each other',
-      '💥 Explosion effect in kill animations',
-      '⛰ Soil behind the walls',
-      '🎩 Bots only wear hats that fit their country',
-      '📱 Mobile / PC choice (change it in Settings)',
-      '🛠 Fixed freezing after tasks and memory issues, much lighter game'
+      '🚩 The 12 historical flags are now drawn from real flag images: Ottoman, British Empire, Rome, Holy Roman, Byzantine, USSR, Japanese Empire, Kingdom of France, Russian Empire, Bulgarian Kingdom, Spanish Empire, Genoa',
+      '🌐 The server address can now be updated remotely: no need to re-download the app when the server changes'
     ]
   }
 };

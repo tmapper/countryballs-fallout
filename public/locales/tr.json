@@ -44,7 +44,8 @@
     "fullscreen": "Tam ekran",
     "resume": "DEVAM ET",
     "autoLow": "Cihaz yavaş: grafik otomatik olarak Düşük yapıldı (Ayarlar'dan değiştirilebilir)",
-    "device": "Cihaz (sonraki maçta)"
+    "device": "Cihaz (sonraki maçta)",
+    "tunnelHint": "Tünelde: yön tuşları / joystick ile başka tünele geç, ÇIK ile dışarı çık"
   },
   "lobby": {
     "kicker": "Sığınak Lobisi",
@@ -82,7 +83,8 @@
     "report": "BİLDİR",
     "sabotage": "SABOTAJ",
     "fix": "TAMİR",
-    "meeting": "TOPLANTI"
+    "meeting": "TOPLANTI",
+    "tunnelExit": "ÇIK"
   },
   "goals": {
     "impostor": "Kimse görmeden herkesi öldür. Tünellerle kaç.",
@@ -134,7 +136,19 @@
     "AR": "Arjantin",
     "MX": "Meksika",
     "PT": "Portekiz",
-    "CZ": "Çekya"
+    "CZ": "Çekya",
+    "OTT": "Osmanlı İmparatorluğu",
+    "BRE": "Britanya İmparatorluğu",
+    "ROM": "Roma İmparatorluğu",
+    "HRE": "Kutsal Roma İmparatorluğu",
+    "BYZ": "Bizans İmparatorluğu",
+    "SOV": "Sovyetler Birliği",
+    "JPE": "Japon İmparatorluğu",
+    "FRK": "Fransa Krallığı",
+    "RUE": "Rus İmparatorluğu",
+    "BGK": "Bulgar Krallığı",
+    "ESE": "İspanya İmparatorluğu",
+    "GEN": "Ceneviz Cumhuriyeti"
   },
   "rooms": {
     "entrance": "Sığınak Girişi",
@@ -282,7 +296,7 @@
     "offline": "Sunucuya bağlı değil",
     "connecting": "Bağlanıyor...",
     "noServer": "Sunucu adresi yok (Ayarlar)",
-    "version": "Sürüm 0.9.11",
+    "version": "Sürüm 0.9.13",
     "back": "GERİ",
     "language": "Dil",
     "sound": "Ses",
@@ -317,7 +331,8 @@
       "mismatch": "Şifreler aynı değil.",
       "expired": "Oturum süresi doldu, tekrar giriş yap."
     },
-    "social": "ARKADAŞLAR & SIRALAMA"
+    "social": "ARKADAŞLAR & SIRALAMA",
+    "pass": "SIĞINAK BİLETİ"
   },
   "online": {
     "title": "LOBİLER",
@@ -371,7 +386,8 @@
     "kick": "Odadan at (2 kez bas)",
     "giveHost": "Kuruculuğu ver (2 kez bas)",
     "kicked": "Kurucu seni odadan attı.",
-    "err_kicked": "Bu odadan atıldın, tekrar giremezsin."
+    "err_kicked": "Bu odadan atıldın, tekrar giremezsin.",
+    "err_flagLocked": "Bu tarihi bayrağa sahip değilsin. Sığınak Bileti kasalarından kazan."
   },
   "levels": {
     "title": {
@@ -407,7 +423,8 @@
     "empty": "Henüz çevrimiçi maç oynamadın. İlk maçından sonra istatistiklerin burada görünür.",
     "guest": "İstatistikler için giriş yap.",
     "howXp": "XP: maç başı 20, galibiyet +30, görev başı 4, öldürme başı 8. Sadece en az 2 gerçek oyuncunun olduğu çevrimiçi maçlar sayılır.",
-    "nextTitle": "Sonraki unvan: {t} (seviye {n})"
+    "nextTitle": "Sonraki unvan: {t} (seviye {n})",
+    "admin": "ADMİN"
   },
   "hats": {
     "none": "Şapkasız",
@@ -449,7 +466,8 @@
     "confirm": "Al? 🪙 {n}",
     "buying": "Alınıyor…",
     "noCoins": "Yeterli jetonun yok. Online maç oynayarak kazan.",
-    "needLogin": "Şapka almak için giriş yapmalısın."
+    "needLogin": "Şapka almak için giriş yapmalısın.",
+    "noCrate": "Bu kasadan kalmadı"
   },
   "social": {
     "friends": "ARKADAŞLAR",
@@ -493,5 +511,33 @@
   "maps": {
     "ring": "Kavşak",
     "classic": "Klasik Sığınak"
+  },
+  "pass": {
+    "title": "SIĞINAK BİLETİ",
+    "season": "Sezon {n}",
+    "daysLeft": "{n} gün kaldı",
+    "bars": "{a}/{b} bar",
+    "how": "Maç oynadıkça bilet XP'si kazanırsın (günün ilk maçında bonus). Her {n} XP = 1 bar; her barda jeton ya da kasa var. Kasalardan tarihi bayraklar çıkar!",
+    "claim": "AL",
+    "claimAll": "HEPSİNİ AL",
+    "claimedN": "{n} ödül alındı",
+    "crates": "KASALAR",
+    "open": "AÇ",
+    "collection": "TARİHİ BAYRAK KOLEKSİYONU",
+    "tier": {
+      "common": "Sığınak Kasası",
+      "rare": "Ender Kasa",
+      "grand": "Büyük Kasa"
+    },
+    "rarity": {
+      "common": "Sıradan",
+      "rare": "Ender",
+      "epic": "Destansı",
+      "legendary": "Efsanevi"
+    },
+    "newFlag": "YENİ BAYRAK! Lobide bayrak seçerken kullanabilirsin.",
+    "dupe": "Bu bayrağa zaten sahiptin: +{n} 🪙",
+    "ok": "TAMAM",
+    "passXp": "bilet XP"
   }
 }

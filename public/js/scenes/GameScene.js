@@ -32,6 +32,7 @@ import { sfx, startLoop, stopLoop, stopAllLoops } from '../systems/Sound.js';
 import { installExtras, REPORT_RANGE } from './GameExtras.js';
 import { installNet } from './GameNet.js';
 import { installFx } from './GameFx.js';
+import { installTunnel } from './GameTunnel.js';
 
 // Görüş yarıçapları (dünya pikseli). İleride "ışıklar kesildi" sabotajında
 // VISION_LIGHTS_OUT kullanılacak.
@@ -184,7 +185,7 @@ export class GameScene extends Phaser.Scene {
   // Bu cihazdaki oyuncunun aksiyon butonu (Q / Boşluk / ekrandaki buton)
   doAction() {
     const me = this.player;
-    if (this.over || this.meeting || !me.alive || me.cooldown > 0) return;
+    if (this.over || this.meeting || !me.alive || me.cooldown > 0 || me.inTunnel) return;
     if (me.role === 'impostor') {
       const t = findTarget(this.grid, me, this.balls, KILL_RANGE);
       if (t) { if (this.isClient) { this.req('kill', { t: t.id }); me.cooldown = 1; } else this.kill(me, t); }
@@ -236,6 +237,7 @@ export class GameScene extends Phaser.Scene {
   interact() {
     const me = this.player;
     if (this.over || this.meeting) return;
+    if (me.inTunnel) { this.useTunnel(); return; }
     if (this.canFix()) { this.fixSabotage(); return; }
     if (me.role === 'impostor' && this.nearestTunnelOk()) { this.useTunnel(); return; }
     if (this.taskPanel.isOpen) return;
@@ -271,24 +273,6 @@ export class GameScene extends Phaser.Scene {
 
   // Katil: yakındaki tünele gir, bağlı tünelden çık
   nearestTunnelOk() { return !!nearestTunnel(TUNNELS, this.player.x, this.player.y); }
-
-  useTunnel() {
-    const me = this.player;
-    if (this.over || this.meeting || !me.alive || me.role !== 'impostor') return;
-    const t = nearestTunnel(TUNNELS, me.x, me.y);
-    if (!t || (this.tunnelLock || 0) > this.time.now) return;
-    const dest = TUNNELS.find((x) => x.id === t.links[0]);
-    if (!dest) return;
-    this.tunnelLock = this.time.now + 600;
-    this.ventWitness(me);
-    sfx('tunnel');
-    this.fxTunnel(me.x, me.y);
-    me.setPosition(dest.x, dest.y);
-    this.time.delayedCall(60, () => this.fxTunnel(me.x, me.y));
-    me.setDepth(me.y);
-    this.cameras.main.centerOn(me.x, me.y - 40);
-    this.cameras.main.flash(180, 0, 0, 0);
-  }
 
   kill(killer, victim) {
     if (this.meeting || this.over) return;
@@ -564,9 +548,10 @@ export class GameScene extends Phaser.Scene {
     // canStand: yürünebilir alan kontrolü. Duvara çarpınca durur ama duvar boyunca kayar.
     // Hayalet tüm duvarlardan geçer (sadece dünyanın sınırında kalır)
     const stand = this.player.alive ? canStand : (x, y) => x > 0 && y > 0 && x < WORLD.w && y < WORLD.h;
-    const moved = this.player.move(dir, dt, stand);
+    if (this.player.inTunnel) { this.updateTunnelInput(dir); }
+    const moved = this.player.inTunnel ? false : this.player.move(dir, dt, stand);
     // Takılma koruması: yön verildiği halde 0,5 sn hiç kıpırdamadıysa ve eşyanın içindeyse kurtar
-    if (this.player.alive && (dir.x || dir.y) && !moved) { this.stuckT = (this.stuckT || 0) + dt; if (this.stuckT > 0.5) { this.stuckT = 0; this.unstick(this.player); } } else this.stuckT = 0;
+    if (this.player.alive && !this.player.inTunnel && (dir.x || dir.y) && !moved) { this.stuckT = (this.stuckT || 0) + dt; if (this.stuckT > 0.5) { this.stuckT = 0; this.unstick(this.player); } } else this.stuckT = 0;
 
     this.balls.forEach((b) => { if (b.cooldown > 0) b.cooldown = Math.max(0, b.cooldown - dt); });
 
@@ -720,12 +705,13 @@ export class GameScene extends Phaser.Scene {
     if (!this.taskOpen && this.canFix()) { st.task = true; st.useLabel = 'fix'; }
     else if (!st.task && !this.taskOpen && this.nearEmergency() && this.emergencyLeft > 0) { st.task = true; st.useLabel = 'meeting'; }
     if (!me.alive) return st;
-    st.report = !!this.nearestBody(me, REPORT_RANGE);
+    st.report = !me.inTunnel && !!this.nearestBody(me, REPORT_RANGE);
     if (me.role === 'impostor') { st.sabotage = true; st.sabReady = !this.sabotage && this.sabCd <= 0; st.sabCd = this.sabotage ? 0 : Math.max(0, Math.ceil(this.sabCd)); st.sabFrac = Math.min(1, Math.max(0, this.sabCd) / 30); }
     if (me.role === 'impostor') {
       st.action = 'kill';
-      st.ready = me.cooldown <= 0 && !!findTarget(this.grid, me, this.balls, KILL_RANGE);
-      st.tunnel = !!nearestTunnel(TUNNELS, me.x, me.y);
+      st.ready = !me.inTunnel && me.cooldown <= 0 && !!findTarget(this.grid, me, this.balls, KILL_RANGE);
+      st.tunnel = !!me.inTunnel || !!nearestTunnel(TUNNELS, me.x, me.y);
+      st.tunnelExit = !!me.inTunnel;
     } else if (me.role === 'sheriff') {
       st.action = 'shoot';
       st.ready = me.cooldown <= 0 && !!findTarget(this.grid, me, this.balls, SHOOT_RANGE);
@@ -740,3 +726,4 @@ export class GameScene extends Phaser.Scene {
 installExtras(GameScene);
 installNet(GameScene);
 installFx(GameScene);
+installTunnel(GameScene);

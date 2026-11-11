@@ -121,7 +121,7 @@ export function installExtras(GameScene) {
 
   P.reportNearest = function () {
     const me = this.player;
-    if (this.over || this.meeting || !me.alive) return;
+    if (this.over || this.meeting || !me.alive || me.inTunnel) return;
     const body = this.nearestBody(me, REPORT_RANGE);
     if (!body) return;
     if (this.isClient) this.req('report', { b: body.ball.id });
@@ -164,7 +164,7 @@ export function installExtras(GameScene) {
     this.taskOpen = false;
     sabMenu.close();
     minimap.hide();
-    this.balls.forEach((b) => { b.reportT = undefined; });
+    this.balls.forEach((b) => { b.reportT = undefined; if (b.inTunnel) { b.inTunnel = null; if (b.isMe) { b.setAlpha(1); this.clearTunnelArrows(); } } });
     sfx(body ? 'body_found' : 'meeting');
     playMusic('music_meeting');
     const room = body ? getRoomAt(body.x, body.y - 8) : null;

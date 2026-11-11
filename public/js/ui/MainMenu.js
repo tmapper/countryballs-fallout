@@ -7,6 +7,8 @@
 //   menu.show({ onOnline, onCreate, onSolo })   menu.hide()
 // İsteğe bağlı görseller (yoksa kodla çizilir): assets/menu/menu_bg.jpg, assets/menu/logo.png
 import { social } from './Social.js';
+import { shelterPass } from './ShelterPass.js';
+import { passStatus } from '../systems/Pass.js';
 import { i18n } from '../systems/I18n.js';
 import { net, Net } from '../systems/Net.js';
 import { isMuted, toggleMute, sfx } from '../systems/Sound.js';
@@ -23,6 +25,7 @@ const ITEMS = [
   { act: 'online', key: 'menu.play', icon: '☢' },
   { act: 'create', key: 'menu.create', icon: '⊕' },
   { act: 'social', key: 'menu.social', icon: '★' },
+  { act: 'pass', key: 'menu.pass', icon: '🎟' },
   { act: 'solo', key: 'menu.solo', icon: '◎' },
   { act: 'settings', key: 'menu.settings', icon: '⚙' },
   { act: 'howto', key: 'menu.howto', icon: '?' }
@@ -142,6 +145,15 @@ export class MainMenu {
     this.root.querySelectorAll('.mm-item').forEach((b, k) => b.classList.toggle('sel', k === i));
   }
 
+  // Alınabilir bilet ödülü + açılmamış kasa sayısı menüde rozet olarak görünür
+  updatePassBadge() {
+    const b = this.root && this.root.querySelector('.mm-item[data-act="pass"] .mm-txt');
+    if (!b) return;
+    const st = net.account ? passStatus(net.account) : null;
+    const n = st ? st.claimable + st.crates : 0;
+    b.dataset.badge = n > 0 ? String(n) : '';
+  }
+
   setSocialBadge(n) {
     const b = this.root && this.root.querySelector('.mm-item[data-act="social"] .mm-txt');
     if (b) b.dataset.badge = n > 0 ? String(n) : '';
@@ -150,6 +162,11 @@ export class MainMenu {
   act(a) {
     if (a === 'settings') { this.openModal('settings'); return; }
     if (a === 'howto') { this.openModal('howto'); return; }
+    if (a === 'pass') {
+      const open = () => shelterPass.open();
+      if (!net.account) { this.authPending = open; this.openAuth('login'); return; }
+      open(); return;
+    }
     if (a === 'social') {
       const open = () => { net.connect(); social.open('friends'); };
       if (!net.account) { this.authPending = open; this.openAuth('login'); return; }
@@ -189,7 +206,8 @@ export class MainMenu {
     r.querySelector('.mm-id').classList.toggle('guest', !a);
     r.querySelector('.mm-id-name').textContent = a ? a.name : i18n.t('menu.guest');
     r.querySelector('.mm-id-photo').textContent = a ? a.name.slice(0, 1).toUpperCase() : '?';
-    r.querySelector('.mm-id-title').textContent = a ? titleName(a.title) : '';
+    r.querySelector('.mm-id-title').innerHTML = a ? esc(titleName(a.title)) + (a.admin ? ` · <span class="mm-adm">${esc(i18n.t('profile.admin'))}</span>` : '') : '';
+    this.updatePassBadge();
     r.querySelector('.mm-id-level').textContent = a ? `${i18n.t('menu.level', { n: a.level })} · 🪙 ${a.coins ?? 0}` : i18n.t('menu.guestHint');
     r.querySelector('.mm-id-xp i').style.width = xpPercent(a) + '%';
     r.querySelector('.mm-id-no').textContent = a ? '#' + String(Math.abs(a.created || 0) % 100000).padStart(5, '0') : '';

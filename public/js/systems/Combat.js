@@ -22,6 +22,7 @@ export const BOT_AGGRESSIVE = false;
 const EYE = 16; // görüş, ayak noktasının biraz üstünden
 
 export function canSee(grid, a, b, range = Infinity) {
+  if (b && b.inTunnel) return false;   // tünelin içindeki kimse görülemez (b = görülen taraf)
   const d = Math.hypot(a.x - b.x, a.y - b.y);
   return d <= range && hasLineOfSight(grid, a.x, a.y - EYE, b.x, b.y - EYE);
 }
@@ -50,6 +51,21 @@ export function nearestTunnel(tunnels, x, y) {
     if (d < bestD) { best = t; bestD = d; }
   });
   return bestD <= TUNNEL_RANGE ? best : null;
+}
+
+// Tünelin içindeyken: (dx, dy) yönündeki en yakın başka tünel (yaklaşık 60 derece içinde), yoksa null
+export function pickTunnelDir(tunnels, fromId, dx, dy) {
+  const f = tunnels.find((x) => x.id === fromId);
+  const len = Math.hypot(dx, dy);
+  if (!f || !len) return null;
+  let best = null, bestD = Infinity;
+  tunnels.forEach((t) => {
+    if (t.id === fromId) return;
+    const vx = t.x - f.x, vy = t.y - f.y, d = Math.hypot(vx, vy);
+    if (!d || (vx * dx + vy * dy) / (d * len) < 0.5) return;
+    if (d < bestD) { best = t; bestD = d; }
+  });
+  return best;
 }
 
 // 'crew' | 'impostor' | null

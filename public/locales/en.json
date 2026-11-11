@@ -44,7 +44,8 @@
     "fullscreen": "Fullscreen",
     "resume": "RESUME",
     "autoLow": "Slow device: graphics set to Low automatically (change in Settings)",
-    "device": "Device (next match)"
+    "device": "Device (next match)",
+    "tunnelHint": "In tunnel: use arrows / joystick to hop to another tunnel, EXIT to leave"
   },
   "lobby": {
     "kicker": "Bunker Lobby",
@@ -82,7 +83,8 @@
     "report": "REPORT",
     "sabotage": "SABOTAGE",
     "fix": "FIX",
-    "meeting": "MEETING"
+    "meeting": "MEETING",
+    "tunnelExit": "EXIT"
   },
   "goals": {
     "impostor": "Kill everyone without being seen. Escape through tunnels.",
@@ -134,7 +136,19 @@
     "AR": "Argentina",
     "MX": "Mexico",
     "PT": "Portugal",
-    "CZ": "Czechia"
+    "CZ": "Czechia",
+    "OTT": "Ottoman Empire",
+    "BRE": "British Empire",
+    "ROM": "Roman Empire",
+    "HRE": "Holy Roman Empire",
+    "BYZ": "Byzantine Empire",
+    "SOV": "Soviet Union",
+    "JPE": "Empire of Japan",
+    "FRK": "Kingdom of France",
+    "RUE": "Russian Empire",
+    "BGK": "Bulgarian Kingdom",
+    "ESE": "Spanish Empire",
+    "GEN": "Republic of Genoa"
   },
   "rooms": {
     "entrance": "Bunker Entrance",
@@ -282,7 +296,7 @@
     "offline": "Not connected",
     "connecting": "Connecting...",
     "noServer": "No server address (Settings)",
-    "version": "Version 0.9.11",
+    "version": "Version 0.9.13",
     "back": "BACK",
     "language": "Language",
     "sound": "Sound",
@@ -317,7 +331,8 @@
       "mismatch": "Passwords do not match.",
       "expired": "Session expired, please log in again."
     },
-    "social": "FRIENDS & RANKS"
+    "social": "FRIENDS & RANKS",
+    "pass": "SHELTER PASS"
   },
   "online": {
     "title": "LOBBIES",
@@ -371,7 +386,8 @@
     "kick": "Kick (press twice)",
     "giveHost": "Make host (press twice)",
     "kicked": "The host kicked you from the room.",
-    "err_kicked": "You were kicked from this room."
+    "err_kicked": "You were kicked from this room.",
+    "err_flagLocked": "You do not own this historical flag. Win it from Shelter Pass crates."
   },
   "levels": {
     "title": {
@@ -407,7 +423,8 @@
     "empty": "No online matches yet. Your stats will show up here after your first match.",
     "guest": "Log in to see your stats.",
     "howXp": "XP: 20 per match, +30 per win, 4 per task, 8 per kill. Only online matches with at least 2 real players count.",
-    "nextTitle": "Next title: {t} (level {n})"
+    "nextTitle": "Next title: {t} (level {n})",
+    "admin": "ADMIN"
   },
   "hats": {
     "none": "No hat",
@@ -449,7 +466,8 @@
     "confirm": "Buy? 🪙 {n}",
     "buying": "Buying…",
     "noCoins": "Not enough coins. Play online matches to earn more.",
-    "needLogin": "You need to log in to buy hats."
+    "needLogin": "You need to log in to buy hats.",
+    "noCrate": "No crates of that kind left"
   },
   "social": {
     "friends": "FRIENDS",
@@ -493,5 +511,33 @@
   "maps": {
     "ring": "Crossroads",
     "classic": "Classic Bunker"
+  },
+  "pass": {
+    "title": "SHELTER PASS",
+    "season": "Season {n}",
+    "daysLeft": "{n} days left",
+    "bars": "{a}/{b} bars",
+    "how": "Earn pass XP by playing matches (first match of the day gives a bonus). Every {n} XP = 1 bar; each bar gives tokens or a crate. Crates drop historical flags!",
+    "claim": "CLAIM",
+    "claimAll": "CLAIM ALL",
+    "claimedN": "{n} rewards claimed",
+    "crates": "CRATES",
+    "open": "OPEN",
+    "collection": "HISTORICAL FLAG COLLECTION",
+    "tier": {
+      "common": "Shelter Crate",
+      "rare": "Rare Crate",
+      "grand": "Grand Crate"
+    },
+    "rarity": {
+      "common": "Common",
+      "rare": "Rare",
+      "epic": "Epic",
+      "legendary": "Legendary"
+    },
+    "newFlag": "NEW FLAG! Pick it in the lobby flag picker.",
+    "dupe": "You already own this flag: +{n} 🪙",
+    "ok": "OK",
+    "passXp": "pass XP"
   }
 }

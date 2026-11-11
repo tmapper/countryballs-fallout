@@ -4,7 +4,9 @@
 //   flagPicker.open({ current, taken: Set, onPick(code) })
 // Başka oyuncuların (ya da botların) kullandığı bayraklar seçilemez.
 import { i18n } from '../systems/I18n.js';
-import { FLAG_LIST, getFlagThumb } from '../systems/Flags.js';
+import { FLAG_LIST, HIST_FLAGS, HIST_RARITY, getFlagThumb } from '../systems/Flags.js';
+import { net } from '../systems/Net.js';
+import { RARITY_COLOR } from '../systems/Pass.js';
 
 class FlagPicker {
   constructor() { this.root = null; this.isOpen = false; }
@@ -35,6 +37,22 @@ class FlagPicker {
       b.disabled = taken.has(code) && code !== current;
       b.title = i18n.t('countries.' + code);
       b.innerHTML = `<img alt="" src="${getFlagThumb(code, 72, 48)}"><span>${i18n.t('countries.' + code)}</span>`;
+      b.addEventListener('click', () => { if (b.disabled) return; this.close(); onPick(code); });
+      grid.appendChild(b);
+    });
+    // Tarihi bayraklar (Sığınak Bileti kasalarından): sahip olunanlar seçilebilir, diğerleri kilitli görünür
+    const acc = net.account, own = new Set((acc && acc.flags) || []);
+    const sep = document.createElement('div'); sep.className = 'fp-sep'; sep.textContent = i18n.t('pass.collection'); grid.appendChild(sep);
+    HIST_FLAGS.forEach((code, i) => {
+      const has = own.has(code) || !!(acc && acc.admin);
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'fp-flag hist' + (code === current ? ' on' : '');
+      b.style.setProperty('--rc', RARITY_COLOR[HIST_RARITY[code]]);
+      b.style.setProperty('--i', FLAG_LIST.length + i);
+      b.disabled = !has || (taken.has(code) && code !== current);
+      b.title = i18n.t('countries.' + code);
+      b.innerHTML = `<img alt="" src="${getFlagThumb(code, 72, 48)}"><span>${has ? '' : '🔒 '}${i18n.t('countries.' + code)}</span><small>${i18n.t('pass.rarity.' + HIST_RARITY[code])}</small>`;
       b.addEventListener('click', () => { if (b.disabled) return; this.close(); onPick(code); });
       grid.appendChild(b);
     });

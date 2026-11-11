@@ -39,6 +39,7 @@ export function wireChatInput(input, onSend, onEsc) {
 }
 
 export function msgHtml(flag, name, text, extra = '') {
+  if (!flag) return `<span class="mt-sys">⚙</span><div><b>${esc(name)}${extra}</b><span>${esc(text)}</span></div>`;   // sistem / admin mesajı
   return `<img alt="" src="${getFlagThumb(flag, 30, 20)}"><div><b>${esc(name)}${extra}</b><span>${esc(text)}</span></div>`;
 }
 
@@ -96,7 +97,7 @@ class LobbyChat {
   receive(m) {
     const d = document.createElement('div');
     const mine = m.from === net.id || m.from === 'me';
-    d.className = 'mt-msg' + (mine ? ' mine' : '') + (this.ch === 'ghost' ? ' ghost' : '');
+    d.className = 'mt-msg' + (mine ? ' mine' : '') + (this.ch === 'ghost' ? ' ghost' : '') + (m.sys ? ' sys' : '');
     d.innerHTML = msgHtml(m.flag, m.name, m.text, this.ch === 'ghost' ? ' 👻' : '');
     this.list.appendChild(d);
     while (this.list.children.length > 60) this.list.firstChild.remove();
