@@ -10,6 +10,7 @@ import { initFlow } from './systems/GameFlow.js';
 import { setChatGame } from './ui/Chat.js';
 import { runStartPrompts } from './ui/StartPrompts.js';
 import { net } from './systems/Net.js';
+import { initFit } from './systems/FitScreen.js';
 
 // iOS: iki parmakla yakınlaştırmayı engelle
 document.addEventListener('gesturestart', (e) => e.preventDefault());
@@ -41,6 +42,7 @@ initFlow(game);
 
 setChatGame(game);
 runStartPrompts();   // ilk açılış: Mobil mi PC mi? + Yeni Güncelleme! notu
+initFit();           // hiçbir pencerede kaydırma gerekmesin: ekrana sığacak şekilde küçültür (systems/FitScreen.js)
 
 // Konsol kapalı (hile zorlaşsın): F12 / Ctrl+Shift+I-J-C / Ctrl+U / sağ tık engellenir,
 // konsol çıktısı susturulur, oyun nesnesine konsoldan erişilemez.

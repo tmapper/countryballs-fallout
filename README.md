@@ -22,6 +22,11 @@ npm start          # http://localhost:3000
 - **Botlar**: odalar arasında koridorlardan gezer (`systems/BotBrain.js`)
 - Duran karakter `SabitDurma` karesiyle, yürüyen karakter yürüme klibiyle gösterilir
 
+## Sürüm 0.9.16: Sağa kaydırmalı Sığınak Bileti + kaydırmasız ekranlar
+- **Sığınak Bileti** (`ui/ShelterPass.js`): 30 bar artık yatay bir yolda dizili; parmakla/fareyle sürükleyerek, fare tekerleğiyle, ‹ › butonlarıyla ya da ← → tuşlarıyla sağa doğru ilerlenir. Açılınca kaldığın (alınabilir ilk ödül ya da ulaştığın) bara ortalanır, "BURADASIN" işareti vardır. Ekran tek parçadır: BİLET / KASALAR / KOLEKSİYON sekmeleri.
+- **Kaydırmasız ekranlar** (`systems/FitScreen.js`): menü ve pencereler ekranı aşıyorsa CSS `zoom` ile en büyük sığan boyuta küçülür (ekran dönünce, içerik değişince, pencere boyu değişince kendiliğinden yeniden hesaplanır). Yeni bir pencere eklersen seçicisini `TARGETS` listesine yaz. Sohbet listeleri bilerek kayar (`ALLOW`). Çok kısa telefon ekranları için `style.css` sonundaki `@media (max-height: 440px)` bölümü pencereleri daha sıkı çizer.
+- **İsteğe bağlı bilet görselleri** (`public/assets/menu/`): `pass_bg.jpg`, `crate_common.png`, `crate_rare.png`, `crate_grand.png`, `coin.png`. Yoksa emoji kullanılır. Promptlar: `docs/GORSEL_PROMPTLARI.md` D bölümü.
+
 ## Sürüm 0.9.15: Joystick donma düzeltmesi, çıkış butonu, joystik resetle
 - **Görev sonrası joystick donması**: görev paneli ekranı kapladığı için parmak panelin üstünde kalkınca oyun "parmak kalktı" olayını almıyor, joystick eski parmağa bağlı kalıp yeni dokunuşları yok sayıyordu. Artık yeni dokunuş eskisini bırakıp joystick'i devralır (`systems/Joystick.js > onDown`), görev açılırken ve kapanırken joystick kesin sıfırlanır (`GameScene.releaseControls`). Görev tamamlanırken bir hata çıksa bile hareket kilidi açılır (`ui/TaskPanel.js`).
 - **Joystik resetle**: sadece mobilde, sağ üstte küçük buton (`UIScene.resetControls`). Joystick, basılı tuşlar ve hareket kilidini sıfırlar.

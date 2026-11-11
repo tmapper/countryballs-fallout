@@ -544,6 +544,13 @@
     "newFlag": "YENİ BAYRAK! Lobide bayrak seçerken kullanabilirsin.",
     "dupe": "Bu bayrağa zaten sahiptin: +{n} 🪙",
     "ok": "TAMAM",
-    "passXp": "bilet XP"
+    "passXp": "bilet XP",
+    "tabPass": "BİLET",
+    "tabCrates": "KASALAR",
+    "tabColl": "KOLEKSİYON",
+    "swipe": "Kaydırarak ilerle",
+    "here": "BURADASIN",
+    "prev": "Önceki",
+    "next": "Sonraki"
   }
 }

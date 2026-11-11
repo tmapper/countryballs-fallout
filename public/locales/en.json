@@ -544,6 +544,13 @@
     "newFlag": "NEW FLAG! Pick it in the lobby flag picker.",
     "dupe": "You already own this flag: +{n} 🪙",
     "ok": "OK",
-    "passXp": "pass XP"
+    "passXp": "pass XP",
+    "tabPass": "PASS",
+    "tabCrates": "CRATES",
+    "tabColl": "COLLECTION",
+    "swipe": "Swipe to move on",
+    "here": "YOU ARE HERE",
+    "prev": "Previous",
+    "next": "Next"
   }
 }

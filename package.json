@@ -1,6 +1,6 @@
 {
   "name": "countryballs-fallout-suspects",
-  "version": "0.9.15",
+  "version": "0.9.16",
   "description": "Countryballs: Fallout Suspects - 2D çok oyunculu sosyal çıkarım oyunu",
   "main": "server/index.js",
   "scripts": {

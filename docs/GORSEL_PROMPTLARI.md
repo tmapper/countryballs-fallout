@@ -54,6 +54,20 @@ aşağıdaki **ORTAK TARZ** metnini aynen yapıştır, sonra eşyanın kendi cü
 **`yukleme.jpg`** (yükleme ekranı, 16:9, 1920x1080):
 > Wide 16:9 cartoon illustration, a dim nuclear bunker corridor seen from the front, a heavy round vault door closing at the end with warm orange light, flickering ceiling lamps, hazard stripes on the floor, dust in the air, bold dark outlines, flat cel shading, moody teal-and-orange colors. The bottom third of the image is plain and dark so a loading bar can be placed there. No text, no people, no characters.
 
+## D) Sığınak Bileti görselleri (klasör: public/assets/menu/)
+
+Kod bu dosyaları kendiliğinden bulur; yoksa emoji kullanır. Kasa ve jeton için ORTAK TARZ'ı (A bölümündeki) başa yapıştır, ama sonundaki "square image 1024x1024" kalsın.
+
+| Dosya adı | Prompt (ORTAK TARZ'dan sonra) |
+|---|---|
+| `crate_common.png` | A closed olive-green military supply crate, wooden-and-metal with rusty corner brackets, a small white radiation trefoil stencil on the lid, a thin yellow-black hazard stripe. Plain and humble look. |
+| `crate_rare.png` | A closed blue steel armored crate with glowing cyan latches, riveted plates, yellow-black hazard stripes on the edges, a faint blue glow leaking from the seams. Looks special but not luxurious. |
+| `crate_grand.png` | A closed heavy golden-and-black vault crate with ornate gold corner plates, a big round gold lock in the center, warm orange-gold glow leaking from the seams and tiny sparkles. The most valuable looking crate. |
+| `coin.png` | A single round gold bunker token coin seen straight on, thick rim, an embossed radiation trefoil in the center, a few scratches, bright highlights. |
+
+**`pass_bg.jpg`** (Sığınak Bileti arka planı, 16:9, 1920x1080). Bunda ORTAK TARZ kullanma:
+> Wide 16:9 digital painting, dim interior of a nuclear bunker supply room seen from the front: steel shelves with crates and barrels, a long metal workbench in the lower third, hanging cables and a few yellow-black hazard stripes, soft green terminal glow from the right, thin dust in the air. Very dark and low contrast with the center kept calm and plain so UI cards can sit on top. Moody green-and-amber color grading, stylized semi-realistic game art. No text, no letters, no logos, no people, no characters.
+
 ## İpuçları
 - Gemini bazen arka planı yeşil yapmaz ya da gölge ekler; o zaman "solid flat #00FF00 background, no shadow" kısmını tekrar yazıp yeniden üret.
 - Eşyanın içinde yeşil renk olmasın (yeşil ekranla birlikte silinir). Bitki için arka planı mavi iste: `#0000FF` yaz, bana da söyle.

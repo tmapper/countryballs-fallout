@@ -6,25 +6,21 @@ import { i18n } from '../systems/I18n.js';
 import { getDevice, setDevice, applyDeviceClass } from '../systems/Device.js';
 
 export const UPDATE = {
-  id: '0.9.15',
+  id: '0.9.16',
   tr: {
     title: 'Yeni Güncelleme!',
     items: [
-      '🛠 Görev yaptıktan sonra joystick\'in donması düzeltildi',
-      '🎮 Mobilde sağ üstte küçük "Joystik resetle" butonu: joystick takılırsa basman yeter',
-      '⏻ Ayarlar\'a ve ana menüye ÇIKIŞ butonu eklendi',
-      '🚩 12 tarihi bayrak artık gerçek bayrak resimleriyle çiziliyor',
-      '🌐 Sunucu adresi uzaktan güncellenebiliyor: sunucu değişince uygulamayı yeniden indirmen gerekmez'
+      '🎟 Sığınak Bileti artık SAĞA KAYDIRARAK ilerliyor: barlar yatay bir yolda, parmakla / fareyle sürükle',
+      '📐 Hiçbir ekranda kaydırma yok: menüler ve pencereler mobilde ve PC\'de ekrana tam sığıyor',
+      '📦 Kasalar ve bayrak koleksiyonu Bilet ekranında sekmelere taşındı'
     ]
   },
   en: {
     title: 'New Update!',
     items: [
-      '🛠 Fixed the joystick freezing after finishing a task',
-      '🎮 Small "Reset joystick" button at the top right on mobile: tap it if the joystick gets stuck',
-      '⏻ Added an EXIT button to Settings and the main menu',
-      '🚩 The 12 historical flags are now drawn from real flag images',
-      '🌐 The server address can be updated remotely: no re-download when the server changes'
+      '🎟 The Shelter Pass now moves sideways: bars sit on a horizontal track, drag or swipe to move on',
+      '📐 No more scrolling anywhere: menus and windows fit the screen on mobile and PC',
+      '📦 Crates and the flag collection moved into tabs on the Pass screen'
     ]
   }
 };
