@@ -101,6 +101,72 @@ const START_COINS = 200;                                  // yeni hesaba hoş ge
 const COIN = { played: 10, win: 25, task: 2, kill: 5 };
 function ensureWallet(u) { if (typeof u.coins !== 'number') u.coins = START_COINS; if (!Array.isArray(u.hats)) u.hats = []; return u; }
 const ownsHat = (u, h) => HAT_PRICE[h] === 0 || (u && Array.isArray(u.hats) && u.hats.includes(h));
+
+// ---------------- SIĞINAK BİLETİ (sezon) + TARİHİ BAYRAKLAR ----------------
+// 30 günlük sezon; her 20 XP = 1 bar (en fazla 30 bar). Her barın ödülü ya jeton ya kasadır.
+// Kasadan tarihi bayrak çıkar (sıradan 25 bayrak dışındakiler). Her şey SUNUCUDA tutulur ve doğrulanır.
+// UYARI: ödül tablosu, kasa şansları ve bayrak nadirlikleri istemcideki systems/Pass.js ile aynı olmalı.
+const SEASON_DAYS = 30, PASS_LEVELS = 30, PASS_BAR_XP = 20, DAY_MS = 86400000;
+const SEASON_EPOCH = Date.UTC(2026, 10, 11);                   // 1. sezonun başlangıcı (UTC); sonrası otomatik yeni sezon
+const PASS_XP = { played: 8, win: 6, task: 1, kill: 2, daily: 10 };   // bilet XP'si: maç + kazanma + görev + öldürme + günün ilk maçı
+const HFLAGS = { OTT: 'legendary', BRE: 'legendary', ROM: 'legendary', HRE: 'epic', BYZ: 'epic', SOV: 'epic', JPE: 'epic', FRK: 'epic', RUE: 'epic', BGK: 'rare', ESE: 'rare', GEN: 'rare' };
+const DUPE_COINS = { rare: 150, epic: 400, legendary: 1000 };      // aynı bayrak tekrar çıkarsa jetona çevrilir
+const CRATE_ODDS = { common: { rare: 70, epic: 25, legendary: 5 }, rare: { rare: 45, epic: 42, legendary: 13 }, grand: { epic: 70, legendary: 30 } };
+const CRATE_TIERS = Object.keys(CRATE_ODDS);
+function seasonInfo(t = Date.now()) {
+  const n = Math.max(0, Math.floor((t - SEASON_EPOCH) / (SEASON_DAYS * DAY_MS)));
+  const end = SEASON_EPOCH + (n + 1) * SEASON_DAYS * DAY_MS;
+  return { id: n + 1, daysLeft: Math.max(1, Math.ceil((end - t) / DAY_MS)) };
+}
+function passReward(L) {
+  if (L % 3 === 0) return { crate: (L === 15 || L === 30) ? 'grand' : (L === 9 || L === 18 || L === 24) ? 'rare' : 'common' };
+  return { coins: 50 + 10 * Math.floor(L / 3) };
+}
+function ensureMeta(u) {
+  if (!Array.isArray(u.flags)) u.flags = [];
+  if (!u.crates || typeof u.crates !== 'object') u.crates = {};
+  CRATE_TIERS.forEach((k) => { if (typeof u.crates[k] !== 'number') u.crates[k] = 0; });
+  const sid = seasonInfo().id;
+  if (!u.pass || u.pass.s !== sid) u.pass = { s: sid, xp: 0, claimed: [], d: 0 };      // yeni sezon: bilet sıfırlanır (kasa, bayrak, jeton kalır)
+  return u;
+}
+const addPassXp = (u, n) => { const p = ensureMeta(u).pass; p.xp = Math.min(PASS_LEVELS * PASS_BAR_XP, p.xp + Math.max(0, n)); };
+const ownsFlag = (u, f) => !HFLAGS[f] || (u && Array.isArray(u.flags) && u.flags.includes(f));
+function grantReward(u, rw) {
+  if (rw.coins) u.coins += rw.coins;
+  if (rw.crate) u.crates[rw.crate] = (u.crates[rw.crate] || 0) + 1;
+}
+function rollCrate(tier) {
+  const odds = CRATE_ODDS[tier];
+  let x = crypto.randomInt(100), rarity = Object.keys(odds)[0];
+  for (const [rr, w] of Object.entries(odds)) { if (x < w) { rarity = rr; break; } x -= w; }
+  const pool = Object.keys(HFLAGS).filter((f) => HFLAGS[f] === rarity);
+  return { rarity, flag: pool[crypto.randomInt(pool.length)] };
+}
+// ---------------- ADMİN ----------------
+// Admin listesi Upstash'te "cfs:admins" adlı HASH'te tutulur: alan = hesap adı (küçük harf), değer = 1 (admin) / 0.
+// Sunucu bunu dakikada bir okur ve hesaplara u.admin = 0/1 olarak yansıtır (yeniden başlatmaya gerek yok).
+// Upstash yoksa ADMINS=ad1,ad2 ortam değişkeni kullanılır.
+const ADMIN_HASH = process.env.ADMIN_HASH || 'cfs:admins';
+const ENV_ADMINS = (process.env.ADMINS || '').split(',').map((x) => x.trim().toLocaleLowerCase('tr')).filter(Boolean);
+let adminSet = new Set(ENV_ADMINS);
+const isAdmin = (c) => !!(c && c.account && adminSet.has(c.account));
+async function loadAdmins() {
+  const set = new Set(ENV_ADMINS);
+  if (KV_URL && KV_TOKEN) {
+    try {
+      const arr = await kv(['HGETALL', ADMIN_HASH]) || [];
+      for (let i = 0; i + 1 < arr.length; i += 2) if (String(arr[i + 1]).trim() === '1') set.add(String(arr[i]).trim().toLocaleLowerCase('tr'));
+    } catch (e) { console.error('Admin listesi okunamadı:', e.message); return; }   // hata olursa eski liste kalsın
+  }
+  adminSet = set;
+  let changed = false;
+  Object.entries(accounts.users).forEach(([k, u]) => {
+    const v = set.has(k) ? 1 : 0;
+    if (u.admin !== v) { u.admin = v; changed = true; clients.forEach((c) => { if (c.account === k) send(c, { t: 'account', account: publicAcc(u) }); }); }
+  });
+  if (changed) saveAccounts();
+}
 // ---------------- ARKADAŞLAR + SIRALAMA ----------------
 // u.friends: arkadaş hesap anahtarları, u.freq: gelen istekler. Haftalık XP: u.wxp + u.wk (yılın haftası).
 const weekId = (t = Date.now()) => Math.floor((t / 86400000 + 3) / 7);   // Pazartesi başlar
@@ -151,7 +217,10 @@ function publicAcc(u) {
   const base = xpAt(level), next = level >= MAX_LEVEL ? base : xpAt(level + 1);
   let title = 0; TITLE_AT.forEach((l, i) => { if (level >= l) title = i; });
   ensureWallet(u);
-  return { name: u.name, created: u.created, xp, level, xpInto: xp - base, xpNeed: Math.max(1, next - base), title, stats: { ...st }, coins: u.coins, hats: [...u.hats] };
+  ensureMeta(u);
+  const si = seasonInfo();
+  return { name: u.name, created: u.created, xp, level, xpInto: xp - base, xpNeed: Math.max(1, next - base), title, stats: { ...st }, coins: u.coins, hats: [...u.hats],
+    flags: [...u.flags], crates: { ...u.crates }, admin: u.admin ? 1 : 0, pass: { season: si.id, daysLeft: si.daysLeft, xp: u.pass.xp, claimed: [...u.pass.claimed] } };
 }
 function newToken(key) {
   const tok = crypto.randomBytes(24).toString('hex');
@@ -344,11 +413,146 @@ function leaveRoom(c) {
   roomUpdate(r);
 }
 
+// İstenen bayrak tarihi bir bayraksa sahibi olunmalı (admin hariç); değilse sıradan bayrağa dönülür
+function applyFlag(c) {
+  const u = c.account && accounts.users[c.account];
+  if (u) u.admin = adminSet.has(c.account) ? 1 : 0;           // giriş anında admin durumu hesaba yansısın
+  const want = c.wantFlag || c.flag || 'TR';
+  c.flag = (!HFLAGS[want] || isAdmin(c) || ownsFlag(u, want)) ? want : 'TR';
+}
+
+// ---------------- ADMİN KOMUTLARI (sohbete / ile yazılır; sadece admin) ----------------
+let LOC_NAMES = {};
+try { ['tr', 'en'].forEach((l) => { LOC_NAMES[l] = JSON.parse(fs.readFileSync(path.join(PUBLIC, 'locales', l + '.json'), 'utf8')).countries || {}; }); } catch (e) { /* isimler yoksa sadece kodla çalışır */ }
+const fold = (x) => String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+// "finland", "turkey", "Finlandiya", "FI" -> 'FI'
+function flagFromSpec(spec) {
+  const sp = fold(spec); if (!sp) return null;
+  const codes = [...new Set([...Object.keys(LOC_NAMES.tr || {}), ...Object.keys(LOC_NAMES.en || {})])];
+  let hit = codes.find((k) => fold(k) === sp);
+  if (!hit) hit = codes.find((k) => fold((LOC_NAMES.tr || {})[k]) === sp || fold((LOC_NAMES.en || {})[k]) === sp);
+  if (!hit && sp.length >= 3) hit = codes.find((k) => fold((LOC_NAMES.tr || {})[k]).startsWith(sp) || fold((LOC_NAMES.en || {})[k]).startsWith(sp));
+  return hit || null;
+}
+const ROLE_TR = { impostor: 'KATİL', sheriff: 'ŞERİF', crewmate: 'MASUM' };
+function matchPlayer(all, spec) {
+  const code = flagFromSpec(spec), f = fold(spec);
+  return all.find((p) => (code && String(p.flag).toUpperCase() === code) || fold(p.name) === f) || null;
+}
+// /imposter vb. ile ayarlanan roller: rastgele dağıtımdan SONRA uygulanır; sayılar korunsun diye rolü eski sahibiyle takas eder
+function applyForcedRoles(r, all) {
+  const out = [], forced = new Set();
+  (r.force || []).forEach((e) => {
+    const t = matchPlayer(all, e.spec);
+    if (!t) { out.push('⚠ Bulunamadı: ' + e.spec); return; }
+    if (t.role !== e.role) {
+      const other = all.find((q) => q !== t && !forced.has(q) && q.role === e.role);
+      if (other) other.role = t.role;
+      t.role = e.role;
+    }
+    forced.add(t);
+    out.push('✔ ' + (t.name || t.flag) + ' → ' + ROLE_TR[e.role]);
+  });
+  if (!all.some((q) => q.role === 'impostor')) {                      // en az bir katil kalsın
+    const pick = all.find((q) => !forced.has(q) && q.role !== 'impostor');
+    if (pick) { pick.role = 'impostor'; out.push('ℹ Katil kalmadığı için rastgele biri katil yapıldı'); }
+  }
+  const by = new Set((r.force || []).map((e) => e.by));
+  r.force = [];
+  by.forEach((id) => { const pl = r.players.get(id); if (pl) out.forEach((t) => sysMsg(pl.client, t)); });
+}
+const sysMsg = (c, text) => send(c, { t: 'chat', from: 'sys', name: 'SİSTEM', flag: '', text, ch: 'lobby', sys: true });
+function pushAccount(key) { const u = accounts.users[key]; if (u) clients.forEach((c) => { if (c.account === key) send(c, { t: 'account', account: publicAcc(u) }); }); }
+// hedef: "ben" | hesap adı | odadaki oyuncunun bayrağı/adı
+function findAccount(c, r, spec) {
+  const sp = String(spec || '').trim();
+  if (!sp) return null;
+  if (['me', 'ben'].includes(sp.toLowerCase())) return c.account && accounts.users[c.account] ? c.account : null;
+  const key = sp.toLocaleLowerCase('tr');
+  if (accounts.users[key]) return key;
+  if (r) { const code = flagFromSpec(sp); for (const pl of r.players.values()) if (pl.client.account && ((code && String(pl.flag).toUpperCase() === code) || fold(pl.name) === fold(sp))) return pl.client.account; }
+  return null;
+}
+const HELP = [
+  'ROL (lobide, sonraki maç): /imposter <hedef>  /sheriff <hedef>  /crew <hedef>  /roles  /clearroles',
+  'HESAP: /coins <hedef> <±n>  /xp <hedef> <n> (bilet XP)  /crate <hedef> <common|rare|grand> [n]  /flag <hedef> <bayrak|all>',
+  'ODA: /kick <hedef>  /say <metin>  /who  /season  — hedef: ben, hesap adı, bayrak (finland, turkey, FI) ya da oyuncu adı'
+];
+function adminCommand(c, r, text) {
+  const tok = text.slice(1).trim().split(/\s+/);
+  const cmd = (tok.shift() || '').toLocaleLowerCase('tr');
+  const say = (t) => sysMsg(c, t);
+  const num = (v) => Math.max(-100000, Math.min(100000, Math.floor(Number(v) || 0)));
+  const roleCmd = { imposter: 'impostor', impostor: 'impostor', katil: 'impostor', sheriff: 'sheriff', sherriff: 'sheriff', serif: 'sheriff', şerif: 'sheriff', crew: 'crewmate', crewmate: 'crewmate', masum: 'crewmate' }[cmd];
+  if (roleCmd) {
+    if (r.state !== 'lobby') { say('Roller sadece lobide, maç başlamadan ayarlanır.'); return; }
+    const spec = tok.join(' ');
+    if (!spec) { say('Kullanım: /' + cmd + ' <bayrak veya oyuncu>  (ör. /' + cmd + ' finland)'); return; }
+    r.force = (r.force || []).filter((e) => fold(e.spec) !== fold(spec));
+    r.force.push({ spec, role: roleCmd, by: c.id });
+    say('✔ Sonraki maç: ' + spec + ' → ' + ROLE_TR[roleCmd]);
+    return;
+  }
+  switch (cmd) {
+    case 'help': case 'yardim': case 'yardım': case '?': HELP.forEach(say); break;
+    case 'roles': say((r.force || []).length ? (r.force || []).map((e) => e.spec + ' → ' + ROLE_TR[e.role]).join(', ') : 'Ayarlı rol yok.'); break;
+    case 'clearroles': r.force = []; say('✔ Rol ayarları silindi.'); break;
+    case 'coins': case 'jeton': {
+      const k = findAccount(c, r, tok[0]); const n = num(tok[1]);
+      if (!k || !n) { say('Kullanım: /coins <hedef> <±sayı>'); break; }
+      const u = accounts.users[k]; ensureWallet(u); u.coins = Math.max(0, u.coins + n); saveAccounts(); pushAccount(k);
+      say('✔ ' + u.name + ': ' + (n > 0 ? '+' : '') + n + ' 🪙 (yeni bakiye ' + u.coins + ')'); break;
+    }
+    case 'xp': {
+      const k = findAccount(c, r, tok[0]); const n = num(tok[1]);
+      if (!k || !n) { say('Kullanım: /xp <hedef> <sayı>  (Sığınak Bileti XP)'); break; }
+      const u = accounts.users[k]; ensureMeta(u); addPassXp(u, n); saveAccounts(); pushAccount(k);
+      say('✔ ' + u.name + ': bilet XP ' + u.pass.xp + '/' + (PASS_LEVELS * PASS_BAR_XP)); break;
+    }
+    case 'crate': case 'kasa': {
+      const k = findAccount(c, r, tok[0]); const tier = String(tok[1] || '').toLowerCase(); const n = Math.max(1, Math.min(50, num(tok[2]) || 1));
+      if (!k || !CRATE_ODDS[tier]) { say('Kullanım: /crate <hedef> <common|rare|grand> [adet]'); break; }
+      const u = accounts.users[k]; ensureMeta(u); u.crates[tier] += n; saveAccounts(); pushAccount(k);
+      say('✔ ' + u.name + ': +' + n + ' ' + tier + ' kasa'); break;
+    }
+    case 'flag': case 'bayrak': {
+      const k = findAccount(c, r, tok[0]); const what = tok.slice(1).join(' ');
+      if (!k || !what) { say('Kullanım: /flag <hedef> <bayrak|all>'); break; }
+      const u = accounts.users[k]; ensureMeta(u);
+      const list = fold(what) === 'all' ? Object.keys(HFLAGS) : [flagFromSpec(what)].filter((f) => f && HFLAGS[f]);
+      if (!list.length) { say('Bu bir tarihi bayrak değil. Tarihi bayraklar: ' + Object.keys(HFLAGS).join(', ')); break; }
+      list.forEach((f) => { if (!u.flags.includes(f)) u.flags.push(f); });
+      saveAccounts(); pushAccount(k); say('✔ ' + u.name + ': ' + list.join(', ') + ' verildi'); break;
+    }
+    case 'kick': case 'at': {
+      const k = tok.join(' ');
+      const code = flagFromSpec(k);
+      const pl = [...r.players.values()].find((p) => p.id !== c.id && ((code && String(p.flag).toUpperCase() === code) || fold(p.name) === fold(k)));
+      if (!pl) { say('Odada bulunamadı: ' + k); break; }
+      (r.banned || (r.banned = new Set())).add(pl.client.account || pl.id);
+      send(pl.client, { t: 'kicked' }); leaveRoom(pl.client); say('✔ Atıldı: ' + pl.name); break;
+    }
+    case 'say': case 'duyuru': {
+      const t = tok.join(' '); if (!t) { say('Kullanım: /say <metin>'); break; }
+      broadcast(r, { t: 'chat', from: 'sys', name: '📢 YÖNETİM', flag: '', text: t.slice(0, 120), ch: 'lobby', sys: true }); break;
+    }
+    case 'who': {
+      r.players.forEach((p) => {
+        const role = r.match && r.match.roster && r.match.roster[p.id] ? ' · ' + (ROLE_TR[r.match.roster[p.id].role] || '') : '';
+        say(p.id + ' · ' + p.name + ' · ' + p.flag + (p.client.account ? ' · @' + p.client.account : ' · misafir') + role);
+      }); break;
+    }
+    case 'season': { const si = seasonInfo(); say('Sezon ' + si.id + ' · ' + si.daysLeft + ' gün kaldı'); break; }
+    default: say('Bilinmeyen komut: /' + cmd + '  (/help)');
+  }
+}
+
 function handle(c, m) {
   switch (m.t) {
     case 'profile':
       if (!c.account) c.name = clean(m.name, 16) || 'Misafir';
-      c.flag = clean(m.flag, 4) || 'TR';
+      c.wantFlag = clean(m.flag, 4) || 'TR';
+      applyFlag(c);
       if (m.hat !== undefined) c.hat = ownsHat(c.account && accounts.users[c.account], String(m.hat)) ? String(m.hat) : 'none';
       break;
     case 'social': { sendSocial(c); break; }
@@ -409,6 +613,35 @@ function handle(c, m) {
       send(c, { t: 'board', period: week ? 'week' : 'all', top: arr.slice(0, 25).map(row), me: meIdx >= 0 ? row(arr[meIdx], meIdx) : null, total: arr.length });
       break;
     }
+    case 'passClaim': case 'passClaimAll': {
+      const u = c.account && accounts.users[c.account];
+      if (!u) { send(c, { t: 'shopError', code: 'needLogin' }); return; }
+      ensureWallet(u); ensureMeta(u);
+      const p = u.pass, got = [];
+      const levels = m.t === 'passClaimAll' ? Array.from({ length: PASS_LEVELS }, (_, i) => i + 1) : [Math.floor(Number(m.level))];
+      levels.forEach((L) => {
+        if (!(L >= 1 && L <= PASS_LEVELS) || p.xp < L * PASS_BAR_XP || p.claimed.includes(L)) return;
+        p.claimed.push(L);
+        const rw = passReward(L); grantReward(u, rw); got.push({ level: L, ...rw });
+      });
+      if (got.length) saveAccounts();
+      send(c, { t: 'account', account: publicAcc(u), claimed: got });
+      break;
+    }
+    case 'crateOpen': {
+      const u = c.account && accounts.users[c.account];
+      if (!u) { send(c, { t: 'shopError', code: 'needLogin' }); return; }
+      ensureWallet(u); ensureMeta(u);
+      const tier = String(m.tier || '');
+      if (!CRATE_ODDS[tier] || !(u.crates[tier] > 0)) { send(c, { t: 'shopError', code: 'noCrate' }); return; }
+      u.crates[tier]--;
+      const res = rollCrate(tier);
+      let dupe = false, coins = 0;
+      if (u.flags.includes(res.flag)) { dupe = true; coins = DUPE_COINS[res.rarity]; u.coins += coins; } else u.flags.push(res.flag);
+      saveAccounts();
+      send(c, { t: 'account', account: publicAcc(u), crate: { tier, flag: res.flag, rarity: res.rarity, dupe, coins } });
+      break;
+    }
     case 'buyHat': {
       const u = c.account && accounts.users[c.account];
       const h = String(m.hat || '');
@@ -437,9 +670,9 @@ function handle(c, m) {
       const key = name.toLocaleLowerCase('tr');
       if (accounts.users[key]) { send(c, { t: 'authError', code: 'nameTaken' }); return; }
       const salt = crypto.randomBytes(16).toString('hex');
-      accounts.users[key] = { name, salt, hash: hashPass(pass, salt), stats: emptyStats(), created: Date.now(), coins: START_COINS, hats: [] };
+      accounts.users[key] = { name, salt, hash: hashPass(pass, salt), stats: emptyStats(), created: Date.now(), coins: START_COINS, hats: [], admin: 0 };
       saveAccounts();
-      c.account = key; c.name = name;
+      c.account = key; c.name = name; applyFlag(c);
       send(c, { t: 'account', account: publicAcc(accounts.users[key]), token: newToken(key) });
       break;
     }
@@ -448,7 +681,7 @@ function handle(c, m) {
       const key = String(m.name || '').trim().toLocaleLowerCase('tr');
       const u = accounts.users[key];
       if (!u || !crypto.timingSafeEqual(Buffer.from(hashPass(m.pass || '', u.salt), 'hex'), Buffer.from(u.hash, 'hex'))) { send(c, { t: 'authError', code: 'wrong' }); return; }
-      c.account = key; c.name = u.name;
+      c.account = key; c.name = u.name; applyFlag(c);
       send(c, { t: 'account', account: publicAcc(u), token: newToken(key) });
       break;
     }
@@ -456,7 +689,7 @@ function handle(c, m) {
       const tk = accounts.tokens[String(m.token || '')];
       const u = tk && accounts.users[tk.key];
       if (!u) { send(c, { t: 'authError', code: 'expired', silent: true }); return; }
-      c.account = tk.key; c.name = u.name;
+      c.account = tk.key; c.name = u.name; applyFlag(c);
       send(c, { t: 'account', account: publicAcc(u) });
       break;
     }
@@ -506,10 +739,12 @@ function handle(c, m) {
       break;
     case 'setFlag': {
       const want = clean(m.flag, 4);
+      if (HFLAGS[want] && !isAdmin(c) && !ownsFlag(c.account && accounts.users[c.account], want)) { send(c, { t: 'error', code: 'flagLocked' }); return; }   // tarihi bayrak sadece sahibi
       const r0 = rooms.get(c.room);
       // Odada başkasının bayrağı seçilemez
       if (r0 && [...r0.players.values()].some((p) => p.id !== c.id && p.flag === want)) { send(c, { t: 'error', code: 'flagTaken' }); return; }
-      c.flag = want || c.flag;
+      c.wantFlag = want || c.flag;
+      applyFlag(c);
       const r = rooms.get(c.room);
       if (r && r.players.get(c.id)) { r.players.get(c.id).flag = c.flag; roomUpdate(r); }
       break;
@@ -568,6 +803,7 @@ function handle(c, m) {
       const roles = [...Array(nImp).fill('impostor'), ...Array(nSh).fill('sheriff'), ...Array(all.length - nImp - nSh).fill('crewmate')];
       for (let i = roles.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [roles[i], roles[j]] = [roles[j], roles[i]]; }
       all.forEach((p, i) => { p.role = roles[i]; });
+      applyForcedRoles(r, all);                      // admin /imposter /sheriff /crew komutları
       r.state = 'game';
       // Maç kaydı: kim hangi rolde ve hangi hesap. Sonuç gelince istatistik buna göre yazılır.
       r.match = { startAt: Date.now(), done: false, roster: {} };
@@ -620,10 +856,15 @@ function handle(c, m) {
         addWeekXp(u, calcXp(st) - before.xp);
         const coins = COIN.played + (won ? COIN.win : 0) + tasks * COIN.task + kills * COIN.kill;
         u.coins += coins;
+        // Sığınak Bileti XP'si (günün ilk maçında bonus)
+        const pp = ensureMeta(u).pass, today = Math.floor(Date.now() / DAY_MS), pBefore = pp.xp;
+        let pxp = PASS_XP.played + (won ? PASS_XP.win : 0) + tasks * PASS_XP.task + kills * PASS_XP.kill;
+        if (pp.d !== today) { pp.d = today; pxp += PASS_XP.daily; }
+        addPassXp(u, pxp);
         const after = publicAcc(u);
         const pl = r.players.get(pid);
         if (pl && pl.client.account === e.key) {
-          send(pl.client, { t: 'matchReward', account: after, gain: { xp: after.xp - before.xp, coins, won, tasks, kills, levelUp: after.level > before.level, oldLevel: before.level } });
+          send(pl.client, { t: 'matchReward', account: after, gain: { xp: after.xp - before.xp, coins, passXp: pp.xp - pBefore, won, tasks, kills, levelUp: after.level > before.level, oldLevel: before.level } });
         }
       });
       saveAccounts();
@@ -639,7 +880,10 @@ function handle(c, m) {
       // saniyede 10 kez TEK toplu mesajla gönderilir (25 kişide mesaj sayısı ~24 kat azalır).
       if ((k === 'p' || k === 'lp') && !m.to) {
         const d = m.d;
-        (r.pos || (r.pos = new Map())).set(c.id, [c.id, d.x | 0, d.y | 0, d.f ? 1 : 0, d.m ? 1 : 0, k === 'lp' ? 1 : 0]);
+        // m: 0 duruyor, 1 yürüyor, 2 tünelin içinde (sadece Katil tünelde olabilir; başkası 2 yollarsa 0 sayılır)
+        const me = r.players.get(c.id);
+        const mv = d.m === 2 ? (me && me.role === 'impostor' && r.state === 'game' ? 2 : 0) : (d.m ? 1 : 0);
+        (r.pos || (r.pos = new Map())).set(c.id, [c.id, d.x | 0, d.y | 0, d.f ? 1 : 0, mv, k === 'lp' ? 1 : 0]);
         return;
       }
       const msg = { t: 'relay', from: c.id, d: m.d };
@@ -657,6 +901,7 @@ function handle(c, m) {
       c.lastChat = now;
       const text = String(m.text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 120);
       if (!text) return;
+      if (text[0] === '/' && isAdmin(c)) { adminCommand(c, r, text); return; }   // admin komutu: kimseye yayılmaz
       const pl = r.players.get(c.id);
       broadcast(r, { t: 'chat', from: c.id, name: pl ? pl.name : '?', flag: pl ? pl.flag : '', text, ch: m.ch === 'meet' ? 'meet' : m.ch === 'ghost' ? 'ghost' : 'lobby', dead: !!m.dead || m.ch === 'ghost' });
       break;
@@ -673,7 +918,7 @@ function onClose(c) {
   leaveRoom(c);
 }
 
-loadCloud().then(() => server.listen(PORT, () => {
+loadCloud().then(loadAdmins).then(() => { setInterval(loadAdmins, 60000); }).then(() => server.listen(PORT, () => {
   console.log(`Sunucu çalışıyor -> http://localhost:${PORT}  (WebSocket: /ws)`);
 }));
 
