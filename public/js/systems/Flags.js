@@ -11,8 +11,10 @@ const W = 450, H = 300, HD = 2;
 const STORAGE_KEY = 'cfs_flag';
 
 export const FLAG_LIST = [
-  'TR', 'AZ', 'DE', 'FR', 'IT', 'ES', 'PT', 'GB', 'NL', 'PL', 'CZ', 'GR', 'CH',
-  'SE', 'NO', 'FI', 'UA', 'RU', 'US', 'MX', 'BR', 'AR', 'JP', 'CN', 'IN'
+  'TR', 'AZ', 'KZ', 'UZ', 'TM', 'KG', 'PK', 'SA', 'EG', 'IQ', 'IR', 'GE',
+  'DE', 'FR', 'IT', 'ES', 'PT', 'GB', 'NL', 'PL', 'CZ', 'GR', 'CH', 'AT', 'HU',
+  'SE', 'NO', 'FI', 'DK', 'IE', 'BE', 'UA', 'RU', 'RO', 'BG', 'RS', 'HR',
+  'US', 'MX', 'BR', 'AR', 'CA', 'AU', 'JP', 'KR', 'CN', 'IN', 'ID', 'MY', 'TH'
 ];
 
 const cache = {};
@@ -253,19 +255,288 @@ const DRAW = {
   GEN: (c) => {                                     // Ceneviz Cumhuriyeti (Aziz Yorgi haçı)
     c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
     c.fillStyle = '#d4002a'; c.fillRect(W / 2 - 24, 0, 48, H); c.fillRect(0, H / 2 - 24, W, 48);
-  }
+  },
+
+  // ---- Yeni eklenen bayraklar ----
+  KZ: (c) => { // Kazakhstan
+    c.fillStyle = '#00afca'; c.fillRect(0, 0, W, H);
+    // golden sun
+    circle(c, W/2, H*0.38, H*0.13, '#ffc20e');
+    // sun rays
+    c.strokeStyle = '#ffc20e'; c.lineWidth = 4;
+    for (let i = 0; i < 32; i++) {
+      const a = (i / 32) * Math.PI * 2 - Math.PI/2;
+      c.beginPath();
+      c.moveTo(W/2 + Math.cos(a)*H*0.15, H*0.38 + Math.sin(a)*H*0.15);
+      c.lineTo(W/2 + Math.cos(a)*H*0.22, H*0.38 + Math.sin(a)*H*0.22);
+      c.stroke();
+    }
+    // eagle (simplified)
+    c.fillStyle = '#ffc20e';
+    c.beginPath();
+    c.moveTo(W/2 - 40, H*0.62); c.lineTo(W/2, H*0.48); c.lineTo(W/2 + 40, H*0.62);
+    c.lineTo(W/2 + 25, H*0.72); c.lineTo(W/2, H*0.62); c.lineTo(W/2 - 25, H*0.72);
+    c.closePath(); c.fill();
+    // vertical ornament left
+    c.fillStyle = '#ffc20e';
+    for (let i = 0; i < 6; i++) {
+      c.beginPath();
+      c.ellipse(28, H*(0.15 + i*0.12), 10, 18, 0, 0, Math.PI*2);
+      c.fill();
+    }
+  },
+  UZ: (c) => { // Uzbekistan
+    stripesH(c, ['#1eb53a', '#fff', '#0099b5'], [1, 0.2, 1]);
+    // red thin lines
+    c.fillStyle = '#ce1126';
+    c.fillRect(0, H*0.32 - 2, W, 4);
+    c.fillRect(0, H*0.68 - 2, W, 4);
+    // crescent + stars
+    circle(c, W*0.18, H*0.18, H*0.08, '#fff');
+    circle(c, W*0.21, H*0.18, H*0.065, '#1eb53a');
+    for (let i = 0; i < 12; i++) {
+      const row = Math.floor(i / 3), col = i % 3;
+      star(c, W*(0.28 + col*0.06), H*(0.12 + row*0.06), 6, '#fff');
+    }
+  },
+  TM: (c) => { // Turkmenistan
+    c.fillStyle = '#28ae66'; c.fillRect(0, 0, W, H);
+    // vertical stripe
+    c.fillStyle = '#d22630'; c.fillRect(0, 0, W*0.22, H);
+    // five carpet guls (simplified)
+    c.fillStyle = '#fff';
+    const gy = [0.12, 0.28, 0.44, 0.60, 0.76];
+    gy.forEach((y, i) => {
+      c.beginPath();
+      c.moveTo(W*0.11, H*y);
+      c.lineTo(W*0.16, H*(y+0.04));
+      c.lineTo(W*0.11, H*(y+0.08));
+      c.lineTo(W*0.06, H*(y+0.04));
+      c.closePath(); c.fill();
+    });
+    // crescent + stars
+    circle(c, W*0.55, H*0.35, H*0.12, '#fff');
+    circle(c, W*0.58, H*0.35, H*0.09, '#28ae66');
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI/2 + i * (Math.PI*2/5);
+      star(c, W*0.55 + Math.cos(a)*H*0.18, H*0.35 + Math.sin(a)*H*0.18, 8, '#fff');
+    }
+  },
+  KG: (c) => { // Kyrgyzstan
+    c.fillStyle = '#e8112d'; c.fillRect(0, 0, W, H);
+    // sun
+    circle(c, W/2, H/2, H*0.22, '#ffef00');
+    // 40 rays
+    c.strokeStyle = '#ffef00'; c.lineWidth = 5;
+    for (let i = 0; i < 40; i++) {
+      const a = (i / 40) * Math.PI * 2;
+      c.beginPath();
+      c.moveTo(W/2 + Math.cos(a)*H*0.24, H/2 + Math.sin(a)*H*0.24);
+      c.lineTo(W/2 + Math.cos(a)*H*0.38, H/2 + Math.sin(a)*H*0.38);
+      c.stroke();
+    }
+    // tunduk (yurt crown)
+    c.strokeStyle = '#e8112d'; c.lineWidth = 6;
+    c.beginPath(); c.arc(W/2, H/2, H*0.14, 0, Math.PI*2); c.stroke();
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3;
+      c.beginPath();
+      c.moveTo(W/2, H/2);
+      c.lineTo(W/2 + Math.cos(a)*H*0.14, H/2 + Math.sin(a)*H*0.14);
+      c.stroke();
+    }
+  },
+  PK: (c) => { // Pakistan
+    c.fillStyle = '#01411c'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#fff'; c.fillRect(0, 0, W*0.25, H);
+    // crescent
+    circle(c, W*0.55, H/2, H*0.22, '#fff');
+    circle(c, W*0.60, H/2, H*0.18, '#01411c');
+    star(c, W*0.68, H*0.42, H*0.09, '#fff');
+  },
+  SA: (c) => { // Saudi Arabia
+    c.fillStyle = '#165d31'; c.fillRect(0, 0, W, H);
+    // simplified shahada area + sword
+    c.fillStyle = '#fff';
+    c.font = 'bold 28px Arial';
+    c.textAlign = 'center';
+    c.fillText('لا إله إلا الله', W/2, H*0.38);
+    c.fillText('محمد رسول الله', W/2, H*0.52);
+    // sword
+    c.fillRect(W*0.25, H*0.68, W*0.5, 8);
+    c.beginPath();
+    c.moveTo(W*0.75, H*0.68); c.lineTo(W*0.82, H*0.72); c.lineTo(W*0.75, H*0.76);
+    c.closePath(); c.fill();
+    // hilt
+    c.fillRect(W*0.22, H*0.65, 12, 18);
+  },
+  EG: (c) => { // Egypt
+    stripesH(c, ['#ce1126', '#fff', '#000']);
+    // eagle of Saladin (simplified)
+    c.fillStyle = '#c09300';
+    c.beginPath();
+    c.moveTo(W/2, H*0.28);
+    c.lineTo(W/2 + 35, H*0.42);
+    c.lineTo(W/2 + 25, H*0.55);
+    c.lineTo(W/2, H*0.70);
+    c.lineTo(W/2 - 25, H*0.55);
+    c.lineTo(W/2 - 35, H*0.42);
+    c.closePath(); c.fill();
+    // shield
+    c.fillStyle = '#ce1126';
+    c.fillRect(W/2 - 12, H*0.42, 24, 22);
+  },
+  IQ: (c) => { // Iraq
+    stripesH(c, ['#ce1126', '#fff', '#000']);
+    c.fillStyle = '#007a3d';
+    c.font = 'bold 42px Arial';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText('الله أكبر', W/2, H/2);
+  },
+  IR: (c) => { // Iran
+    stripesH(c, ['#239f40', '#fff', '#da0000']);
+    // emblem
+    c.fillStyle = '#da0000';
+    c.beginPath();
+    c.moveTo(W/2, H*0.28);
+    c.lineTo(W/2 + 18, H*0.55);
+    c.lineTo(W/2, H*0.70);
+    c.lineTo(W/2 - 18, H*0.55);
+    c.closePath(); c.fill();
+    // tulip-like
+    circle(c, W/2, H*0.38, 10, '#da0000');
+  },
+  GE: (c) => { // Georgia
+    c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
+    // large cross
+    c.fillStyle = '#ff0000';
+    c.fillRect(W/2 - 22, 0, 44, H);
+    c.fillRect(0, H/2 - 22, W, 44);
+    // four small crosses
+    const positions = [[0.2,0.2],[0.8,0.2],[0.2,0.8],[0.8,0.8]];
+    positions.forEach(([px,py]) => {
+      c.fillRect(W*px - 8, H*py - 20, 16, 40);
+      c.fillRect(W*px - 20, H*py - 8, 40, 16);
+    });
+  },
+  KR: (c) => { // South Korea
+    c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
+    // taegeuk
+    circle(c, W/2, H/2, H*0.22, '#cd2e3a');
+    c.beginPath();
+    c.arc(W/2, H/2, H*0.22, Math.PI, 0); c.fillStyle = '#0047a0'; c.fill();
+    circle(c, W/2 - H*0.11, H/2, H*0.11, '#cd2e3a');
+    circle(c, W/2 + H*0.11, H/2, H*0.11, '#0047a0');
+    // trigrams (simplified bars)
+    c.fillStyle = '#000';
+    const bars = [
+      [0.18,0.18, true],[0.18,0.78,false],[0.82,0.18,false],[0.82,0.78,true]
+    ];
+    bars.forEach(([px,py,solid]) => {
+      for (let i=0;i<3;i++) {
+        const y = H*py + (i-1)*14;
+        if (solid || i!==1) c.fillRect(W*px-28, y-4, 56, 8);
+        else {
+          c.fillRect(W*px-28, y-4, 24, 8);
+          c.fillRect(W*px+4, y-4, 24, 8);
+        }
+      }
+    });
+  },
+  CA: (c) => { // Canada
+    stripesV(c, ['#ff0000', '#fff', '#ff0000'], [1, 2, 1]);
+    // maple leaf (simplified)
+    c.fillStyle = '#ff0000';
+    c.beginPath();
+    c.moveTo(W/2, H*0.18);
+    c.lineTo(W/2 + 18, H*0.35);
+    c.lineTo(W/2 + 40, H*0.32);
+    c.lineTo(W/2 + 22, H*0.48);
+    c.lineTo(W/2 + 30, H*0.70);
+    c.lineTo(W/2, H*0.58);
+    c.lineTo(W/2 - 30, H*0.70);
+    c.lineTo(W/2 - 22, H*0.48);
+    c.lineTo(W/2 - 40, H*0.32);
+    c.lineTo(W/2 - 18, H*0.35);
+    c.closePath(); c.fill();
+    // stem
+    c.fillRect(W/2 - 4, H*0.58, 8, H*0.2);
+  },
+  AU: (c) => { // Australia
+    c.fillStyle = '#00008b'; c.fillRect(0, 0, W, H);
+    // Union Jack canton
+    c.save(); c.beginPath(); c.rect(0,0,W/2,H/2); c.clip();
+    c.scale(0.5,0.5); DRAW.GB(c); c.restore();
+    // Commonwealth star
+    star(c, W*0.25, H*0.72, H*0.12, '#fff', 7, 0.4);
+    // Southern Cross
+    const sc = [[0.72,0.22],[0.82,0.38],[0.68,0.52],[0.78,0.68],[0.62,0.42]];
+    sc.forEach(([x,y],i) => star(c, W*x, H*y, i===4?7:10, '#fff'));
+  },
+  IE: (c) => stripesV(c, ['#169b62', '#fff', '#ff883e']),
+  BE: (c) => stripesV(c, ['#000', '#fdda24', '#ef3340']),
+  AT: (c) => stripesH(c, ['#ed2939', '#fff', '#ed2939']),
+  HU: (c) => stripesH(c, ['#ce2939', '#fff', '#477050']),
+  RO: (c) => stripesV(c, ['#002b7f', '#fcd116', '#ce1126']),
+  BG: (c) => stripesH(c, ['#fff', '#00966e', '#d62612']),
+  RS: (c) => { // Serbia
+    stripesH(c, ['#c6363c', '#0c4076', '#fff']);
+    // coat of arms simplified
+    c.fillStyle = '#c6363c';
+    c.fillRect(W*0.18, H*0.22, W*0.2, H*0.45);
+    c.fillStyle = '#fff';
+    c.fillRect(W*0.22, H*0.28, W*0.12, H*0.12);
+    c.fillStyle = '#c6363c';
+    // double-headed eagle hint
+    circle(c, W*0.25, H*0.55, 8, '#fff');
+    circle(c, W*0.31, H*0.55, 8, '#fff');
+  },
+  HR: (c) => { // Croatia
+    stripesH(c, ['#ff0000', '#fff', '#171796']);
+    // checkerboard
+    const s = 18;
+    for (let row=0; row<5; row++) for (let col=0; col<5; col++) {
+      c.fillStyle = (row+col)%2===0 ? '#ff0000' : '#fff';
+      c.fillRect(W/2 - 2.5*s + col*s, H/2 - 2.5*s + row*s, s, s);
+    }
+  },
+  DK: (c) => nordic(c, '#c8102e', '#fff', W*0.32, H*0.18),
+  ID: (c) => stripesH(c, ['#ff0000', '#fff']),
+  MY: (c) => { // Malaysia
+    // 14 stripes
+    for (let i=0;i<14;i++) {
+      c.fillStyle = i%2===0 ? '#cc0001' : '#fff';
+      c.fillRect(0, (H/14)*i, W, Math.ceil(H/14)+1);
+    }
+    // blue canton
+    c.fillStyle = '#000066'; c.fillRect(0,0,W*0.5, H*(8/14));
+    // crescent + star
+    circle(c, W*0.22, H*(4/14), H*0.12, '#ffcc00');
+    circle(c, W*0.26, H*(4/14), H*0.095, '#000066');
+    star(c, W*0.32, H*(4/14), H*0.1, '#ffcc00', 14, 0.45);
+  },
+  TH: (c) => stripesH(c, ['#a51931', '#f4f5f8', '#2d2a4a', '#f4f5f8', '#a51931'], [1,1,2,1,1]),
+
 };
 
 // Tarihi bayraklar: kasadan çıkar. Nadirlik sunucudaki HFLAGS ile AYNI olmalı.
 export const HIST_RARITY = { OTT: 'legendary', BRE: 'legendary', ROM: 'legendary', HRE: 'epic', BYZ: 'epic', SOV: 'epic', JPE: 'epic', FRK: 'epic', RUE: 'epic', BGK: 'rare', ESE: 'rare', GEN: 'rare' };
 export const HIST_FLAGS = Object.keys(HIST_RARITY);
+// Resim dosyası olan modern bayraklar (assets/flags/<KOD>.webp)
+export const IMAGE_FLAGS = [
+  'KZ', 'UZ', 'TM', 'KG', 'PK', 'SA', 'EG', 'IQ', 'IR', 'GE',
+  'AT', 'HU', 'DK', 'IE', 'BE', 'RO', 'BG', 'RS', 'HR',
+  'KR', 'CA', 'AU', 'ID', 'MY', 'TH'
+];
 export const ALL_FLAGS = [...FLAG_LIST, ...HIST_FLAGS];
 
 // Tarihi bayraklar artık gerçek resimlerden çizilir: assets/flags/<KOD>.webp (900x600).
 // Resim yüklenemezse yukarıdaki kodla çizilmiş eski hali yedek olarak kullanılır.
 const FLAG_IMG = {};
 export function loadFlagImages() {
-  return Promise.all(HIST_FLAGS.map((code) => new Promise((resolve) => {
+  const codes = [...HIST_FLAGS, ...IMAGE_FLAGS];
+  return Promise.all(codes.map((code) => new Promise((resolve) => {
     const img = new Image();
     img.onload = () => { FLAG_IMG[code] = img; delete cache[code]; resolve(); };
     img.onerror = () => resolve();      // yedek çizim kullanılır
