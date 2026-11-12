@@ -15,7 +15,7 @@ class FlagPicker {
     const r = this.root = document.createElement('div');
     r.className = 'flagpick hidden';
     r.innerHTML = `<div class="fp-card"><div class="fp-head"><span class="fp-un"></span><h2></h2><button class="fp-x" type="button">✕</button></div>
-      <p class="fp-sub"></p><div class="fp-grid"></div></div>`;
+      <p class="fp-sub"></p><div class="fp-grid" data-scroll></div></div>`;
     document.body.appendChild(r);
     r.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (e.target === r) this.close(); });
     r.querySelector('.fp-x').addEventListener('click', () => this.close());

@@ -156,12 +156,76 @@ class ShelterPass {
 
   close() { if (this.root) this.root.classList.add('hidden'); this.isOpen = false; }
 
-  hideReveal() { const v = this.root.querySelector('.sp-reveal'); v.classList.add('hidden'); v.innerHTML = ''; }
+  hideReveal() { clearTimeout(this._spinTimer); const v = this.root.querySelector('.sp-reveal'); v.classList.add('hidden'); v.innerHTML = ''; }
 
-  // Kasa açıldı: bayrak ışıltılı şekilde gösterilir
+  // Kasa açıldı: önce hızlı dönen bayrak şeridi, yavaşlayarak ortadaki bayrakta durur
   reveal(c) {
     sfx(c.rarity === 'legendary' || c.rarity === 'epic' ? 'task_done' : 'wire_connect');
     const v = this.root.querySelector('.sp-reveal');
+    const col = RARITY_COLOR[c.rarity];
+    v.style.setProperty('--rc', col);
+
+    // Bu kasanın çıkarabileceği nadirliklere göre havuz
+    const odds = CRATE_ODDS[c.tier] || {};
+    const pool = HIST_FLAGS.filter((f) => odds[HIST_RARITY[f]]);
+    const list = pool.length ? pool : HIST_FLAGS.slice();
+
+    // Uzun şerit: ~40-50 bayrak, kazanılan bayrak ortalara yakın yerleştirilir
+    const ITEM_W = 120;           // her kutu genişliği (px)
+    const VISIBLE = 5;            // görünür kutu sayısı (ortadaki vurgulu)
+    const total = 48;
+    const winIdx = 38 + Math.floor(Math.random() * 4); // 38..41 → yavaşlama bölgesi
+    const strip = [];
+    for (let i = 0; i < total; i++) {
+      strip.push(i === winIdx ? c.flag : list[Math.floor(Math.random() * list.length)]);
+    }
+
+    v.innerHTML = `
+      <div class="sp-spin">
+        <div class="sp-spin-title">${this.icon(c.tier)} ${i18n.t('pass.tier.' + c.tier)}</div>
+        <div class="sp-spin-window">
+          <div class="sp-spin-pointer"></div>
+          <div class="sp-spin-track" style="--item-w:${ITEM_W}px"></div>
+        </div>
+        <div class="sp-spin-hint">${i18n.t('pass.spinning') || 'Dönüyor...'}</div>
+      </div>`;
+    v.classList.remove('hidden');
+
+    const track = v.querySelector('.sp-spin-track');
+    strip.forEach((code, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'sp-spin-item' + (i === winIdx ? ' win' : '');
+      cell.innerHTML = `<img alt="" src="${getFlagThumb(code, 100, 66)}"><span>${i18n.t('countries.' + code)}</span>`;
+      track.appendChild(cell);
+    });
+
+    // Başlangıç: solda, hızlı; hedef: winIdx ortada
+    const centerOffset = (VISIBLE / 2 - 0.5) * ITEM_W;
+    const targetX = -(winIdx * ITEM_W - centerOffset);
+    track.style.transform = 'translateX(0)';
+    track.style.transition = 'none';
+
+    // force reflow
+    void track.offsetWidth;
+
+    // Ease-out cubic: hızlı başla, yavaş yavaş dur
+    const duration = 4200 + Math.random() * 800; // 4.2–5 sn
+    track.style.transition = `transform ${duration}ms cubic-bezier(0.12, 0.75, 0.18, 1)`;
+    track.style.transform = `translateX(${targetX}px)`;
+
+    const finish = () => {
+      // Ortadaki kazananı vurgula, sonra kartı göster
+      const items = track.querySelectorAll('.sp-spin-item');
+      items.forEach((el, i) => el.classList.toggle('landed', i === winIdx));
+      setTimeout(() => this.showRevealCard(c, v), 650);
+    };
+    track.addEventListener('transitionend', finish, { once: true });
+    // güvenlik: transitionend gelmezse
+    this._spinTimer = setTimeout(finish, duration + 200);
+  }
+
+  showRevealCard(c, v) {
+    clearTimeout(this._spinTimer);
     const col = RARITY_COLOR[c.rarity];
     v.style.setProperty('--rc', col);
     v.innerHTML = `<div class="sp-rv-card"><div class="sp-rv-crate">${this.icon(c.tier)} ${i18n.t('pass.tier.' + c.tier)}</div>
@@ -170,7 +234,6 @@ class ShelterPass {
       <div class="sp-rv-name">${i18n.t('countries.' + c.flag)}</div>
       <div class="sp-rv-note">${c.dupe ? i18n.t('pass.dupe', { n: c.coins }) : i18n.t('pass.newFlag')}</div>
       <button class="mm-tbtn primary" type="button">${i18n.t('pass.ok')}</button></div>`;
-    v.classList.remove('hidden');
     v.querySelector('button').addEventListener('click', () => this.hideReveal());
   }
 

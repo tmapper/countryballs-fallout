@@ -569,6 +569,7 @@
     "newFlag": "NEW FLAG! Pick it in the lobby flag picker.",
     "dupe": "You already own this flag: +{n} 🪙",
     "ok": "OK",
-    "passXp": "pass XP"
+    "passXp": "pass XP",
+    "spinning": "Spinning..."
   }
 }

@@ -475,8 +475,9 @@ function findAccount(c, r, spec) {
 }
 const HELP = [
   'ROL (lobide, sonraki maç): /imposter <hedef>  /sheriff <hedef>  /crew <hedef>  /roles  /clearroles',
-  'HESAP: /coins <hedef> <±n>  /xp <hedef> <n> (bilet XP)  /crate <hedef> <common|rare|grand> [n]  /flag <hedef> <bayrak|all>',
-  'ODA: /kick <hedef>  /say <metin>  /who  /season  — hedef: ben, hesap adı, bayrak (finland, turkey, FI) ya da oyuncu adı'
+  'HESAP: /coins <hedef> <±n>  /xp <hedef> <n> (bilet XP)  /crate <hedef> <common|rare|grand> [n]  /flag <hedef> <bayrak|all>  /hat <hedef> <şapka|all>',
+  'ODA: /kick <hedef>  /say <metin>  /who  /season  /admins  /reloadadmins',
+  'Hedef: ben, hesap adı, bayrak (finland, turkey, FI) ya da oyuncu adı. Admin listesi Upstash cfs:admins hash\'inden gelir.'
 ];
 function adminCommand(c, r, text) {
   const tok = text.slice(1).trim().split(/\s+/);
@@ -543,6 +544,27 @@ function adminCommand(c, r, text) {
       }); break;
     }
     case 'season': { const si = seasonInfo(); say('Sezon ' + si.id + ' · ' + si.daysLeft + ' gün kaldı'); break; }
+    case 'hat': case 'sapka': case 'şapka': {
+      const k = findAccount(c, r, tok[0]); const what = String(tok[1] || '').toLowerCase();
+      if (!k || !what) { say('Kullanım: /hat <hedef> <şapka_id|all>  (ör. /hat ben top_hat)'); break; }
+      const u = accounts.users[k]; ensureMeta(u);
+      if (!u.hats) u.hats = [];
+      if (what === 'all') {
+        // Tüm bilinen şapkaları ver (Looks.js HAT_IDS ile aynı olmalı; sunucuda sabit liste)
+        const ALL_HATS = ['tophat','cowboy','crown','beanie','cap_red','cap_blue','fedora','party','chef','viking','army','hardhat','fez','beret','santa','witch','pirate','grad','headphones','flowers','halo','propeller','bowler','sombrero','ushanka','bunny','cat','antenna','gasmask'];
+        ALL_HATS.forEach((h) => { if (!u.hats.includes(h)) u.hats.push(h); });
+        saveAccounts(); pushAccount(k); say('✔ ' + u.name + ': tüm şapkalar verildi'); break;
+      }
+      if (!u.hats.includes(what)) u.hats.push(what);
+      saveAccounts(); pushAccount(k); say('✔ ' + u.name + ': şapka ' + what + ' verildi'); break;
+    }
+    case 'admins': case 'adminler': {
+      say('Adminler: ' + ([...adminSet].join(', ') || '(yok)')); break;
+    }
+    case 'reloadadmins': case 'adminyenile': {
+      loadAdmins().then(() => say('✔ Admin listesi yenilendi (' + adminSet.size + ' kişi)')).catch((e) => say('Hata: ' + e.message));
+      break;
+    }
     default: say('Bilinmeyen komut: /' + cmd + '  (/help)');
   }
 }

@@ -12,9 +12,9 @@ const TARGETS = [
   ['.mm-ui', { fill: true }],
   ['.lobby', { fill: true }],
   ['.mm-card', {}],
-  ['.fp-card', { wide: true }],
+  // .fp-card (bayrak/şapka seçme) ve .so-card (arkadaşlar/sıralama) kasıtlı olarak listede YOK:
+  // bu ekranlarda grid/liste kaydırılabilir olsun. Diğer pencereler ekrana sığdırılır.
   ['.gs-card', {}],
-  ['.so-card', { wide: true }],
   ['.sp-modal .sp-card', {}],
   ['.taskbox', {}],
   ['.mt-panel', { wide: true }],
@@ -26,7 +26,7 @@ const TARGETS = [
   ['.sab-panel', {}],
   ['.pass-card', { wide: true }]
 ];
-const ALLOW = '.mt-chat-list, .lc-list, .pass-track, [data-scroll]';
+const ALLOW = '.mt-chat-list, .lc-list, .pass-track, .fp-grid, .so-body, [data-scroll]';
 const MIN_Z = 0.42;
 const STEP = 0.04;
 const ALL_SEL = TARGETS.map((t) => t[0]).join(',');

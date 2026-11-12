@@ -16,7 +16,7 @@ class HatPicker {
     r.className = 'flagpick hatpick hidden';
     r.innerHTML = `<div class="fp-card hp-card"><div class="fp-head"><span class="hp-ico">🎩</span><h2></h2><button class="fp-x" type="button">✕</button></div>
       <div class="hp-bar"><span class="hp-coins"></span><span class="hp-msg"></span></div>
-      <p class="fp-sub"></p><div class="fp-grid hp-grid"></div></div>`;
+      <p class="fp-sub"></p><div class="fp-grid hp-grid" data-scroll></div></div>`;
     document.body.appendChild(r);
     r.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (e.target === r) this.close(); });
     r.querySelector('.fp-x').addEventListener('click', () => this.close());

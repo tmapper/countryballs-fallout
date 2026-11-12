@@ -1031,6 +1031,47 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 @media (max-width: 560px) { .sp-season { display: none; } .pass-head .hp-msg { max-width: 46%; } }
 .sp-reveal { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; background: rgba(4,10,20,.9); animation: mtFade .25s ease; }
 .sp-reveal.hidden { display: none; }
+
+/* Kasa açma spin animasyonu */
+.sp-spin { width: min(640px, 96vw); display: flex; flex-direction: column; align-items: center; gap: 16px; color: #fff; }
+.sp-spin-title { font: 900 18px system-ui; letter-spacing: .08em; opacity: .9; }
+.sp-spin-window {
+  position: relative; width: 100%; height: 140px; overflow: hidden;
+  border-radius: 14px; border: 3px solid var(--rc, #5b92e5);
+  background: linear-gradient(180deg, #0a1524, #061018);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--rc, #5b92e5) 45%, transparent), inset 0 0 30px rgba(0,0,0,.5);
+}
+.sp-spin-pointer {
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; margin-left: -1.5px; z-index: 3;
+  background: linear-gradient(180deg, transparent, var(--rc, #ffd23f), transparent);
+  box-shadow: 0 0 12px var(--rc, #ffd23f);
+  pointer-events: none;
+}
+.sp-spin-pointer::before, .sp-spin-pointer::after {
+  content: ''; position: absolute; left: 50%; transform: translateX(-50%);
+  border-left: 8px solid transparent; border-right: 8px solid transparent;
+}
+.sp-spin-pointer::before { top: 0; border-top: 10px solid var(--rc, #ffd23f); }
+.sp-spin-pointer::after { bottom: 0; border-bottom: 10px solid var(--rc, #ffd23f); }
+.sp-spin-track {
+  display: flex; height: 100%; will-change: transform;
+}
+.sp-spin-item {
+  flex: 0 0 var(--item-w, 120px); width: var(--item-w, 120px); height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  border-right: 1px solid rgba(255,255,255,.08); box-sizing: border-box;
+  opacity: .55; transition: opacity .25s, transform .25s;
+}
+.sp-spin-item img { width: 90px; height: 60px; object-fit: cover; border-radius: 6px; border: 2px solid #2a3a4a; }
+.sp-spin-item span { font: 700 11px system-ui; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .85; }
+.sp-spin-item.win, .sp-spin-item.landed { opacity: 1; }
+.sp-spin-item.landed img {
+  border-color: var(--rc, #ffd23f);
+  box-shadow: 0 0 20px var(--rc, #ffd23f);
+  transform: scale(1.08);
+}
+.sp-spin-hint { font: 700 13px system-ui; opacity: .7; letter-spacing: .06em; }
+
 .sp-rv-card { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px; text-align: center; color: #fff; font: 700 15px system-ui; }
 .sp-rv-card img { width: 240px; max-width: 70vw; border-radius: 10px; border: 3px solid var(--rc); box-shadow: 0 0 40px var(--rc), 0 0 90px -10px var(--rc); animation: spPop .6s cubic-bezier(.2,1.6,.4,1); }
 @keyframes spPop { from { transform: scale(.2) rotate(-12deg); opacity: 0; } }

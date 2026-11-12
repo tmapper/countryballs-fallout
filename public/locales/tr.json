@@ -569,6 +569,7 @@
     "newFlag": "YENİ BAYRAK! Lobide bayrak seçerken kullanabilirsin.",
     "dupe": "Bu bayrağa zaten sahiptin: +{n} 🪙",
     "ok": "TAMAM",
-    "passXp": "bilet XP"
+    "passXp": "bilet XP",
+    "spinning": "Dönüyor..."
   }
 }

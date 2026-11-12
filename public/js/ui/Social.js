@@ -18,7 +18,7 @@ class Social {
     r.className = 'social hidden';
     r.innerHTML = `<div class="so-card">
       <div class="so-head"><div class="so-tabs"><button type="button" data-tab="friends"></button><button type="button" data-tab="board"></button></div><button class="so-x" type="button">✕</button></div>
-      <div class="so-body"></div><div class="so-msg"></div></div>`;
+      <div class="so-body" data-scroll></div><div class="so-msg"></div></div>`;
     document.body.appendChild(r);
     r.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (e.target === r) this.close(); });
     r.querySelector('.so-x').addEventListener('click', () => this.close());
