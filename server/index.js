@@ -150,7 +150,14 @@ function rollCrate(tier) {
 const ADMIN_HASH = process.env.ADMIN_HASH || 'cfs:admins';
 const ENV_ADMINS = (process.env.ADMINS || '').split(',').map((x) => x.trim().toLocaleLowerCase('tr')).filter(Boolean);
 let adminSet = new Set(ENV_ADMINS);
-const isAdmin = (c) => !!(c && c.account && adminSet.has(c.account));
+// Admin: Upstash hash (cfs:admins) VEYA hesap nesnesindeki u.admin === 1
+// (sadece hesaba admin yazıldıysa da komutlar çalışsın)
+const isAdmin = (c) => {
+  if (!c || !c.account) return false;
+  if (adminSet.has(c.account)) return true;
+  const u = accounts.users[c.account];
+  return !!(u && (u.admin === 1 || u.admin === true || u.admin === '1'));
+};
 async function loadAdmins() {
   const set = new Set(ENV_ADMINS);
   if (KV_URL && KV_TOKEN) {
@@ -159,6 +166,10 @@ async function loadAdmins() {
       for (let i = 0; i + 1 < arr.length; i += 2) if (String(arr[i + 1]).trim() === '1') set.add(String(arr[i]).trim().toLocaleLowerCase('tr'));
     } catch (e) { console.error('Admin listesi okunamadı:', e.message); return; }   // hata olursa eski liste kalsın
   }
+  // Hesaplarda elle admin=1 yazılmış olanları da sete ekle (tek yönlü senkron)
+  Object.entries(accounts.users || {}).forEach(([k, u]) => {
+    if (u && (u.admin === 1 || u.admin === true || u.admin === '1')) set.add(k);
+  });
   adminSet = set;
   let changed = false;
   Object.entries(accounts.users).forEach(([k, u]) => {
@@ -416,7 +427,12 @@ function leaveRoom(c) {
 // İstenen bayrak tarihi bir bayraksa sahibi olunmalı (admin hariç); değilse sıradan bayrağa dönülür
 function applyFlag(c) {
   const u = c.account && accounts.users[c.account];
-  if (u) u.admin = adminSet.has(c.account) ? 1 : 0;           // giriş anında admin durumu hesaba yansısın
+  // Admin: hash'te varsa 1; hesapta zaten 1 ise koru (Upstash'te elle yazılmış olabilir)
+  if (u) {
+    if (adminSet.has(c.account)) u.admin = 1;
+    else if (u.admin === 1 || u.admin === true || u.admin === '1') u.admin = 1;
+    else u.admin = 0;
+  }
   const want = c.wantFlag || c.flag || 'TR';
   c.flag = (!HFLAGS[want] || isAdmin(c) || ownsFlag(u, want)) ? want : 'TR';
 }
@@ -923,7 +939,12 @@ function handle(c, m) {
       c.lastChat = now;
       const text = String(m.text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 120);
       if (!text) return;
-      if (text[0] === '/' && isAdmin(c)) { adminCommand(c, r, text); return; }   // admin komutu: kimseye yayılmaz
+      // / ile başlayan mesajlar: admin ise komut, değilse yayma (görünmez kalsın) + uyarı
+      if (text[0] === '/') {
+        if (isAdmin(c)) { adminCommand(c, r, text); return; }
+        sysMsg(c, 'Bu komut için admin yetkisi gerekli. Hesabın Upstash cfs:admins hash\'inde 1 olmalı veya admin=1 yazılmalı.');
+        return;
+      }
       const pl = r.players.get(c.id);
       broadcast(r, { t: 'chat', from: c.id, name: pl ? pl.name : '?', flag: pl ? pl.flag : '', text, ch: m.ch === 'meet' ? 'meet' : m.ch === 'ghost' ? 'ghost' : 'lobby', dead: !!m.dead || m.ch === 'ghost' });
       break;
