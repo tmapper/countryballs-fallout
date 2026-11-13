@@ -9,15 +9,15 @@
 //
 // Okunan adres telefona/PC'ye kaydedilir; internet/dosya o an yoksa son bilinen adres kullanılır.
 
-// 1) BURAYI BİR KERE DOLDUR: server.json dosyasının durduğu adres(ler). Birden fazla yazarsan sırayla denenir.
+// 1) server.json adresi — GitHub raw + jsDelivr yedek (biri engellenirse diğeri çalışır)
 export const CONFIG_URLS = [
-  // 'https://KULLANICIADI.github.io/countryballs-fallout/server.json',
-  // 'https://SITENIZ.com/server.json',
+  'https://raw.githubusercontent.com/tmapper/countryballs-config/main/server.json',
+  'https://cdn.jsdelivr.net/gh/tmapper/countryballs-config@main/server.json',
 ];
 
-// 2) Hiçbir şey okunamazsa kullanılacak yedek adres (APK/EXE ilk kez, internetsiz açılırsa). Boş olabilir.
+// 2) Hiçbir şey okunamazsa kullanılacak yedek (guncel tut)
 export const DEFAULT_SERVERS = [
-  // 'https://countryballs-fallout.onrender.com',
+  'https://countryballs-fallout-cv96.onrender.com',
 ];
 
 const CACHE_KEY = 'cfs.remoteServers';
