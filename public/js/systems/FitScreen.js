@@ -24,7 +24,9 @@ const TARGETS = [
   ['.rh-flagcard', { wide: true }],
   ['.rh-panel', {}],
   ['.sab-panel', {}],
-  ['.pass-card', { wide: true }]
+  ['.pass-card', { wide: true }],
+  ['.mk-card', { wide: true }],
+  ['.sg-card', {}]
 ];
 const ALLOW = '.mt-chat-list, .lc-list, .pass-track, .fp-grid, .so-body, [data-scroll]';
 const MIN_Z = 0.42;

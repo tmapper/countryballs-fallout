@@ -109,17 +109,19 @@ const ownsHat = (u, h) => HAT_PRICE[h] === 0 || (u && Array.isArray(u.hats) && u
 const SEASON_DAYS = 30, PASS_LEVELS = 30, PASS_BAR_XP = 20, DAY_MS = 86400000;
 const SEASON_EPOCH = Date.UTC(2026, 10, 11);                   // 1. sezonun başlangıcı (UTC); sonrası otomatik yeni sezon
 const PASS_XP = { played: 8, win: 6, task: 1, kill: 2, daily: 10 };   // bilet XP'si: maç + kazanma + görev + öldürme + günün ilk maçı
-const HFLAGS = { OTT: 'legendary', BRE: 'legendary', ROM: 'legendary', HRE: 'epic', BYZ: 'epic', SOV: 'epic', JPE: 'epic', FRK: 'epic', RUE: 'epic', BGK: 'rare', ESE: 'rare', GEN: 'rare' };
-const DUPE_COINS = { rare: 150, epic: 400, legendary: 1000 };      // aynı bayrak tekrar çıkarsa jetona çevrilir
+const HFLAGS = { OTT: 'mystic', BRE: 'legendary', ROM: 'legendary', MAM: 'legendary', AND: 'legendary', GOK: 'legendary', HRE: 'epic', BYZ: 'epic', SOV: 'epic', JPE: 'epic', FRK: 'epic', RUE: 'epic', VEN: 'epic', PRU: 'epic', AQY: 'epic', QRN: 'epic', BGK: 'rare', ESE: 'rare', GEN: 'rare', HAZ: 'rare', MON: 'epic', PER: 'epic', ABB: 'legendary', SEL: 'legendary' };
+const DUPE_COINS = { rare: 150, epic: 400, legendary: 1000, mystic: 2500 };      // aynı bayrak tekrar çıkarsa jetona çevrilir
 const CRATE_ODDS = { common: { rare: 70, epic: 25, legendary: 5 }, rare: { rare: 45, epic: 42, legendary: 13 }, grand: { epic: 70, legendary: 30 } };
 const CRATE_TIERS = Object.keys(CRATE_ODDS);
+const CRATE_PRICE = { common: 250, rare: 500, grand: 1000 };  // jetonla kasa satın alma
 function seasonInfo(t = Date.now()) {
   const n = Math.max(0, Math.floor((t - SEASON_EPOCH) / (SEASON_DAYS * DAY_MS)));
   const end = SEASON_EPOCH + (n + 1) * SEASON_DAYS * DAY_MS;
   return { id: n + 1, daysLeft: Math.max(1, Math.ceil((end - t) / DAY_MS)) };
 }
 function passReward(L) {
-  if (L % 3 === 0) return { crate: (L === 15 || L === 30) ? 'grand' : (L === 9 || L === 18 || L === 24) ? 'rare' : 'common' };
+  if (L === 30) return { flag: 'OTT' };  // 30. seviye: Osmanlı (mistik, kasadan çıkmaz)
+  if (L % 3 === 0) return { crate: (L === 15) ? 'grand' : (L === 9 || L === 18 || L === 24) ? 'rare' : 'common' };
   return { coins: 50 + 10 * Math.floor(L / 3) };
 }
 function ensureMeta(u) {
@@ -135,12 +137,18 @@ const ownsFlag = (u, f) => !HFLAGS[f] || (u && Array.isArray(u.flags) && u.flags
 function grantReward(u, rw) {
   if (rw.coins) u.coins += rw.coins;
   if (rw.crate) u.crates[rw.crate] = (u.crates[rw.crate] || 0) + 1;
+  if (rw.flag && HFLAGS[rw.flag] && !u.flags.includes(rw.flag)) u.flags.push(rw.flag);
 }
 function rollCrate(tier) {
   const odds = CRATE_ODDS[tier];
   let x = crypto.randomInt(100), rarity = Object.keys(odds)[0];
   for (const [rr, w] of Object.entries(odds)) { if (x < w) { rarity = rr; break; } x -= w; }
-  const pool = Object.keys(HFLAGS).filter((f) => HFLAGS[f] === rarity);
+  // mystic bayraklar (OTT) kasadan ASLA çıkmaz
+  const pool = Object.keys(HFLAGS).filter((f) => HFLAGS[f] === rarity && HFLAGS[f] !== 'mystic');
+  if (!pool.length) { // yedek: epic/legendary
+    const fallback = Object.keys(HFLAGS).filter((f) => HFLAGS[f] === 'epic' || HFLAGS[f] === 'legendary');
+    return { rarity: 'epic', flag: fallback[crypto.randomInt(fallback.length)] };
+  }
   return { rarity, flag: pool[crypto.randomInt(pool.length)] };
 }
 // ---------------- ADMİN ----------------
@@ -651,6 +659,92 @@ function handle(c, m) {
       send(c, { t: 'board', period: week ? 'week' : 'all', top: arr.slice(0, 25).map(row), me: meIdx >= 0 ? row(arr[meIdx], meIdx) : null, total: arr.length });
       break;
     }
+    case 'suggest': {
+      const u = c.account && accounts.users[c.account];
+      const text = String(m.text || '').trim().slice(0, 280);
+      if (!text || text.length < 3) return;
+      if (!accounts.suggestions) accounts.suggestions = [];
+      accounts.suggestions.push({ name: u ? u.name : 'anon', account: c.account || null, text, at: Date.now() });
+      if (accounts.suggestions.length > 500) accounts.suggestions = accounts.suggestions.slice(-400);
+      saveAccounts();
+      send(c, { t: 'suggestOk' });
+      break;
+    }
+    // ---- OYUNCULAR ARASI PAZAR ----
+    // listing: { id, seller, sellerName, type:'flag'|'hat', item, price, at }
+    case 'marketList': {
+      if (!accounts.market) accounts.market = [];
+      send(c, { t: 'market', list: accounts.market.slice(-100) });
+      break;
+    }
+    case 'marketSell': {
+      const u = c.account && accounts.users[c.account];
+      if (!u) { send(c, { t: 'shopError', code: 'needLogin' }); return; }
+      ensureMeta(u); ensureWallet(u);
+      const type = m.kind === 'hat' ? 'hat' : 'flag';
+      const item = String(m.item || '');
+      const price = Math.floor(Number(m.price) || 0);
+      if (price < 50 || price > 50000) { send(c, { t: 'shopError', code: 'badPrice' }); return; }
+      if (type === 'flag') {
+        if (!HFLAGS[item] || !u.flags.includes(item)) { send(c, { t: 'shopError', code: 'noItem' }); return; }
+        // mystic satılamaz
+        if (HFLAGS[item] === 'mystic') { send(c, { t: 'shopError', code: 'mysticLock' }); return; }
+        u.flags = u.flags.filter((f) => f !== item);
+      } else {
+        if (!u.hats.includes(item) || (HAT_PRICE[item] === 0)) { send(c, { t: 'shopError', code: 'noItem' }); return; }
+        u.hats = u.hats.filter((h) => h !== item);
+      }
+      if (!accounts.market) accounts.market = [];
+      const id = crypto.randomBytes(6).toString('hex');
+      accounts.market.push({ id, seller: c.account, sellerName: u.name, type, item, price, at: Date.now() });
+      if (accounts.market.length > 200) accounts.market = accounts.market.slice(-150);
+      saveAccounts();
+      send(c, { t: 'account', account: publicAcc(u), marketOk: 'listed' });
+      break;
+    }
+    case 'marketBuy': {
+      const u = c.account && accounts.users[c.account];
+      if (!u) { send(c, { t: 'shopError', code: 'needLogin' }); return; }
+      ensureMeta(u); ensureWallet(u);
+      if (!accounts.market) accounts.market = [];
+      const id = String(m.id || '');
+      const idx = accounts.market.findIndex((x) => x.id === id);
+      if (idx < 0) { send(c, { t: 'shopError', code: 'gone' }); return; }
+      const listing = accounts.market[idx];
+      if (listing.seller === c.account) { send(c, { t: 'shopError', code: 'own' }); return; }
+      if (u.coins < listing.price) { send(c, { t: 'shopError', code: 'noCoins' }); return; }
+      const seller = accounts.users[listing.seller];
+      if (!seller) { accounts.market.splice(idx, 1); saveAccounts(); send(c, { t: 'shopError', code: 'gone' }); return; }
+      u.coins -= listing.price;
+      seller.coins = (seller.coins || 0) + listing.price;
+      if (listing.type === 'flag') {
+        if (!u.flags.includes(listing.item)) u.flags.push(listing.item);
+      } else {
+        if (!u.hats.includes(listing.item)) u.hats.push(listing.item);
+      }
+      accounts.market.splice(idx, 1);
+      saveAccounts();
+      send(c, { t: 'account', account: publicAcc(u), marketOk: 'bought' });
+      // satıcıya haber (online ise)
+      const sc = onlineClient(listing.seller);
+      if (sc) send(sc, { t: 'account', account: publicAcc(seller), marketOk: 'sold' });
+      break;
+    }
+    case 'marketCancel': {
+      const u = c.account && accounts.users[c.account];
+      if (!u) return;
+      if (!accounts.market) accounts.market = [];
+      const id = String(m.id || '');
+      const idx = accounts.market.findIndex((x) => x.id === id && x.seller === c.account);
+      if (idx < 0) return;
+      const listing = accounts.market[idx];
+      if (listing.type === 'flag' && !u.flags.includes(listing.item)) u.flags.push(listing.item);
+      else if (listing.type === 'hat' && !u.hats.includes(listing.item)) u.hats.push(listing.item);
+      accounts.market.splice(idx, 1);
+      saveAccounts();
+      send(c, { t: 'account', account: publicAcc(u), marketOk: 'cancelled' });
+      break;
+    }
     case 'passClaim': case 'passClaimAll': {
       const u = c.account && accounts.users[c.account];
       if (!u) { send(c, { t: 'shopError', code: 'needLogin' }); return; }
@@ -664,6 +758,22 @@ function handle(c, m) {
       });
       if (got.length) saveAccounts();
       send(c, { t: 'account', account: publicAcc(u), claimed: got });
+      break;
+    }
+    case 'buyCrate': {
+      const u = c.account && accounts.users[c.account];
+      if (!u) { send(c, { t: 'shopError', code: 'needLogin' }); return; }
+      ensureWallet(u); ensureMeta(u);
+      const tier = String(m.tier || '');
+      const price = CRATE_PRICE[tier];
+      if (!price) { send(c, { t: 'shopError', code: 'badCrate' }); return; }
+      const n = Math.max(1, Math.min(10, Math.floor(Number(m.n) || 1)));
+      const cost = price * n;
+      if (u.coins < cost) { send(c, { t: 'shopError', code: 'noCoins' }); return; }
+      u.coins -= cost;
+      u.crates[tier] = (u.crates[tier] || 0) + n;
+      saveAccounts();
+      send(c, { t: 'account', account: publicAcc(u), boughtCrate: { tier, n, cost } });
       break;
     }
     case 'crateOpen': {

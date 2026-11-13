@@ -178,7 +178,19 @@
     "DK": "Danimarka",
     "ID": "Endonezya",
     "MY": "Malezya",
-    "TH": "Tayland"
+    "TH": "Tayland",
+    "MON": "Moğol İmparatorluğu",
+    "PER": "Pers İmparatorluğu",
+    "ABB": "Abbasî Halifeliği",
+    "SEL": "Büyük Selçuklu",
+    "GOK": "Göktürk Kağanlığı",
+    "QRN": "Karahanlılar",
+    "AQY": "Akkoyunlu",
+    "MAM": "Memlük Sultanlığı",
+    "VEN": "Venedik Cumhuriyeti",
+    "PRU": "Prusya Krallığı",
+    "AND": "Endülüs (Kurtuba)",
+    "HAZ": "Hazar Kağanlığı"
   },
   "rooms": {
     "entrance": "Sığınak Girişi",
@@ -363,7 +375,9 @@
       "expired": "Oturum süresi doldu, tekrar giriş yap."
     },
     "social": "ARKADAŞLAR & SIRALAMA",
-    "pass": "SIĞINAK BİLETİ"
+    "pass": "SIĞINAK BİLETİ",
+    "market": "PAZAR YERİ",
+    "suggest": "ÖNERİ KUTUSU"
   },
   "online": {
     "title": "LOBİLER",
@@ -418,7 +432,11 @@
     "giveHost": "Kuruculuğu ver (2 kez bas)",
     "kicked": "Kurucu seni odadan attı.",
     "err_kicked": "Bu odadan atıldın, tekrar giremezsin.",
-    "err_flagLocked": "Bu tarihi bayrağa sahip değilsin. Sığınak Bileti kasalarından kazan."
+    "err_flagLocked": "Bu tarihi bayrağa sahip değilsin. Sığınak Bileti kasalarından kazan.",
+    "suggestTitle": "Öneri Kutusu",
+    "suggestSend": "Gönder",
+    "suggestShort": "En az 3 karakter yaz",
+    "suggestThanks": "Teşekkürler, önerin kaydedildi!"
   },
   "levels": {
     "title": {
@@ -498,7 +516,8 @@
     "buying": "Alınıyor…",
     "noCoins": "Yeterli jetonun yok. Online maç oynayarak kazan.",
     "needLogin": "Şapka almak için giriş yapmalısın.",
-    "noCrate": "Bu kasadan kalmadı"
+    "noCrate": "Bu kasadan kalmadı",
+    "badCrate": "Geçersiz kasa"
   },
   "social": {
     "friends": "ARKADAŞLAR",
@@ -564,12 +583,54 @@
       "common": "Sıradan",
       "rare": "Ender",
       "epic": "Destansı",
-      "legendary": "Efsanevi"
+      "legendary": "Efsanevi",
+      "mystic": "Mistik"
     },
     "newFlag": "YENİ BAYRAK! Lobide bayrak seçerken kullanabilirsin.",
     "dupe": "Bu bayrağa zaten sahiptin: +{n} 🪙",
     "ok": "TAMAM",
     "passXp": "bilet XP",
-    "spinning": "Dönüyor..."
+    "spinning": "Dönüyor...",
+    "tabPass": "BİLET",
+    "tabCrates": "KASALAR",
+    "tabColl": "KOLEKSİYON",
+    "buyCrate": "Satın al",
+    "buyCrateHint": "Jetonla kasa satın al",
+    "boughtCrate": "{tier} ×{n} alındı (−{cost} 🪙)"
+  },
+  "market": {
+    "title": "PAZAR YERİ",
+    "tabBrowse": "PAZAR",
+    "tabSell": "İLAN VER",
+    "tabMine": "İLANLARIM",
+    "empty": "Henüz ilan yok. İlk ilanı sen ver!",
+    "needLogin": "Pazar için giriş yapmalısın",
+    "buy": "SATIN AL",
+    "cancel": "İPTAL",
+    "hat": "Şapka",
+    "sellHint": "Sahip olduğun tarihi bayrak veya şapkayı sat. Mistik bayraklar (Osmanlı) satılamaz.",
+    "kindFlag": "Bayrak",
+    "kindHat": "Şapka",
+    "noItems": "Satılacak eşyan yok",
+    "price": "Fiyat (jeton)",
+    "priceHint": "Min 50 · Max 50.000 jeton",
+    "listBtn": "İLANI YAYINLA",
+    "listed": "İlan yayınlandı!",
+    "noMine": "Aktif ilanın yok",
+    "err_needLogin": "Giriş gerekli",
+    "err_badPrice": "Fiyat 50–50000 arasında olmalı",
+    "err_noItem": "Bu eşyaya sahip değilsin",
+    "err_mysticLock": "Mistik bayrak satılamaz",
+    "err_gone": "İlan artık yok",
+    "err_own": "Kendi ilanını alamazsın",
+    "err_noCoins": "Yeterli jetonun yok"
+  },
+  "suggest": {
+    "title": "ÖNERİ KUTUSU",
+    "hint": "Oyuna dair fikir, hata bildirimi veya isteğini yaz. Geliştiriciler okur.",
+    "placeholder": "Önerini yaz...",
+    "send": "GÖNDER",
+    "short": "En az 3 karakter yaz",
+    "thanks": "Teşekkürler, önerin kaydedildi!"
   }
 }

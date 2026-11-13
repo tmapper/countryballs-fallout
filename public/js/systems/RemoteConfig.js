@@ -1,76 +1,105 @@
 // ============================================================
-// RemoteConfig.js - Sunucu adresini UZAKTAN güncellemek için (APK/EXE'yi yeniden indirtmeden)
+// RemoteConfig.js - APK/EXE için uzaktan sunucu adresi (server.json)
 // ============================================================
-// Sorun: Render çökerse / sunucu değişirse APK içindeki adres eski kalıyor, herkes yeniden indirmek zorunda.
-// Çözüm: Oyun açılırken küçük bir "server.json" dosyasını internetten okur:
-//     { "servers": ["https://yeni-sunucu.onrender.com", "https://yedek.onrender.com"] }
-// Bu dosya Render'da DEĞİL, Render'dan bağımsız bir yerde durur (GitHub Pages / siteniz).
-// Sunucu değişince sadece bu dosyayı güncellersin; oyun bir sonraki açılışta yeni adrese bağlanır.
-//
-// Okunan adres telefona/PC'ye kaydedilir; internet/dosya o an yoksa son bilinen adres kullanılır.
+// CONFIG_URLS: server.json dosyasının bulunduğu adresler (GitHub Pages vb.)
+// Biçim: { "servers": ["https://ana.onrender.com", "https://yedek.onrender.com"] }
+// Ayarlar'daki elle yazılan adres (cfs.serverManual) her zaman önceliklidir.
+// Tarayıcıdan (localhost:3000) açıyorsan bu dosya sadece stub; Net.js kendi host'unu kullanır.
 
-// 1) server.json adresi — GitHub raw + jsDelivr yedek (biri engellenirse diğeri çalışır)
-export const CONFIG_URLS = [
-  'https://raw.githubusercontent.com/tmapper/countryballs-config/main/server.json',
-  'https://cdn.jsdelivr.net/gh/tmapper/countryballs-config@main/server.json',
+const CONFIG_URLS = [
+  // Örnek: 'https://kullanici.github.io/cfs/server.json',
 ];
-
-// 2) Hiçbir şey okunamazsa kullanılacak yedek (guncel tut)
-export const DEFAULT_SERVERS = [
-  'https://countryballs-fallout-cv96.onrender.com',
-];
-
+const DEFAULT_SERVERS = [];   // CONFIG_URLS boşsa veya okunamazsa yedek
 const CACHE_KEY = 'cfs.remoteServers';
-const TIMEOUT_MS = 4000;
+const INDEX_KEY = 'cfs.remoteIdx';
 
-let servers = [];          // kullanılacak adres listesi (ilki esas, diğerleri yedek)
-let index = 0;
+let servers = [];
+let idx = 0;
 let readyPromise = null;
 
-function clean(list) {
-  return (Array.isArray(list) ? list : [list]).map((s) => String(s || '').trim().replace(/\/+$/, '')).filter(Boolean);
-}
-function readCache() { try { return clean(JSON.parse(localStorage.getItem(CACHE_KEY) || '[]')); } catch (e) { return []; } }
-function writeCache(list) { try { localStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch (e) { /* yoksay */ } }
-
-async function fetchOne(url) {
-  const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timer = ctl ? setTimeout(() => ctl.abort(), TIMEOUT_MS) : null;
+function loadCache() {
   try {
-    // ?t= önbelleği atlatır: güncellemeyi hemen görsün
-    const res = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store', signal: ctl && ctl.signal });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const j = await res.json();
-    const list = clean(j.servers || j.server);
-    if (!list.length) throw new Error('boş liste');
-    return list;
-  } finally { if (timer) clearTimeout(timer); }
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length) servers = arr.map(String);
+    }
+    const i = parseInt(localStorage.getItem(INDEX_KEY) || '0', 10);
+    if (Number.isFinite(i) && i >= 0) idx = i % Math.max(1, servers.length);
+  } catch (e) { /* yoksay */ }
 }
 
-// server.json'u (yeniden) oku. Başarısız olursa eski listeyi bozmaz.
-export async function refresh() {
-  for (const u of CONFIG_URLS) {
+function saveCache() {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(servers));
+    localStorage.setItem(INDEX_KEY, String(idx));
+  } catch (e) { /* yoksay */ }
+}
+
+async function fetchServers() {
+  loadCache();
+  for (const url of CONFIG_URLS) {
     try {
-      const list = await fetchOne(u);
-      servers = list; index = 0; writeCache(list);
-      return true;
-    } catch (e) { /* sıradaki adresi dene */ }
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 4000);
+      const res = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), {
+        signal: ctrl.signal,
+        cache: 'no-store',
+      });
+      clearTimeout(t);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const list = Array.isArray(data?.servers) ? data.servers : (Array.isArray(data) ? data : []);
+      const cleaned = list.map((s) => String(s || '').trim()).filter(Boolean);
+      if (cleaned.length) {
+        servers = cleaned;
+        idx = 0;
+        saveCache();
+        return servers;
+      }
+    } catch (e) { /* sonraki URL */ }
   }
-  return false;
+  if (!servers.length && DEFAULT_SERVERS.length) {
+    servers = [...DEFAULT_SERVERS];
+    idx = 0;
+    saveCache();
+  }
+  return servers;
 }
 
-// Açılışta bir kere çağrılır; bağlantı kurulmadan önce kısa süre beklenir.
+export function currentServer() {
+  if (!servers.length) loadCache();
+  return servers[idx] || servers[0] || '';
+}
+
+export function nextServer() {
+  if (!servers.length) return false;
+  if (servers.length < 2) return false;
+  idx = (idx + 1) % servers.length;
+  saveCache();
+  return true;
+}
+
+export function resetServer() {
+  idx = 0;
+  saveCache();
+}
+
+export function hasServers() {
+  if (!servers.length) loadCache();
+  return servers.length > 0;
+}
+
+export function refresh() {
+  return fetchServers();
+}
+
 export function ready() {
   if (!readyPromise) {
-    servers = readCache();
-    if (!servers.length) servers = clean(DEFAULT_SERVERS);
-    readyPromise = CONFIG_URLS.length ? refresh().then(() => {}) : Promise.resolve();
+    readyPromise = fetchServers().then(() => true).catch(() => true);
   }
   return readyPromise;
 }
 
-export function currentServer() { return servers[index] || ''; }
-// Bağlantı kurulamadıysa yedek adrese geç. Başka adres kalmadıysa false.
-export function nextServer() { if (index + 1 < servers.length) { index++; return true; } return false; }
-export function resetServer() { index = 0; }
-export function hasServers() { return servers.length > 0; }
+// İlk yüklemede önbelleği oku
+loadCache();

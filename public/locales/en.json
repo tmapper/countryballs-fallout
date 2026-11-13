@@ -178,7 +178,19 @@
     "DK": "Denmark",
     "ID": "Indonesia",
     "MY": "Malaysia",
-    "TH": "Thailand"
+    "TH": "Thailand",
+    "MON": "Mongol Empire",
+    "PER": "Persian Empire",
+    "ABB": "Abbasid Caliphate",
+    "SEL": "Great Seljuk",
+    "GOK": "Göktürk Khaganate",
+    "QRN": "Kara-Khanid Khanate",
+    "AQY": "Aq Qoyunlu",
+    "MAM": "Mamluk Sultanate",
+    "VEN": "Republic of Venice",
+    "PRU": "Kingdom of Prussia",
+    "AND": "Al-Andalus (Córdoba)",
+    "HAZ": "Khazar Khaganate"
   },
   "rooms": {
     "entrance": "Bunker Entrance",
@@ -363,7 +375,9 @@
       "expired": "Session expired, please log in again."
     },
     "social": "FRIENDS & RANKS",
-    "pass": "SHELTER PASS"
+    "pass": "SHELTER PASS",
+    "market": "MARKETPLACE",
+    "suggest": "SUGGESTIONS"
   },
   "online": {
     "title": "LOBBIES",
@@ -418,7 +432,11 @@
     "giveHost": "Make host (press twice)",
     "kicked": "The host kicked you from the room.",
     "err_kicked": "You were kicked from this room.",
-    "err_flagLocked": "You do not own this historical flag. Win it from Shelter Pass crates."
+    "err_flagLocked": "You do not own this historical flag. Win it from Shelter Pass crates.",
+    "suggestTitle": "Suggestion Box",
+    "suggestSend": "Send",
+    "suggestShort": "Write at least 3 characters",
+    "suggestThanks": "Thanks, your suggestion was saved!"
   },
   "levels": {
     "title": {
@@ -498,7 +516,8 @@
     "buying": "Buying…",
     "noCoins": "Not enough coins. Play online matches to earn more.",
     "needLogin": "You need to log in to buy hats.",
-    "noCrate": "No crates of that kind left"
+    "noCrate": "No crates of that kind left",
+    "badCrate": "Invalid crate"
   },
   "social": {
     "friends": "FRIENDS",
@@ -564,12 +583,54 @@
       "common": "Common",
       "rare": "Rare",
       "epic": "Epic",
-      "legendary": "Legendary"
+      "legendary": "Legendary",
+      "mystic": "Mystic"
     },
     "newFlag": "NEW FLAG! Pick it in the lobby flag picker.",
     "dupe": "You already own this flag: +{n} 🪙",
     "ok": "OK",
     "passXp": "pass XP",
-    "spinning": "Spinning..."
+    "spinning": "Spinning...",
+    "tabPass": "PASS",
+    "tabCrates": "CRATES",
+    "tabColl": "COLLECTION",
+    "buyCrate": "Buy",
+    "buyCrateHint": "Buy crate with tokens",
+    "boughtCrate": "Bought {tier} ×{n} (−{cost} 🪙)"
+  },
+  "market": {
+    "title": "MARKETPLACE",
+    "tabBrowse": "MARKET",
+    "tabSell": "SELL",
+    "tabMine": "MY LISTINGS",
+    "empty": "No listings yet. Be the first!",
+    "needLogin": "Log in to use the market",
+    "buy": "BUY",
+    "cancel": "CANCEL",
+    "hat": "Hat",
+    "sellHint": "Sell a historical flag or hat you own. Mystic flags cannot be sold.",
+    "kindFlag": "Flag",
+    "kindHat": "Hat",
+    "noItems": "Nothing to sell",
+    "price": "Price (tokens)",
+    "priceHint": "Min 50 · Max 50,000 tokens",
+    "listBtn": "PUBLISH LISTING",
+    "listed": "Listing published!",
+    "noMine": "No active listings",
+    "err_needLogin": "Login required",
+    "err_badPrice": "Price must be 50–50000",
+    "err_noItem": "You do not own this item",
+    "err_mysticLock": "Mystic flags cannot be sold",
+    "err_gone": "Listing is gone",
+    "err_own": "Cannot buy your own listing",
+    "err_noCoins": "Not enough tokens"
+  },
+  "suggest": {
+    "title": "SUGGESTION BOX",
+    "hint": "Share an idea, bug report, or request. Developers read these.",
+    "placeholder": "Write your suggestion...",
+    "send": "SEND",
+    "short": "Write at least 3 characters",
+    "thanks": "Thanks, your suggestion was saved!"
   }
 }

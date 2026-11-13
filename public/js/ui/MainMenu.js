@@ -9,6 +9,8 @@
 import { social } from './Social.js';
 import { exitGame } from '../systems/ExitGame.js';
 import { shelterPass } from './ShelterPass.js';
+import { market } from './Market.js';
+import { suggest } from './Suggest.js';
 import { passStatus } from '../systems/Pass.js';
 import { i18n } from '../systems/I18n.js';
 import { net, Net } from '../systems/Net.js';
@@ -27,6 +29,8 @@ const ITEMS = [
   { act: 'create', key: 'menu.create', icon: '⊕' },
   { act: 'social', key: 'menu.social', icon: '★' },
   { act: 'pass', key: 'menu.pass', icon: '🎟' },
+  { act: 'market', key: 'menu.market', icon: '⚖' },
+  { act: 'suggest', key: 'menu.suggest', icon: '✉' },
   { act: 'solo', key: 'menu.solo', icon: '◎' },
   { act: 'settings', key: 'menu.settings', icon: '⚙' },
   { act: 'howto', key: 'menu.howto', icon: '?' },
@@ -174,6 +178,15 @@ export class MainMenu {
       const open = () => { net.connect(); social.open('friends'); };
       if (!net.account) { this.authPending = open; this.openAuth('login'); return; }
       open(); return;
+    }
+    if (a === 'market') {
+      const open = () => { net.connect(); market.open(); };
+      if (!net.account) { this.authPending = open; this.openAuth('login'); return; }
+      open(); return;
+    }
+    if (a === 'suggest') {
+      suggest.open();
+      return;
     }
     const fn = { online: this.handlers.onOnline, create: this.handlers.onCreate, solo: this.handlers.onSolo }[a];
     if (!fn) return;

@@ -10,7 +10,7 @@ import { net } from '../systems/Net.js';
 import { sfx } from '../systems/Sound.js';
 import { assetUrl } from '../systems/Assets.js';
 import { getFlagThumb, HIST_FLAGS, HIST_RARITY } from '../systems/Flags.js';
-import { PASS, CRATE_TIERS, CRATE_ICON, CRATE_ODDS, RARITY_COLOR, RARITY_ORDER, passReward, passStatus } from '../systems/Pass.js';
+import { PASS, CRATE_TIERS, CRATE_ICON, CRATE_ODDS, CRATE_PRICE, RARITY_COLOR, RARITY_ORDER, passReward, passStatus } from '../systems/Pass.js';
 
 const TABS = ['pass', 'crates', 'coll'];
 // İsteğe bağlı görseller (public/assets/menu/): yoksa emoji ve kodla çizilen arka plan kullanılır.
@@ -79,6 +79,11 @@ class ShelterPass {
       if (!this.isOpen) return;
       if (m.crate) { this.reveal(m.crate); }
       else if (m.claimed && m.claimed.length) { sfx('task_done'); this.msg(i18n.t('pass.claimedN', { n: m.claimed.length })); }
+      else if (m.boughtCrate) {
+        sfx('task_done');
+        const b = m.boughtCrate;
+        this.msg(i18n.t('pass.boughtCrate', { tier: i18n.t('pass.tier.' + b.tier), n: b.n, cost: b.cost }) || `+${b.n} kasa (−${b.cost} 🪙)`);
+      }
       this.render();
     });
     net.on('shopError', (m) => { if (this.isOpen) this.msg(i18n.t('shop.' + m.code), true); });
@@ -267,9 +272,18 @@ class ShelterPass {
       step.dataset.l = L;
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'sp-tile' + (done ? ' done' : ready ? ' ready' : ' lock') + (rw.crate ? ' crate' : '');
-      const ico = this.icon(rw.crate || 'coin');
-      const txt = rw.crate ? i18n.t('pass.tier.' + rw.crate) : `+${rw.coins}`;
+      b.className = 'sp-tile' + (done ? ' done' : ready ? ' ready' : ' lock') + (rw.crate ? ' crate' : '') + (rw.flag ? ' flag' : '');
+      let ico, txt;
+      if (rw.flag) {
+        ico = `<img class="sp-art" alt="" src="${getFlagThumb(rw.flag, 48, 32)}" style="width:36px;height:24px;border-radius:3px">`;
+        txt = i18n.t('countries.' + rw.flag);
+      } else if (rw.crate) {
+        ico = this.icon(rw.crate);
+        txt = i18n.t('pass.tier.' + rw.crate);
+      } else {
+        ico = this.icon('coin');
+        txt = `+${rw.coins}`;
+      }
       b.innerHTML = `<span class="sp-ico">${ico}</span><span class="sp-txt">${txt}</span><em>${done ? '✔' : ready ? i18n.t('pass.claim') : `${L * PASS.BAR_XP} XP`}</em>`;
       if (ready) b.addEventListener('click', () => net.send({ t: 'passClaim', level: L }));
       else b.disabled = true;
@@ -284,16 +298,28 @@ class ShelterPass {
     this.track.scrollLeft = keep;
     this.updateArrows();
 
-    // --- kasalar
+    // --- kasalar (aç + jetonla satın al)
     const cr = r.querySelector('.sp-crates'); cr.innerHTML = '';
     CRATE_TIERS.forEach((t) => {
       const n = (acc.crates && acc.crates[t]) || 0;
+      const price = CRATE_PRICE[t] || 0;
+      const canBuy = (acc.coins || 0) >= price;
       const odds = Object.entries(CRATE_ODDS[t]).map(([rr, w]) => `<span style="color:${RARITY_COLOR[rr]}">${i18n.t('pass.rarity.' + rr)} %${w}</span>`).join(' · ');
       const d = document.createElement('div');
       d.className = 'sp-crate' + (n ? ' has' : '');
-      d.innerHTML = `<div class="sp-cico">${this.icon(t)}</div><b>${i18n.t('pass.tier.' + t)} ×${n}</b><small>${odds}</small><button class="mm-tbtn small primary" type="button">${i18n.t('pass.open')}</button>`;
-      const btn = d.querySelector('button'); btn.disabled = !n;
-      btn.addEventListener('click', () => net.send({ t: 'crateOpen', tier: t }));
+      d.innerHTML = `<div class="sp-cico">${this.icon(t)}</div>
+        <b>${i18n.t('pass.tier.' + t)} ×${n}</b>
+        <small>${odds}</small>
+        <div class="sp-crate-acts">
+          <button class="mm-tbtn small primary sp-open" type="button">${i18n.t('pass.open')}</button>
+          <button class="mm-tbtn small sp-buy" type="button" title="${i18n.t('pass.buyCrateHint') || ''}">🪙 ${price}</button>
+        </div>`;
+      const openBtn = d.querySelector('.sp-open');
+      openBtn.disabled = !n;
+      openBtn.addEventListener('click', () => net.send({ t: 'crateOpen', tier: t }));
+      const buyBtn = d.querySelector('.sp-buy');
+      buyBtn.disabled = !canBuy;
+      buyBtn.addEventListener('click', () => net.send({ t: 'buyCrate', tier: t, n: 1 }));
       cr.appendChild(d);
     });
 

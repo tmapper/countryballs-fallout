@@ -256,6 +256,42 @@ const DRAW = {
     c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
     c.fillStyle = '#d4002a'; c.fillRect(W / 2 - 24, 0, 48, H); c.fillRect(0, H / 2 - 24, W, 48);
   },
+  MON: (c) => {                                     // Moğol İmparatorluğu (Soyombo benzeri)
+    c.fillStyle = '#0a5c2e'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#f2c14e';
+    // soyombo stilize
+    const cx = W/2, cy = H/2;
+    c.beginPath(); c.arc(cx, cy - 40, 18, 0, Math.PI*2); c.fill(); // güneş
+    c.fillRect(cx - 6, cy - 20, 12, 50); // dikey
+    c.fillRect(cx - 28, cy + 10, 56, 10); // yatay
+    c.beginPath(); c.moveTo(cx - 20, cy + 30); c.lineTo(cx, cy + 55); c.lineTo(cx + 20, cy + 30); c.closePath(); c.fill(); // ok
+  },
+  PER: (c) => {                                     // Pers İmparatorluğu (Ahameniş)
+    c.fillStyle = '#8b0000'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#f2c14e';
+    c.font = 'bold 48px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('𐎠𐎧𐎠', W/2, H/2 - 10);
+    c.font = 'bold 22px Georgia, serif';
+    c.fillText('PERSIA', W/2, H/2 + 40);
+    c.textAlign = 'start'; c.textBaseline = 'alphabetic';
+  },
+  ABB: (c) => {                                     // Abbasî Halifeliği
+    c.fillStyle = '#111'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#fff';
+    c.font = 'bold 90px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('ع', W/2, H/2 + 8);
+    c.textAlign = 'start'; c.textBaseline = 'alphabetic';
+  },
+  SEL: (c) => {                                     // Büyük Selçuklu
+    c.fillStyle = '#1a3a6e'; c.fillRect(0, 0, W, H);
+    // çift başlı kartal stilize
+    c.fillStyle = '#f2c14e';
+    const cx = W/2, cy = H/2;
+    c.beginPath(); c.arc(cx - 25, cy - 15, 18, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.arc(cx + 25, cy - 15, 18, 0, Math.PI*2); c.fill();
+    c.fillRect(cx - 35, cy, 70, 40);
+    c.beginPath(); c.moveTo(cx - 40, cy + 40); c.lineTo(cx, cy + 70); c.lineTo(cx + 40, cy + 40); c.closePath(); c.fill();
+  },
 
   // ---- Yeni eklenen bayraklar ----
   KZ: (c) => { // Kazakhstan
@@ -521,7 +557,7 @@ const DRAW = {
 };
 
 // Tarihi bayraklar: kasadan çıkar. Nadirlik sunucudaki HFLAGS ile AYNI olmalı.
-export const HIST_RARITY = { OTT: 'legendary', BRE: 'legendary', ROM: 'legendary', HRE: 'epic', BYZ: 'epic', SOV: 'epic', JPE: 'epic', FRK: 'epic', RUE: 'epic', BGK: 'rare', ESE: 'rare', GEN: 'rare' };
+export const HIST_RARITY = { OTT: 'mystic', BRE: 'legendary', ROM: 'legendary', MAM: 'legendary', AND: 'legendary', GOK: 'legendary', HRE: 'epic', BYZ: 'epic', SOV: 'epic', JPE: 'epic', FRK: 'epic', RUE: 'epic', VEN: 'epic', PRU: 'epic', AQY: 'epic', QRN: 'epic', BGK: 'rare', ESE: 'rare', GEN: 'rare', HAZ: 'rare', MON: 'epic', PER: 'epic', ABB: 'legendary', SEL: 'legendary' };
 export const HIST_FLAGS = Object.keys(HIST_RARITY);
 // Resim dosyası olan modern bayraklar (assets/flags/<KOD>.webp)
 export const IMAGE_FLAGS = [
@@ -545,14 +581,15 @@ export function loadFlagImages() {
 }
 
 export function getFlagCanvas(code) {
-  const key = DRAW[code] ? code : 'NONE';
+  const key = code || 'NONE';
   if (!cache[key]) {
     const cv = document.createElement('canvas');
     cv.width = W * HD; cv.height = H * HD;
     const c = cv.getContext('2d');
     c.scale(HD, HD);
     if (FLAG_IMG[key]) c.drawImage(FLAG_IMG[key], 0, 0, W, H);
-    else DRAW[key](c);
+    else if (DRAW[key]) DRAW[key](c);
+    else DRAW.NONE(c);
     cache[key] = cv;
   }
   return cache[key];
