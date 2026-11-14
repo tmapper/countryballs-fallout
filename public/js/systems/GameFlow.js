@@ -273,7 +273,8 @@ export function startMatch(settings) {
     { id: 'me', flag: settings.myFlag, role: roles[0], me: true, name: net.profile.name || '', hat: loadHat() },
     ...settings.botFlags.map((flag, i) => ({ id: 'b' + i, flag, role: roles[i + 1], me: false, hat: botHat(flag) }))
   ];
-  startWith(players, 'offline');
+  const cfg = settings.mapId ? { map: settings.mapId } : null;
+  startWith(players, 'offline', cfg);
 }
 
 // players: [{ id, flag, role, me, name, bot }]   netMode: 'offline' | 'host' | 'client'

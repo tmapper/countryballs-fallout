@@ -1,3 +1,4 @@
+import { MAP_IDS } from '../map/BunkerMap.js';
 // ============================================================
 // Lobby.js - Lobi arayüzü (HTML), yürünen lobi odasının (LobbyScene) üstünde durur
 // ============================================================
@@ -15,7 +16,12 @@ const SETTINGS_KEY = 'cfs_lobby';
 
 // Ayarlar butonu kaldırıldı: tek kişilik maç her zaman 6 kişi (5 bot), rol rastgele
 function loadSettings() {
-  return { playerCount: 6, forcedRole: 'random', bots: true };
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    return { playerCount: 6, forcedRole: 'random', bots: true, mapId: MAP_IDS.includes(s.mapId) ? s.mapId : (MAP_IDS[0] || 'classic') };
+  } catch (e) {
+    return { playerCount: 6, forcedRole: 'random', bots: true, mapId: MAP_IDS[0] || 'classic' };
+  }
 }
 
 const pct = (v) => `%${Math.round(v * 100)}`;
@@ -36,12 +42,12 @@ export class Lobby {
 
   save() {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots }));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots, mapId: this.mapId }));
     } catch (e) { /* yoksay */ }
   }
 
   state() {
-    return { myFlag: this.myFlag, botFlags: this.bots ? [...this.botFlags] : [], playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots };
+    return { myFlag: this.myFlag, botFlags: this.bots ? [...this.botFlags] : [], playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots, mapId: this.mapId || MAP_IDS[0] };
   }
 
   // Botlar için benimkinden farklı, birbirinden farklı rastgele bayraklar
@@ -93,6 +99,8 @@ export class Lobby {
             </div>
             <p class="hint bots-hint"></p>
             <div class="chips"></div>
+            <h2 class="mt" data-t="online.cfg_map">Harita</h2>
+            <div class="seg map-seg"></div>
           </section>
           <section class="card">
             <h2 data-t="lobby.chances"></h2>
@@ -121,6 +129,16 @@ export class Lobby {
       this.changed();
     }));
     r.querySelector('.bots-toggle').addEventListener('change', (e) => { this.bots = e.target.checked; this.changed(); });
+    const mapSeg = r.querySelector('.map-seg');
+    if (mapSeg) {
+      MAP_IDS.forEach((id) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'seg-btn'; b.dataset.map = id;
+        b.textContent = id;
+        b.addEventListener('click', () => { this.mapId = id; this.save(); this.changed(); });
+        mapSeg.appendChild(b);
+      });
+    }
     r.querySelector('.lang-btn').addEventListener('click', () => i18n.toggle());
     r.querySelector('.menu-btn').addEventListener('click', () => this.onMenu && this.onMenu());
     r.querySelector('.flag-open').addEventListener('click', () => this.onFlag && this.onFlag());
@@ -155,6 +173,10 @@ export class Lobby {
     r.querySelector('[data-step="-1"]').disabled = this.playerCount <= MIN_PLAYERS;
     r.querySelector('[data-step="1"]').disabled = this.playerCount >= MAX_PLAYERS;
     r.querySelector('.bots-toggle').checked = this.bots;
+    r.querySelectorAll('.map-seg .seg-btn').forEach((b) => {
+      b.classList.toggle('on', b.dataset.map === this.mapId);
+      b.textContent = i18n.t('maps.' + b.dataset.map) || b.dataset.map;
+    });
     r.querySelector('.bots-hint').textContent = i18n.t(this.bots ? 'lobby.botsOnHint' : 'lobby.botsOffHint');
 
     const chips = r.querySelector('.chips');

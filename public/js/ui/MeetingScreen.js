@@ -42,7 +42,16 @@ export class MeetingScreen {
           <div class="mt-note"></div>
         </div>
       </div>
-      <div class="mt-eject hidden"><img alt=""><div class="mt-eject-1"></div><div class="mt-eject-2"></div></div>
+      <div class="mt-eject hidden">
+      <div class="mt-guillo">
+        <div class="mt-guillo-frame">
+          <div class="mt-guillo-blade"></div>
+          <div class="mt-guillo-ball"><img alt=""></div>
+        </div>
+      </div>
+      <div class="mt-eject-1"></div>
+      <div class="mt-eject-2"></div>
+    </div>
       <div class="mt-splash hidden"><img alt=""><div class="mt-splash-text"></div></div>`;
     document.body.appendChild(r);
     r.querySelector('.mt-skip').addEventListener('click', () => this.vote('skip'));
@@ -179,9 +188,16 @@ export class MeetingScreen {
     r.querySelector('.mt-panel').classList.add('hidden');
     const e = r.querySelector('.mt-eject');
     e.classList.remove('hidden');
-    const img = e.querySelector('img');
-    img.style.display = flag ? '' : 'none';
-    if (flag) img.src = getFlagThumb(flag, 120, 80);
+    const img = e.querySelector('.mt-guillo-ball img');
+    const ball = e.querySelector('.mt-guillo-ball');
+    if (flag) {
+      img.src = getFlagThumb(flag, 120, 80);
+      ball.style.display = '';
+      e.querySelector('.mt-guillo').style.display = '';
+    } else {
+      ball.style.display = 'none';
+      e.querySelector('.mt-guillo').style.display = 'none';
+    }
     e.querySelector('.mt-eject-1').textContent = line1;
     e.querySelector('.mt-eject-2').textContent = line2 || '';
     e.classList.remove('anim'); void e.offsetWidth; e.classList.add('anim');

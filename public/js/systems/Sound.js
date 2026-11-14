@@ -28,7 +28,7 @@ export function setSfxVolume(k) {
 }
 // Bazı seslerin kendi ses seviyesi (1 = normal)
 const LEVEL = {
-  step: 0.3, ui_click: 0.5, geiger_loop: 0.55, alarm_loop: 0.16, oxygen_alert: 0.3, valve_turn: 0.7,
+  step: 0.22, ui_click: 0.5, geiger_loop: 0.55, alarm_loop: 0.16, oxygen_alert: 0.3, valve_turn: 0.7,
   wire_connect: 0.8, lever: 0.8, dust_wipe: 0.7, door_seal: 0.5, power_down: 0.45, power_up: 0.5
 };
 const MUTE_KEY = 'cfs.muted';

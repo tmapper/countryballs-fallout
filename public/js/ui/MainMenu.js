@@ -216,14 +216,8 @@ export class MainMenu {
     net.on('account', () => { this.renderAccount(); if (net.account && this.authPending) { const fn = this.authPending; this.authPending = null; this.closeModal(); fn(); } else if (net.account) this.closeModal(); });
     net.on('authError', (m) => { if (!m.silent) { const e = this.root.querySelector('.mm-auth-err'); e.textContent = i18n.t('menu.authErr.' + m.code); e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake'); } });
     // İsteğe bağlı görseller
-    // Animasyonlu arka plan birincil; eski menu_bg isteğe bağlı düşük opaklık
-    loadOptional('assets/menu/menu_bg.jpg').then((im) => {
-      if (im) {
-        const ph = r.querySelector('.mm-photo');
-        ph.style.backgroundImage = `url("${im.src}")`;
-        ph.style.opacity = '0.25';
-      }
-    });
+    // menu_bg tamamen kaldırıldı — sadece .mm-anim-bg
+
     loadOptional('assets/menu/logo.png').then((im) => { if (im) { const l = r.querySelector('.mm-logo'); l.src = im.src; l.classList.remove('hidden'); r.querySelector('.mm-logotext').classList.add('hidden'); } });
   }
 
