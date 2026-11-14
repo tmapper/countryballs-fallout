@@ -1179,6 +1179,7 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 .sg-head h2 { margin: 0; flex: 1; font-size: 17px; letter-spacing: .1em; color: #7ec8f0; }
 .sg-x { background: none; border: none; color: #7ec8f0; font-size: 22px; cursor: pointer; }
 .sg-hint { margin: 0; font-size: 13px; color: #7a9bb0; line-height: 1.4; }
+.sg-warn { margin: 0; padding: 8px 10px; border-radius: 8px; background: rgba(180,40,40,.25); border: 1px solid rgba(255,100,100,.45); color: #ff8a80; font: 800 13px system-ui; letter-spacing: .02em; text-align: center; }
 .sg-txt { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 10px; border: 2px solid rgba(62,120,160,.4); background: rgba(0,0,0,.4); color: #e0f0fa; font: inherit; font-size: 14px; resize: vertical; min-height: 100px; outline: none; }
 .sg-txt:focus { border-color: #7ec8f0; }
 .sg-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

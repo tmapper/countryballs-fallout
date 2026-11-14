@@ -16,6 +16,7 @@ class Suggest {
       <div class="sg-card">
         <div class="sg-head"><h2 data-t="suggest.title">ÖNERİ KUTUSU</h2><button class="sg-x" type="button">✕</button></div>
         <p class="sg-hint" data-t="suggest.hint">Oyuna dair fikir, hata bildirimi veya isteğini yaz.</p>
+        <p class="sg-warn">Gereksiz mesajlar ban sebebidir!</p>
         <textarea class="sg-txt" maxlength="280" rows="5" placeholder="..."></textarea>
         <div class="sg-foot">
           <span class="sg-count">0/280</span>

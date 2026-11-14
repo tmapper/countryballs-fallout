@@ -569,12 +569,13 @@ export class GameScene extends Phaser.Scene {
 
     this.balls.forEach((b) => { if (b.cooldown > 0) b.cooldown = Math.max(0, b.cooldown - dt); });
 
-    // Botlar: kare atlatma (her 2. kare) — mobilde yük azalır
+    // Botlar: kare atlatma — düşük kalite / kalabalık odada daha seyrek
     if (!this.over) {
       this._botFrame = (this._botFrame || 0) + 1;
-      const runBots = (this._botFrame % 2) === 0 || this.balls.length <= 8;
+      const botSkip = (getQuality() === 'low' || this.balls.length > 12) ? 3 : 2;
+      const runBots = (this._botFrame % botSkip) === 0 || this.balls.length <= 6;
       if (runBots) {
-        const botDt = dt * (this._botFrame % 2 === 0 && this.balls.length > 8 ? 2 : 1);
+        const botDt = dt * botSkip;
         this.balls.forEach((b) => {
           if (!b.brain || !b.alive) return;
           const mv = b.move(this.botThink(b, botDt), botDt, canStand);
@@ -641,7 +642,8 @@ export class GameScene extends Phaser.Scene {
   updateCull(dt) {
     this.cullT -= dt;
     if (this.cullT > 0 || !this.cullList) return;
-    this.cullT = 0.16;
+    // Düşük kalitede daha seyrek cull (CPU tasarrufu)
+    this.cullT = getQuality() === 'low' ? 0.28 : 0.16;
     const v = this.cameras.main.worldView, M = 160;
     const me = this.player, seeAll = !me.alive || !this.fog.enabled;
     const R = this.visionRadius + 260;
@@ -671,7 +673,7 @@ export class GameScene extends Phaser.Scene {
     const all = !me.alive || !this.fog.enabled;
     this.sightT = (this.sightT || 0) - dt;
     if (this.sightT <= 0) {
-      this.sightT = 0.08;
+      this.sightT = getQuality() === 'low' ? 0.14 : 0.08;
       const r = this.visionRadius + 30;
       const see = (o) => all || canSee(this.grid, me, o, r);
       this.balls.forEach((b) => { if (!b.isMe && b.alive) b.seen = see(b); });
