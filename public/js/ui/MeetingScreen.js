@@ -25,8 +25,16 @@ export class MeetingScreen {
           <div class="mt-timer"><span class="mt-phase"></span><b class="mt-time"></b></div>
         </div>
         <div class="mt-body">
-          <div class="mt-grid"></div>
-          <div class="mt-chat"><div class="mt-chat-title"></div><div class="mt-chat-list"></div><div class="mt-chat-row"><input class="mt-chat-input" autocomplete="off" spellcheck="false" enterkeyhint="send"><button class="mt-chat-send" type="button">➤</button></div></div>
+          <div class="mt-grid-wrap">
+            <div class="mt-grid"></div>
+            <div class="mt-quick-panel hidden"></div>
+          </div>
+          <div class="mt-chat"><div class="mt-chat-title"></div><div class="mt-chat-list"></div>
+          <div class="mt-quick">
+            <button type="button" class="mt-qbtn" data-q="phrases">💬</button>
+            <button type="button" class="mt-qbtn" data-q="suspect">⚠</button>
+          </div>
+          <div class="mt-chat-row"><input class="mt-chat-input" autocomplete="off" spellcheck="false" enterkeyhint="send"><button class="mt-chat-send" type="button">➤</button></div></div>
         </div>
         <div class="mt-foot">
           <button class="btn mt-skip" type="button"></button>
@@ -43,6 +51,7 @@ export class MeetingScreen {
     const send = (v) => { const now = performance.now(); if (now - (this.lastSend || 0) < 600) return; this.lastSend = now; if (this.opts && this.opts.onChat) this.opts.onChat(v); };
     wireChatInput(inp, send);
     r.querySelector('.mt-chat-send').addEventListener('click', () => { const v = inp.value.trim(); if (v) { send(v); inp.value = ''; } inp.focus(); });
+    r.querySelectorAll('.mt-qbtn').forEach((b) => b.addEventListener('click', () => this.openQuick(b.dataset.q)));
   }
 
   open(opts) {
@@ -96,6 +105,36 @@ export class MeetingScreen {
     r.querySelector('.mt-time').textContent = secs > 0 ? i18n.t('meeting.timeLeft', { s: Math.ceil(secs) }) : '';
     const canVote = this.opts && this.opts.canVote && phase === 'vote' && !this.myVote;
     r.classList.toggle('can-vote', !!canVote);
+  }
+
+  openQuick(mode) {
+    const panel = this.root.querySelector('.mt-quick-panel');
+    if (!panel || !this.opts) return;
+    panel.classList.remove('hidden');
+    if (mode === 'phrases') {
+      const raw = (i18n.data[i18n.lang] && i18n.data[i18n.lang].chat && i18n.data[i18n.lang].chat.phrases)
+        || (i18n.data.tr && i18n.data.tr.chat && i18n.data.tr.chat.phrases) || [];
+      const phrases = Array.isArray(raw) && raw.length ? raw : ['...'];
+      panel.innerHTML = `<div class="mt-qp-title">${esc(i18n.t('chat.quickTitle') || 'Quick')}</div>` +
+        phrases.slice(0, 10).map((t) => `<button type="button" class="mt-qp-item" data-text="${esc(t)}">${esc(t)}</button>`).join('') +
+        `<button type="button" class="mt-qp-close">✕</button>`;
+      panel.querySelectorAll('[data-text]').forEach((b) => b.addEventListener('click', () => {
+        panel.classList.add('hidden');
+        if (this.opts.onChat) this.opts.onChat(b.dataset.text);
+      }));
+    } else {
+      const alive = (this.opts.players || []).filter((p) => p.alive && !p.me);
+      panel.innerHTML = `<div class="mt-qp-title">${esc(i18n.t('chat.suspectBtn') || 'Suspect')}</div>` +
+        alive.map((p) => `<button type="button" class="mt-qp-item" data-name="${esc(p.name)}">${esc(p.name)}</button>`).join('') +
+        `<button type="button" class="mt-qp-close">✕</button>`;
+      panel.querySelectorAll('[data-name]').forEach((b) => b.addEventListener('click', () => {
+        panel.classList.add('hidden');
+        const msg = i18n.t('chat.suspectOf', { name: b.dataset.name }) || (b.dataset.name + ' şüpheli');
+        if (this.opts.onChat) this.opts.onChat(msg);
+      }));
+    }
+    const c = panel.querySelector('.mt-qp-close');
+    if (c) c.addEventListener('click', () => panel.classList.add('hidden'));
   }
 
   vote(id) {

@@ -58,7 +58,7 @@ const MAPS = {
   hall:       { x: 2650, y: 3450, w: 1200, h: 850,  floor: 'hall' },
   cafeteria:  { x: 1900, y: 3300, w: 850,  h: 750,  floor: 'cafeteria' },
   generator:  { x: 3050, y: 4250, w: 800,  h: 750,  floor: 'generator' },
-  entrance:   { x: 3400, y: 7300, w: 1200, h: 700,  floor: 'grass' }
+  entrance:   { x: 3400, y: 7300, w: 1200, h: 700,  floor: 'hall' }
 },
     corridors: [
   // halka: büyük oda (O2) -> güvenlik
@@ -102,7 +102,7 @@ const MAPS = {
   classic: {
     world: { w: 6450, h: 4100 },
     rooms: {
-  entrance:   { x: 2650, y: 3150, w: 1200, h: 700,  floor: 'grass' },
+  entrance:   { x: 2650, y: 3150, w: 1200, h: 700,  floor: 'hall' },
   hall:       { x: 2650, y: 1450, w: 1200, h: 850,  floor: 'hall' },
   reactor:    { x: 300,  y: 300,  w: 1000, h: 850,  floor: 'reactor' },
   security:   { x: 1550, y: 300,  w: 700,  h: 600,  floor: 'security' },

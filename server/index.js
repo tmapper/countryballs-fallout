@@ -31,7 +31,7 @@ const impCount = (n) => (n >= 20 ? 4 : n >= 13 ? 3 : n >= 8 ? 2 : 1);     // ist
 const sheriffCount = (n) => (n >= 18 ? 3 : n >= 10 ? 2 : 1);              // istemcideki Roles.sheriffCount ile aynı
 const MIN_MATCH_SECS = Number(process.env.MIN_MATCH_SECS) || 40;     // bundan kısa maçlar istatistiğe yazılmaz (hile/test engeli)
 const MAX_TASKS_PER_MATCH = 5; // Tasks.js -> TASKS_PER_PLAYER ile aynı olmalı (oyuncu başına görev sayısı)
-const MIN_HUMANS = 2;          // istatistik için maçta en az 2 gerçek (hesaplı) oyuncu olmalı; botlarla tek başına XP kasılamaz
+const MIN_HUMANS = 1;          // botlarla oynanan maçlar da istatistik/XP versin (en az 1 hesaplı oyuncu)
 const ADMIN_KEY = process.env.ADMIN_KEY || '';   // /api/backup?key=... ile hesapları indirmek için (boşsa kapalı)
 
 // ---------------- HESAPLAR ----------------
@@ -96,7 +96,7 @@ function saveAccounts() {
 // ---------------- JETON (oyun içi para, gerçek para DEĞİL) ----------------
 // Maçlardan kazanılır, şapka almak için harcanır. Bakiye ve alınan şapkalar SUNUCUDA tutulur (hile ile artırılamaz).
 // Fiyatlar istemcideki systems/Looks.js HAT_PRICE ile aynı olmalı.
-const HAT_PRICE = {"none":0,"cap_red":0,"cap_blue":0,"beanie":0,"fedora":100,"party":100,"chef":100,"beret":100,"bowler":100,"army":100,"hardhat":100,"cowboy":250,"fez":250,"santa":250,"grad":250,"headphones":250,"flowers":250,"ushanka":250,"cat":250,"bunny":250,"tophat":500,"viking":500,"witch":500,"pirate":500,"propeller":500,"sombrero":500,"antenna":500,"gasmask":500,"crown":1000,"halo":1000};
+const HAT_PRICE = {"none":0,"cap_red":0,"cap_blue":0,"beanie":0,"fedora":100,"party":100,"chef":100,"beret":100,"bowler":100,"army":100,"hardhat":100,"cowboy":250,"fez":250,"santa":250,"grad":250,"headphones":250,"flowers":250,"ushanka":250,"cat":250,"bunny":250,"tophat":500,"viking":500,"witch":500,"pirate":500,"propeller":500,"sombrero":500,"antenna":500,"gasmask":500,"crown":1000,"halo":1000,"bandana":250,"ninja":500,"helmet":500,"mushroom":500,"afro":500};
 const START_COINS = 200;                                  // yeni hesaba hoş geldin jetonu
 const COIN = { played: 10, win: 25, task: 2, kill: 5 };
 function ensureWallet(u) { if (typeof u.coins !== 'number') u.coins = START_COINS; if (!Array.isArray(u.hats)) u.hats = []; return u; }
@@ -129,9 +129,89 @@ function ensureMeta(u) {
   if (!u.crates || typeof u.crates !== 'object') u.crates = {};
   CRATE_TIERS.forEach((k) => { if (typeof u.crates[k] !== 'number') u.crates[k] = 0; });
   const sid = seasonInfo().id;
-  if (!u.pass || u.pass.s !== sid) u.pass = { s: sid, xp: 0, claimed: [], d: 0 };      // yeni sezon: bilet sıfırlanır (kasa, bayrak, jeton kalır)
+  if (!u.pass || u.pass.s !== sid) u.pass = { s: sid, xp: 0, claimed: [], d: 0 };
+  if (!Array.isArray(u.achievements)) u.achievements = [];
+  if (!Array.isArray(u.roleHist)) u.roleHist = [];   // son roller (anti-streak)
+  ensureQuests(u);
   return u;
 }
+
+// ---- Günlük / haftalık görevler ----
+const DAILY_POOL = [
+  { id: 'd_play_2', goal: 2, reward: 40, key: 'play' },
+  { id: 'd_play_3', goal: 3, reward: 50, key: 'play' },
+  { id: 'd_win_1', goal: 1, reward: 45, key: 'win' },
+  { id: 'd_tasks_8', goal: 8, reward: 40, key: 'tasks' },
+  { id: 'd_kill_2', goal: 2, reward: 45, key: 'kills' },
+  { id: 'd_report_1', goal: 1, reward: 30, key: 'reports' },
+  { id: 'd_crate_1', goal: 1, reward: 35, key: 'crates' },
+];
+const WEEKLY_POOL = [
+  { id: 'w_play_10', goal: 10, reward: 120, key: 'play' },
+  { id: 'w_win_5', goal: 5, reward: 150, key: 'win' },
+  { id: 'w_tasks_30', goal: 30, reward: 100, key: 'tasks' },
+  { id: 'w_kills_8', goal: 8, reward: 130, key: 'kills' },
+  { id: 'w_crates_3', goal: 3, reward: 100, key: 'crates' },
+  { id: 'w_hist_1', goal: 1, reward: 80, key: 'hist' },
+];
+const ACH_REWARDS = {
+  first_win:30, first_kill:25, first_task:20, win_crew:25, win_imp:30, win_sheriff:35,
+  triple_kill:50, perfect_tasks:40, survive_end:30, report_first:20, vote_correct:25,
+  no_kill_win_imp:45, sheriff_ace:50, ghost_tasks:30, play_10:35, play_50:50, win_5:40, win_25:50,
+  collect_3_hist:30, collect_8_hist:50, open_crate:20, buy_hat:20, market_sell:25, market_buy:25,
+  pass_10:30, pass_30:50, daily_3:30, streak_3:40, mystic_own:50, all_hats_free:25,
+  friend_invite:20, solo_win:25, meeting_skip:20, tunnel_escape:30, last_crew:45, double_sheriff_kill:50
+};
+function dayIndex(t = Date.now()) { return Math.floor(t / 86400000); }
+function weekIndex(t = Date.now()) { return Math.floor(t / (7 * 86400000)); }
+function pickPool(pool, seed, n) {
+  const out = []; let x = seed >>> 0; const p = pool.slice();
+  while (out.length < n && p.length) { x = (Math.imul(x, 1103515245) + 12345) >>> 0; const i = x % p.length; out.push({ ...p.splice(i, 1)[0], progress: 0, claimed: false }); }
+  return out;
+}
+function weekFlagCode(t = Date.now()) {
+  const hist = Object.keys(HFLAGS).filter((f) => HFLAGS[f] !== 'mystic');
+  if (!hist.length) return 'BRE';
+  return hist[weekIndex(t) % hist.length];
+}
+function ensureQuests(u) {
+  const di = dayIndex(), wi = weekIndex();
+  if (!u.quests) u.quests = {};
+  if (u.quests.day !== di) {
+    u.quests.day = di;
+    u.quests.daily = pickPool(DAILY_POOL, di * 9973 + 13, 3);
+  }
+  if (u.quests.week !== wi) {
+    u.quests.week = wi;
+    u.quests.weekly = pickPool(WEEKLY_POOL, wi * 7919 + 7, 3);
+  }
+  u.quests.weekFlag = weekFlagCode();
+  return u.quests;
+}
+function bumpQuest(u, key, n = 1) {
+  ensureMeta(u);
+  const q = u.quests;
+  let changed = false;
+  for (const list of [q.daily, q.weekly]) {
+    for (const row of list) {
+      const def = DAILY_POOL.concat(WEEKLY_POOL).find((x) => x.id === row.id);
+      if (!def || def.key !== key || row.claimed) continue;
+      row.progress = Math.min(def.goal, (row.progress || 0) + n);
+      changed = true;
+    }
+  }
+  return changed;
+}
+function unlockAch(u, id) {
+  if (!ACH_REWARDS[id]) return null;
+  ensureMeta(u);
+  if (u.achievements.includes(id)) return null;
+  u.achievements.push(id);
+  const reward = ACH_REWARDS[id];
+  u.coins = (u.coins || 0) + reward;
+  return { id, reward };
+}
+
 const addPassXp = (u, n) => { const p = ensureMeta(u).pass; p.xp = Math.min(PASS_LEVELS * PASS_BAR_XP, p.xp + Math.max(0, n)); };
 const ownsFlag = (u, f) => !HFLAGS[f] || (u && Array.isArray(u.flags) && u.flags.includes(f));
 function grantReward(u, rw) {
@@ -238,8 +318,13 @@ function publicAcc(u) {
   ensureWallet(u);
   ensureMeta(u);
   const si = seasonInfo();
+  const q = ensureQuests(u);
+  const wf = q.weekFlag;
   return { name: u.name, created: u.created, xp, level, xpInto: xp - base, xpNeed: Math.max(1, next - base), title, stats: { ...st }, coins: u.coins, hats: [...u.hats],
-    flags: [...u.flags], crates: { ...u.crates }, admin: u.admin ? 1 : 0, pass: { season: si.id, daysLeft: si.daysLeft, xp: u.pass.xp, claimed: [...u.pass.claimed] } };
+    flags: [...u.flags], crates: { ...u.crates }, admin: u.admin ? 1 : 0, pass: { season: si.id, daysLeft: si.daysLeft, xp: u.pass.xp, claimed: [...u.pass.claimed] },
+    achievements: [...u.achievements],
+    quests: { daily: q.daily.map((x) => ({ ...x })), weekly: q.weekly.map((x) => ({ ...x })), weekFlag: { code: wf, owned: !!(u.flags && u.flags.includes(wf)) } }
+  };
 }
 function newToken(key) {
   const tok = crypto.randomBytes(24).toString('hex');
@@ -575,7 +660,7 @@ function adminCommand(c, r, text) {
       if (!u.hats) u.hats = [];
       if (what === 'all') {
         // Tüm bilinen şapkaları ver (Looks.js HAT_IDS ile aynı olmalı; sunucuda sabit liste)
-        const ALL_HATS = ['tophat','cowboy','crown','beanie','cap_red','cap_blue','fedora','party','chef','viking','army','hardhat','fez','beret','santa','witch','pirate','grad','headphones','flowers','halo','propeller','bowler','sombrero','ushanka','bunny','cat','antenna','gasmask'];
+        const ALL_HATS = ['tophat','cowboy','crown','beanie','cap_red','cap_blue','fedora','party','chef','viking','army','hardhat','fez','beret','santa','witch','pirate','grad','headphones','flowers','halo','propeller','bowler','sombrero','ushanka','bunny','cat','antenna','gasmask','bandana','ninja','helmet','mushroom','afro'];
         ALL_HATS.forEach((h) => { if (!u.hats.includes(h)) u.hats.push(h); });
         saveAccounts(); pushAccount(k); say('✔ ' + u.name + ': tüm şapkalar verildi'); break;
       }
@@ -659,6 +744,13 @@ function handle(c, m) {
       send(c, { t: 'board', period: week ? 'week' : 'all', top: arr.slice(0, 25).map(row), me: meIdx >= 0 ? row(arr[meIdx], meIdx) : null, total: arr.length });
       break;
     }
+    case 'suggests': case 'oneriler': case 'öneriler': {
+      if (!isAdmin(c)) { say('Yetki yok'); break; }
+      const list = accounts.suggestions || [];
+      say('Öneri sayısı: ' + list.length);
+      list.slice(-15).forEach((s) => say((s.name || '?') + ': ' + String(s.text || '').slice(0, 120)));
+      break;
+    }
     case 'suggest': {
       const u = c.account && accounts.users[c.account];
       const text = String(m.text || '').trim().slice(0, 280);
@@ -699,7 +791,9 @@ function handle(c, m) {
       accounts.market.push({ id, seller: c.account, sellerName: u.name, type, item, price, at: Date.now() });
       if (accounts.market.length > 200) accounts.market = accounts.market.slice(-150);
       saveAccounts();
+      const am = unlockAch(u, 'market_sell');
       send(c, { t: 'account', account: publicAcc(u), marketOk: 'listed' });
+      if (am) send(c, { t: 'achUnlock', ...am });
       break;
     }
     case 'marketBuy': {
@@ -724,7 +818,9 @@ function handle(c, m) {
       }
       accounts.market.splice(idx, 1);
       saveAccounts();
+      const ab = unlockAch(u, 'market_buy');
       send(c, { t: 'account', account: publicAcc(u), marketOk: 'bought' });
+      if (ab) send(c, { t: 'achUnlock', ...ab });
       // satıcıya haber (online ise)
       const sc = onlineClient(listing.seller);
       if (sc) send(sc, { t: 'account', account: publicAcc(seller), marketOk: 'sold' });
@@ -743,6 +839,75 @@ function handle(c, m) {
       accounts.market.splice(idx, 1);
       saveAccounts();
       send(c, { t: 'account', account: publicAcc(u), marketOk: 'cancelled' });
+      break;
+    }
+    case 'redeem': {
+      try {
+        const u = c.account && accounts.users[c.account];
+        if (!u) { send(c, { t: 'redeem', ok: false, err: 'login' }); break; }
+        ensureWallet(u);
+        if (!u.redeems || typeof u.redeems !== 'object') u.redeems = {};
+        const code = String(m.code || '').trim().toLowerCase().replace(/\s+/g, '');
+        if (code === 'test1000') {
+          if (u.redeems.test1000) { send(c, { t: 'redeem', ok: false, err: 'used' }); break; }
+          u.redeems.test1000 = Date.now();
+          u.coins = (typeof u.coins === 'number' ? u.coins : 0) + 1000;
+          try { ensureMeta(u); } catch (e) { console.error('redeem meta', e); }
+          saveAccounts();
+          let acc = null;
+          try { acc = publicAcc(u); } catch (e) { console.error('redeem publicAcc', e); acc = { name: u.name, coins: u.coins }; }
+          send(c, { t: 'redeem', ok: true, coins: 1000, account: acc });
+          if (acc) send(c, { t: 'account', account: acc });
+          break;
+        }
+        send(c, { t: 'redeem', ok: false, err: 'invalid' });
+      } catch (e) {
+        console.error('redeem error', e);
+        send(c, { t: 'redeem', ok: false, err: 'error' });
+      }
+      break;
+    }
+    case 'rename': {
+      const u = c.account && accounts.users[c.account];
+      if (!u) return;
+      const name = String(m.name || '').trim().slice(0, 16);
+      if (name.length < 3 || !/^[\w\u00C0-\u024F\u0400-\u04FF \-]+$/i.test(name)) {
+        send(c, { t: 'rename', ok: 0, err: 'bad' }); return;
+      }
+      // unique check
+      const key = Object.keys(accounts.users).find((k) => accounts.users[k].name && accounts.users[k].name.toLowerCase() === name.toLowerCase() && k !== c.account);
+      if (key) { send(c, { t: 'rename', ok: 0, err: 'taken' }); return; }
+      u.name = name;
+      saveAccounts();
+      send(c, { t: 'account', account: publicAcc(u) });
+      send(c, { t: 'rename', ok: 1 });
+      break;
+    }
+    case 'questsGet': {
+      const u = c.account && accounts.users[c.account];
+      if (!u) return;
+      ensureMeta(u);
+      send(c, { t: 'account', account: publicAcc(u) });
+      break;
+    }
+    case 'questClaim': {
+      const u = c.account && accounts.users[c.account];
+      if (!u) { send(c, { t: 'shopError', code: 'needLogin' }); return; }
+      ensureMeta(u); ensureWallet(u);
+      const id = String(m.id || '');
+      const allQ = [...u.quests.daily, ...u.quests.weekly];
+      const row = allQ.find((x) => x.id === id);
+      const def = DAILY_POOL.concat(WEEKLY_POOL).find((x) => x.id === id);
+      if (!row || !def || row.claimed) return;
+      if ((row.progress || 0) < def.goal) return;
+      row.claimed = true;
+      u.coins += def.reward;
+      const unlocked = [];
+      const dailyDone = u.quests.daily.filter((x) => x.claimed).length;
+      if (dailyDone >= 3) { const a = unlockAch(u, 'daily_3'); if (a) unlocked.push(a); }
+      saveAccounts();
+      send(c, { t: 'account', account: publicAcc(u), questClaimed: id, reward: def.reward });
+      unlocked.forEach((a) => send(c, { t: 'achUnlock', ...a }));
       break;
     }
     case 'passClaim': case 'passClaimAll': {
@@ -787,7 +952,11 @@ function handle(c, m) {
       let dupe = false, coins = 0;
       if (u.flags.includes(res.flag)) { dupe = true; coins = DUPE_COINS[res.rarity]; u.coins += coins; } else u.flags.push(res.flag);
       saveAccounts();
+      bumpQuest(u, 'crates', 1);
+      if (!dupe) bumpQuest(u, 'hist', 1);
+      const a1 = unlockAch(u, 'open_crate');
       send(c, { t: 'account', account: publicAcc(u), crate: { tier, flag: res.flag, rarity: res.rarity, dupe, coins } });
+      if (a1) send(c, { t: 'achUnlock', ...a1 });
       break;
     }
     case 'buyHat': {
@@ -800,6 +969,8 @@ function handle(c, m) {
       if (u.coins < HAT_PRICE[h]) { send(c, { t: 'shopError', code: 'noCoins' }); return; }
       u.coins -= HAT_PRICE[h];
       u.hats.push(h);
+      bumpQuest(u, 'play', 0);
+      const ah = unlockAch(u, 'buy_hat');
       saveAccounts();
       send(c, { t: 'account', account: publicAcc(u), bought: h });
       break;
@@ -948,10 +1119,34 @@ function handle(c, m) {
       const maxImp = Math.max(1, Math.ceil(all.length / 2) - 1);
       const nImp = cfg.imps ? Math.min(cfg.imps, maxImp) : impCount(all.length);
       const nSh = Math.max(0, Math.min(cfg.sheriffs ? cfg.sheriffs : sheriffCount(all.length), all.length - nImp - 1));
-      const roles = [...Array(nImp).fill('impostor'), ...Array(nSh).fill('sheriff'), ...Array(all.length - nImp - nSh).fill('crewmate')];
-      for (let i = roles.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [roles[i], roles[j]] = [roles[j], roles[i]]; }
-      all.forEach((p, i) => { p.role = roles[i]; });
-      applyForcedRoles(r, all);                      // admin /imposter /sheriff /crew komutları
+      // Anti-streak: son maçlarda sık katil olanlara daha düşük ağırlık
+      const need = { impostor: nImp, sheriff: nSh, crewmate: all.length - nImp - nSh };
+      const pool = all.map((p) => {
+        const pl = r.players.get(p.id);
+        const u = pl && pl.client.account ? accounts.users[pl.client.account] : null;
+        const hist = (u && u.roleHist) || [];
+        const recentImp = hist.slice(-5).filter((x) => x === 'impostor').length;
+        const recentSh = hist.slice(-5).filter((x) => x === 'sheriff').length;
+        return { p, wImp: Math.max(1, 8 - recentImp * 3), wSh: Math.max(1, 6 - recentSh * 2), wCrew: 4 + recentImp };
+      });
+      const pickWeighted = (arr, weightFn) => {
+        const total = arr.reduce((s, x) => s + weightFn(x), 0);
+        let r = crypto.randomInt(Math.max(1, total));
+        for (const x of arr) { r -= weightFn(x); if (r < 0) return x; }
+        return arr[arr.length - 1];
+      };
+      const remain = pool.slice();
+      const assign = (role, n, wfn) => {
+        for (let k = 0; k < n && remain.length; k++) {
+          const x = pickWeighted(remain, wfn);
+          x.p.role = role;
+          remain.splice(remain.indexOf(x), 1);
+        }
+      };
+      assign('impostor', need.impostor, (x) => x.wImp);
+      assign('sheriff', need.sheriff, (x) => x.wSh);
+      remain.forEach((x) => { x.p.role = 'crewmate'; });
+      applyForcedRoles(r, all);
       r.state = 'game';
       // Maç kaydı: kim hangi rolde ve hangi hesap. Sonuç gelince istatistik buna göre yazılır.
       r.match = { startAt: Date.now(), done: false, roster: {} };
@@ -959,11 +1154,23 @@ function handle(c, m) {
         const pl = r.players.get(sp.id);
         if (!pl || !pl.client.account) return;
         r.match.roster[sp.id] = { key: pl.client.account, role: sp.role, left: false };
+        const u = accounts.users[pl.client.account];
+        if (u) {
+          ensureMeta(u);
+          u.roleHist = (u.roleHist || []).concat(sp.role).slice(-12);
+        }
       });
+      saveAccounts();
       r.players.forEach((pl) => {
-        // Katiller birbirini bilir (ekip); diğer herkes sadece kendi rolünü görür
-        const meImp = (all.find((p) => p.id === pl.id) || {}).role === 'impostor';
-        const view = all.map((p) => (pl.id === r.hostId || p.id === pl.id || (meImp && p.role === 'impostor')) ? p : { ...p, role: null });
+        // Katiller birbirini bilir; şerifler de birbirini bilir
+        const me = all.find((p) => p.id === pl.id) || {};
+        const meImp = me.role === 'impostor';
+        const meSh = me.role === 'sheriff';
+        const view = all.map((p) => (
+          pl.id === r.hostId || p.id === pl.id ||
+          (meImp && p.role === 'impostor') ||
+          (meSh && p.role === 'sheriff')
+        ) ? p : { ...p, role: null });
         send(pl.client, { t: 'start', setup: { players: view, cfg } });
       });
       roomUpdate(r);
@@ -1009,10 +1216,35 @@ function handle(c, m) {
         let pxp = PASS_XP.played + (won ? PASS_XP.win : 0) + tasks * PASS_XP.task + kills * PASS_XP.kill;
         if (pp.d !== today) { pp.d = today; pxp += PASS_XP.daily; }
         addPassXp(u, pxp);
+        // Görev ilerleme + başarımlar
+        bumpQuest(u, 'play', 1);
+        if (won) bumpQuest(u, 'win', 1);
+        if (tasks) bumpQuest(u, 'tasks', tasks);
+        if (kills) bumpQuest(u, 'kills', kills);
+        const unlocked = [];
+        const pushA = (id) => { const a = unlockAch(u, id); if (a) unlocked.push(a); };
+        if (st.played === 1) pushA('first_win'); // only if also won? 
+        if (won && st.wins === 1) pushA('first_win');
+        if (kills >= 1 && st.kills - kills === 0) pushA('first_kill');
+        if (tasks >= 1 && st.tasks - tasks === 0) pushA('first_task');
+        if (won && winner === 'crew' && e.role !== 'impostor') pushA('win_crew');
+        if (won && e.role === 'impostor') pushA('win_imp');
+        if (won && e.role === 'sheriff') pushA('win_sheriff');
+        if (kills >= 3) pushA('triple_kill');
+        if (won && e.role === 'impostor' && kills === 0) pushA('no_kill_win_imp');
+        if (st.played >= 10) pushA('play_10');
+        if (st.played >= 50) pushA('play_50');
+        if (st.wins >= 5) pushA('win_5');
+        if (st.wins >= 25) pushA('win_25');
+        if (st.streak >= 3) pushA('streak_3');
+        if (u.flags && u.flags.length >= 3) pushA('collect_3_hist');
+        if (u.flags && u.flags.length >= 8) pushA('collect_8_hist');
+        if (u.flags && u.flags.includes('OTT')) pushA('mystic_own');
         const after = publicAcc(u);
         const pl = r.players.get(pid);
         if (pl && pl.client.account === e.key) {
-          send(pl.client, { t: 'matchReward', account: after, gain: { xp: after.xp - before.xp, coins, passXp: pp.xp - pBefore, won, tasks, kills, levelUp: after.level > before.level, oldLevel: before.level } });
+          send(pl.client, { t: 'matchReward', account: after, gain: { xp: after.xp - before.xp, coins, passXp: pp.xp - pBefore, won, tasks, kills, levelUp: after.level > before.level, oldLevel: before.level }, unlocked });
+          unlocked.forEach((a) => send(pl.client, { t: 'achUnlock', ...a }));
         }
       });
       saveAccounts();

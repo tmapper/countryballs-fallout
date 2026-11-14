@@ -105,6 +105,7 @@ class Net {
       }
       if (m.t === 'authError' && m.code === 'expired') { this.token = ''; try { localStorage.removeItem(TOKEN_KEY); } catch (e) { /* yoksay */ } }
       if (m.t === 'matchReward') { this.account = m.account; this.lastReward = m; }
+      if (m.t === 'redeem' && m.account) { this.account = m.account; }
       if (m.t === 'joined') { this.id = m.you; this.room = m.room; }
       if (m.t === 'room') this.room = m.room;
       if (m.t === 'left') this.room = null;
@@ -170,6 +171,7 @@ class Net {
   end() { this.send({ t: 'end' }); }
   // Host: maç bitti. stats = [{ id, tasks, kills }] -> sunucu istatistik ve XP yazar, herkese 'matchReward' gönderir
   matchResult(winner, stats) { this.send({ t: 'matchResult', winner, stats }); }
+  redeem(code) { this.send({ t: 'redeem', code: String(code || '').trim() }); }
   chat(text, ch = 'lobby', dead = false) { this.send({ t: 'chat', text, ch, dead }); }
   relay(d, to) { if (!this.blocked && this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({ t: 'relay', d, to })); }
 }

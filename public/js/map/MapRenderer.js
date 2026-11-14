@@ -48,7 +48,7 @@ export class MapRenderer {
 
     // 1) Binanın dışı: koyu boşluk (Among Us tarzı)
     // Duvarların arkası: TOPRAK (sığınak yerin altında). Bellek dostu büyük karolar (Tiled.js).
-    s.cameras.main.setBackgroundColor('#3a2a1c');
+    s.cameras.main.setBackgroundColor('#0a0e12');
     tiled(s, -600, -600, WORLD.w + 1200, WORLD.h + 1200, this.tex('soil', paintSoilTile), -20, 2);
 
     // 2) Duvarlar: yürünebilir alanları büyüterek katman katman çiz (gölge -> koyu -> açık kenar).

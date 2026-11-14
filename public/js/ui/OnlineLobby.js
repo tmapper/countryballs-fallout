@@ -3,6 +3,7 @@
 //                  ve oda içi arayüz (oyuncular, kod, botlar, başlat)
 // ============================================================
 import { i18n } from '../systems/I18n.js';
+import { shelterPass } from './ShelterPass.js';
 import { net } from '../systems/Net.js';
 import { FLAG_LIST, getFlagThumb, saveFlag } from '../systems/Flags.js';
 import { DEFAULT_CFG, CFG_RANGES } from '../systems/RoomConfig.js';
@@ -149,7 +150,7 @@ export class RoomHud {
     r.innerHTML = `
       <div class="rh-top">
         <div class="rh-namebox"><div class="rh-name"></div><button class="rh-code" type="button"></button></div>
-        <div class="rh-topbtns"><button class="rh-invite" type="button" data-t="social.inviteBtn"></button><button class="rh-leave" type="button" data-t="online.leave"></button></div>
+        <div class="rh-topbtns"><button class="rh-settings" type="button" title="Ayarlar">⚙</button><button class="rh-invite" type="button" data-t="social.inviteBtn"></button><button class="rh-leave" type="button" data-t="online.leave"></button></div>
       </div>
       <div class="rh-panel">
         <div class="rh-players"></div>
@@ -160,11 +161,18 @@ export class RoomHud {
         <div class="rh-cfg"><button class="rh-cfg-toggle" type="button"></button><div class="rh-cfg-body hidden"></div></div>
 
       </div>
-      <div class="rh-bottom"><button class="rh-flagbtn hidden" type="button"><span>🇺🇳</span><b data-t="lobby.pickFlagBtn"></b></button><button class="rh-flagbtn rh-hatbtn hidden" type="button"><span>🎩</span><b data-t="lobby.pickHatBtn"></b></button><div class="rh-note"></div><button class="rh-start" type="button" data-t="online.start"></button></div>`;
+      <div class="rh-bottom"><button class="rh-flagbtn hidden" type="button"><span>🇺🇳</span><b data-t="lobby.pickFlagBtn"></b></button><button class="rh-flagbtn rh-hatbtn hidden" type="button"><span>🎩</span><b data-t="lobby.pickHatBtn"></b></button><button class="rh-passbtn" type="button"><span>🎟</span><b data-t="online.passBtn">Sığınak Bileti</b></button><div class="rh-note"></div><button class="rh-start" type="button" data-t="online.start"></button></div>`;
     document.body.appendChild(r);
     r.querySelector('.rh-leave').addEventListener('click', () => this.onLeave && this.onLeave());
+    r.querySelector('.rh-settings').addEventListener('click', () => {
+      import('./GameSettings.js').then((m) => { if (m.gameSettings) m.gameSettings.open({}); }).catch(() => {});
+    });
     r.querySelector('.rh-invite').addEventListener('click', () => this.onInvite && this.onInvite());
     r.querySelector('.rh-start').addEventListener('click', () => this.onStart && this.onStart());
+    r.querySelector('.rh-passbtn').addEventListener('click', () => {
+      if (net.account) shelterPass.open();
+      else this.root.querySelector('.rh-note').textContent = i18n.t('shop.needLogin') || 'Giriş gerekli';
+    });
     r.querySelector('.rh-code').addEventListener('click', () => {
       const code = net.room && net.room.code;
       if (!code) return;

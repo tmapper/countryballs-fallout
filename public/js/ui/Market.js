@@ -72,6 +72,11 @@ class Market {
     this.tab = 'browse';
     this.root.classList.remove('hidden');
     this.isOpen = true;
+    // Sığınak bileti pazarın üstüne binmesin
+    document.querySelectorAll('.sp-root, .flagpick.sp-root').forEach((el) => {
+      el.style.zIndex = '50';
+      el.classList.add('behind-market');
+    });
     this.root.querySelectorAll('.mk-tabs button').forEach((x) => x.classList.toggle('on', x.dataset.tab === this.tab));
     net.connect();
     net.send({ t: 'marketList' });
@@ -83,7 +88,47 @@ class Market {
   close() {
     if (this.root) this.root.classList.add('hidden');
     this.isOpen = false;
+    this.embedded = false;
     clearInterval(this.poll);
+    document.querySelectorAll('.sp-root, .flagpick.sp-root').forEach((el) => {
+      el.style.zIndex = '';
+      el.classList.remove('behind-market');
+    });
+  }
+
+  // Sığınak bileti içine gömülü: ayrı overlay açmaz
+  openEmbedded(host) {
+    this.ensure();
+    this.embedded = true;
+    this.tab = 'browse';
+    this.isOpen = true;
+    // Modal kapalı, içerik host'a taşınır
+    this.root.classList.add('hidden');
+    const card = this.root.querySelector('.mk-card');
+    if (!host || !card) return this.open();
+    host.innerHTML = '';
+    host.appendChild(card);
+    card.classList.add('mk-embedded');
+    // X gizle (üst pass zaten var)
+    const x = card.querySelector('.mk-x');
+    if (x) x.style.display = 'none';
+    this.render();
+    net.send({ t: 'marketList' });
+    clearInterval(this.poll);
+    this.poll = setInterval(() => { if (this.isOpen) net.send({ t: 'marketList' }); }, 8000);
+  }
+
+  // Kartı modal root'a geri al
+  unembed() {
+    if (!this.embedded) return;
+    this.embedded = false;
+    const card = document.querySelector('.mk-card.mk-embedded');
+    if (card && this.root) {
+      card.classList.remove('mk-embedded');
+      const x = card.querySelector('.mk-x');
+      if (x) x.style.display = '';
+      this.root.appendChild(card);
+    }
   }
 
   itemLabel(type, item) {

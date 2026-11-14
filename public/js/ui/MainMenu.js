@@ -11,10 +11,12 @@ import { exitGame } from '../systems/ExitGame.js';
 import { shelterPass } from './ShelterPass.js';
 import { market } from './Market.js';
 import { suggest } from './Suggest.js';
+import { achievementsPanel } from './AchievementsPanel.js';
+import { questsPanel } from './QuestsPanel.js';
 import { passStatus } from '../systems/Pass.js';
 import { i18n } from '../systems/I18n.js';
 import { net, Net } from '../systems/Net.js';
-import { isMuted, toggleMute, sfx } from '../systems/Sound.js';
+import { isMuted, toggleMute, sfx, setSfxVolume, setMusicVolume, getVolumes } from '../systems/Sound.js';
 import { assetUrl } from '../systems/Assets.js';
 import { titleName, xpPercent, winRate, nextTitle } from '../systems/Levels.js';
 
@@ -26,14 +28,12 @@ function loadOptional(path) {
 
 const ITEMS = [
   { act: 'online', key: 'menu.play', icon: '☢' },
-  { act: 'create', key: 'menu.create', icon: '⊕' },
   { act: 'social', key: 'menu.social', icon: '★' },
   { act: 'pass', key: 'menu.pass', icon: '🎟' },
-  { act: 'market', key: 'menu.market', icon: '⚖' },
+  { act: 'ach', key: 'menu.ach', icon: '★' },
   { act: 'suggest', key: 'menu.suggest', icon: '✉' },
   { act: 'solo', key: 'menu.solo', icon: '◎' },
   { act: 'settings', key: 'menu.settings', icon: '⚙' },
-  { act: 'howto', key: 'menu.howto', icon: '?' },
   { act: 'exit', key: 'menu.exit', icon: '⏻' }
 ];
 
@@ -89,12 +89,22 @@ export class MainMenu {
         <button class="mm-link mm-close" type="button" data-t="menu.back"></button>
       </div></div>
       <div class="mm-modal hidden" data-m="profile"><div class="mm-card term mm-profile-card"><div class="pf-body"></div><button class="mm-tbtn mm-close" type="button" data-t="menu.back"></button></div></div>
-      <div class="mm-modal hidden" data-m="settings"><div class="mm-card term">
+      <div class="mm-modal hidden" data-m="settings"><div class="mm-card term mm-settings-card">
         <h2 data-t="menu.settings"></h2>
         <div class="mm-row"><span data-t="menu.language"></span><button class="mm-chip mm-set-lang" type="button"></button></div>
         <div class="mm-row"><span data-t="menu.sound"></span><button class="mm-chip mm-set-sound" type="button"></button></div>
-        <label class="mm-field"><span data-t="menu.server"></span><input class="mm-server" placeholder="oyunum.onrender.com" autocomplete="off" spellcheck="false"></label>
-        <p class="mm-hint" data-t="menu.serverHint"></p>
+        <div class="mm-row"><span data-t="menu.sfxVol">Ses efektleri</span><input type="range" class="mm-slider mm-sfx-vol" min="0" max="100" value="80"></div>
+        <div class="mm-row"><span data-t="menu.musicVol">Müzik</span><input type="range" class="mm-slider mm-music-vol" min="0" max="100" value="70"></div>
+        <div class="mm-row"><span data-t="menu.graphics">Grafik</span>
+          <select class="mm-select mm-graphics"><option value="high">Yüksek</option><option value="med">Orta</option><option value="low">Düşük</option></select>
+        </div>
+        <label class="mm-field"><span data-t="menu.redeem">Kod</span>
+          <div class="mm-redeem-row">
+            <input class="mm-redeem" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done">
+            <button class="mm-tbtn primary mm-redeem-go" type="button" data-t="menu.redeemGo">Kullan</button>
+          </div>
+        </label>
+        <p class="mm-hint mm-redeem-msg"></p>
         <button class="mm-tbtn primary mm-save" type="button" data-t="menu.save"></button>
       </div></div>
       <div class="mm-modal hidden" data-m="howto"><div class="mm-card term"><h2 data-t="menu.howto"></h2><p class="mm-howto"></p><button class="mm-tbtn mm-close" type="button" data-t="menu.back"></button></div></div>`;
@@ -115,12 +125,76 @@ export class MainMenu {
     r.querySelector('.mm-lang').addEventListener('click', () => i18n.toggle());
     r.querySelector('.mm-set-lang').addEventListener('click', () => i18n.toggle());
     r.querySelector('.mm-set-sound').addEventListener('click', () => { toggleMute(); this.render(); });
-    r.querySelector('.mm-save').addEventListener('click', () => {
-      Net.setServerSetting(r.querySelector('.mm-server').value.trim());
-      if (net.ws) { try { net.ws.close(); } catch (e) { /* yoksay */ } }
-      net.connect();
-      this.closeModal();
+    const loadVol = () => {
+      try {
+        const v = getVolumes();
+        r.querySelector('.mm-sfx-vol').value = Math.round((v.sfx ?? 1) * 100);
+        r.querySelector('.mm-music-vol').value = Math.round((v.music ?? 1) * 100);
+        const g = localStorage.getItem('cfs.graphics'); if (g) r.querySelector('.mm-graphics').value = g;
+      } catch (e) {}
+    };
+    loadVol();
+    const applyVol = () => {
+      const sv = Number(r.querySelector('.mm-sfx-vol').value) / 100;
+      const mv = Number(r.querySelector('.mm-music-vol').value) / 100;
+      try { localStorage.setItem('cfs.sfxVol', r.querySelector('.mm-sfx-vol').value); localStorage.setItem('cfs.musicVol', r.querySelector('.mm-music-vol').value); } catch (e) {}
+      setSfxVolume(sv); setMusicVolume(mv);
+    };
+    r.querySelector('.mm-sfx-vol').addEventListener('input', applyVol);
+    r.querySelector('.mm-music-vol').addEventListener('input', applyVol);
+    r.querySelector('.mm-graphics').addEventListener('change', () => {
+      try { localStorage.setItem('cfs.graphics', r.querySelector('.mm-graphics').value); } catch (e) {}
     });
+    const doRedeem = () => {
+      const inp = r.querySelector('.mm-redeem');
+      const el = r.querySelector('.mm-redeem-msg');
+      const code = (inp && inp.value || '').trim();
+      if (!code) { el.textContent = i18n.t('menu.redeemEmpty') || 'Kod gir'; return; }
+      if (!net.account) { el.textContent = i18n.t('shop.needLogin') || 'Giriş yapmalısın'; return; }
+      if (net.status !== 'online') {
+        el.textContent = i18n.t('menu.connecting') || 'Sunucuya bağlanıyor...';
+        net.connect();
+        // bağlanınca tekrar dene
+        const once = () => {
+          if (net.status === 'online') {
+            net.off('status', once);
+            el.textContent = '...';
+            (net.redeem ? net.redeem(code) : net.send({ t: 'redeem', code }));
+          }
+        };
+        net.on('status', once);
+        setTimeout(() => { try { net.off('status', once); } catch (e) {} }, 8000);
+        return;
+      }
+      el.textContent = '...';
+      if (net.redeem) net.redeem(code); else net.send({ t: 'redeem', code });
+    };
+    r.querySelector('.mm-redeem-go').addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); doRedeem(); });
+    r.querySelector('.mm-redeem').addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') { e.preventDefault(); doRedeem(); }
+    });
+    net.on('account', () => {
+      this.renderAccount();
+      if (!r.querySelector('[data-m="profile"]').classList.contains('hidden')) this.renderProfile();
+    });
+    net.on('redeem', (m) => {
+      const el = r.querySelector('.mm-redeem-msg');
+      if (!el) return;
+      if (m.ok) {
+        el.textContent = (i18n.t('menu.redeemOk') || 'Kod kabul edildi!') + ' +' + (m.coins || 0) + ' 🪙';
+        r.querySelector('.mm-redeem').value = '';
+        if (m.account) net.account = m.account;
+        this.renderAccount();
+      } else {
+        const err = m.err === 'used' ? (i18n.t('menu.redeemUsed') || 'Bu kod zaten kullanıldı')
+          : m.err === 'login' ? (i18n.t('shop.needLogin') || 'Giriş yapmalısın')
+          : m.err === 'error' ? 'Sunucu hatası'
+          : (i18n.t('menu.redeemFail') || 'Geçersiz kod');
+        el.textContent = err;
+      }
+    });
+    r.querySelector('.mm-save').addEventListener('click', () => { this.closeModal(); });
     r.querySelectorAll('.mm-close').forEach((b) => b.addEventListener('click', () => this.closeModal()));
     r.querySelectorAll('.mm-modal').forEach((m) => m.addEventListener('click', (e) => { if (e.target === m) this.closeModal(); }));
     r.querySelectorAll('input').forEach((i) => i.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && i.closest('[data-m="auth"]')) this.submitAuth(); }));
@@ -188,6 +262,17 @@ export class MainMenu {
       suggest.open();
       return;
     }
+    if (a === 'ach') {
+      const open = () => achievementsPanel.open();
+      if (!net.account) { this.authPending = open; this.openAuth('login'); return; }
+      open(); return;
+    }
+    if (a === 'tutorial') {
+      this.openModal('howto');
+      const how = this.root.querySelector('.mm-howto');
+      if (how) how.innerHTML = (i18n.t('menu.tutorialText') || i18n.t('menu.howtoText') || '').replace(/\n/g, '<br>');
+      return;
+    }
     const fn = { online: this.handlers.onOnline, create: this.handlers.onCreate, solo: this.handlers.onSolo }[a];
     if (!fn) return;
     // Çevrimiçi oyun için hesap gerekli
@@ -221,10 +306,14 @@ export class MainMenu {
     const a = net.account;
     r.querySelector('.mm-id').classList.toggle('guest', !a);
     r.querySelector('.mm-id-name').textContent = a ? a.name : i18n.t('menu.guest');
-    r.querySelector('.mm-id-photo').textContent = a ? a.name.slice(0, 1).toUpperCase() : '?';
+    const photo = r.querySelector('.mm-id-photo');
+    let av = '';
+    try { av = localStorage.getItem('cfs.avatar') || ''; } catch (e) {}
+    if (a && av) { photo.innerHTML = `<img class="pf-avatar-img" src="${av}" alt="">`; }
+    else { photo.textContent = a ? a.name.slice(0, 1).toUpperCase() : '?'; }
     r.querySelector('.mm-id-title').innerHTML = a ? esc(titleName(a.title)) + (a.admin ? ` · <span class="mm-adm">${esc(i18n.t('profile.admin'))}</span>` : '') : '';
     this.updatePassBadge();
-    r.querySelector('.mm-id-level').textContent = a ? `${i18n.t('menu.level', { n: a.level })} · 🪙 ${a.coins ?? 0}` : i18n.t('menu.guestHint');
+    r.querySelector('.mm-id-level').innerHTML = a ? `${i18n.t('menu.level', { n: a.level })} · <img class="mm-coin" src="assets/menu/coin.png" alt="" width="16" height="16"> ${a.coins ?? 0}` : i18n.t('menu.guestHint');
     r.querySelector('.mm-id-xp i').style.width = xpPercent(a) + '%';
     r.querySelector('.mm-id-no').textContent = a ? '#' + String(Math.abs(a.created || 0) % 100000).padStart(5, '0') : '';
     const act = r.querySelector('.mm-id-actions');
@@ -246,24 +335,59 @@ export class MainMenu {
     box.innerHTML = `
       <h2>${T('title')}</h2>
       <div class="pf-head">
-        <div class="pf-photo">${esc(a.name.slice(0, 1).toUpperCase())}</div>
-        <div><div class="pf-name">${esc(a.name)}</div><div class="pf-title">${esc(titleName(a.title))}</div></div>
-        <div class="pf-lvl"><b>${a.level}</b><span>${esc(i18n.t('levels.level', { n: '' }).trim().toUpperCase())}</span></div>
+        <div class="pf-photo">${this.avatarHtml(a.name)}</div>
+        <div class="pf-meta">
+          <div class="pf-name">${esc(a.name)}</div>
+          <div class="pf-title">${esc(titleName(a.title))}${a.admin ? ' · ADMIN' : ''}</div>
+          <div class="pf-coins"><img class="mm-coin" src="assets/menu/coin.png" alt="" width="16" height="16"> ${a.coins ?? 0}</div>
+        </div>
+        <div class="pf-lvl"><b>${a.level}</b><span>LVL</span></div>
       </div>
       <div class="pf-xp"><i style="width:${xpPercent(a)}%"></i></div>
-      <div class="pf-xptext">${a.level >= 100 ? esc(i18n.t('levels.max')) : esc(i18n.t('levels.xpText', { a: a.xpInto, b: a.xpNeed }))}${nt ? ' · ' + esc(i18n.t('profile.nextTitle', { t: titleName(nt.idx), n: nt.level })) : ''}</div>
+      <div class="pf-xptext">${a.level >= 100 ? esc(i18n.t('levels.max')) : esc(i18n.t('levels.xpText', { a: a.xpInto, b: a.xpNeed }))}</div>
+      <div class="pf-edit">
+        <label>${esc(i18n.t('profile.photo') || 'Profil fotoğrafı')}</label>
+        <div class="pf-edit-row">
+          <input type="file" accept="image/*" class="pf-photo-file" hidden>
+          <button type="button" class="mm-tbtn small pf-photo-btn">${esc(i18n.t('profile.pickPhoto') || 'Fotoğraf seç')}</button>
+          <button type="button" class="mm-tbtn small pf-photo-clear">${esc(i18n.t('profile.clearPhoto') || 'Kaldır')}</button>
+        </div>
+        <p class="pf-edit-msg mm-hint">${esc(i18n.t('profile.photoHint') || 'Sadece bu cihazda görünür')}</p>
+      </div>
       <div class="pf-grid">
         ${cell('played', st.played || 0)}${cell('wins', st.wins || 0, 'hi')}${cell('losses', st.losses || 0, 'lo')}
         ${cell('winrate', wr === null ? '—' : wr + '%')}${cell('streak', st.streak || 0)}${cell('bestStreak', st.bestStreak || 0)}
       </div>
-      ${st.played ? `<div class="pf-sub">${T('record')}</div><div class="pf-bar"><i style="width:${wr}%"></i></div>` : `<p class="mm-hint">${T('empty')}</p>`}
       <div class="pf-sub">${T('roles')}</div>
       <div class="pf-grid">
         ${cell('asImpostor', st.asImpostor || 0)}${cell('asSheriff', st.asSheriff || 0)}${cell('asCrew', st.asCrew || 0)}
         ${cell('winsCrew', st.winsCrew || 0)}${cell('winsImpostor', st.winsImpostor || 0)}${cell('tasks', st.tasks || 0)}
-        ${cell('kills', st.kills || 0)}${cell('left', st.left || 0)}
-      </div>
-      <p class="mm-hint">${T('howXp')}</p>`;
+        ${cell('kills', st.kills || 0)}
+      </div>`;
+    const file = box.querySelector('.pf-photo-file');
+    const btn = box.querySelector('.pf-photo-btn');
+    const clr = box.querySelector('.pf-photo-clear');
+    if (btn && file) btn.addEventListener('click', () => file.click());
+    if (file) file.addEventListener('change', () => {
+      const f = file.files && file.files[0];
+      if (!f) return;
+      if (f.size > 800000) { box.querySelector('.pf-edit-msg').textContent = i18n.t('profile.photoBig') || 'Dosya çok büyük (max ~800KB)'; return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        try { localStorage.setItem('cfs.avatar', reader.result); } catch (e) { box.querySelector('.pf-edit-msg').textContent = 'Kayıt başarısız'; return; }
+        this.renderProfile();
+        this.renderAccount();
+      };
+      reader.readAsDataURL(f);
+    });
+    if (clr) clr.addEventListener('click', () => { try { localStorage.removeItem('cfs.avatar'); } catch (e) {} this.renderProfile(); this.renderAccount(); });
+  }
+
+  avatarHtml(name) {
+    let av = '';
+    try { av = localStorage.getItem('cfs.avatar') || ''; } catch (e) {}
+    if (av) return `<img class="pf-avatar-img" src="${av}" alt="">`;
+    return esc((name || '?').slice(0, 1).toUpperCase());
   }
 
   openModal(m) { this.closeModal(); this.root.querySelector(`.mm-modal[data-m="${m}"]`).classList.remove('hidden'); if (m === 'profile') this.renderProfile(); this.render(); }
@@ -293,11 +417,12 @@ export class MainMenu {
   }
 
   show(handlers) {
+    try { questsPanel.show(); } catch (e) { /* yoksay */ }
+
     if (!this.root) this.build();
     this.handlers = handlers || this.handlers;
     const r = this.root;
-    r.querySelector('.mm-server').value = Net.serverSetting();
-    r.classList.remove('hidden', 'leaving');
+        r.classList.remove('hidden', 'leaving');
     // Uzun giriş animasyonu sadece ilk açılışta; menüye geri dönünce hemen görünsün
     r.classList.remove('intro');
     if (!this.introDone) { void r.offsetWidth; r.classList.add('intro'); this.introDone = true; }
@@ -320,6 +445,8 @@ export class MainMenu {
   }
 
   hide() {
+    try { questsPanel.hide(); } catch (e) { /* yoksay */ }
+
     if (!this.root || this.root.classList.contains('hidden')) return;
     clearInterval(this.pollT); clearInterval(this.tickT);
     this.root.classList.add('leaving');

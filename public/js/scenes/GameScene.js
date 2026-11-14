@@ -166,12 +166,15 @@ export class GameScene extends Phaser.Scene {
   applyRoleTags() {
     const show = !!this.registry.get('showRoles');
     const iAmImp = this.player && this.player.role === 'impostor';
+    const iAmSh = this.player && this.player.role === 'sheriff';
     const nameOf = (b) => b.name || (b.isMe ? (net.profile.name || '') : '') || i18n.t('countries.' + b.flag);
     this.balls.forEach((b) => {
       if (show) { b.showTag(`${nameOf(b)} · ${i18n.t('roles.' + b.role)}`, ROLE_COLORS[b.role]); return; }
       const red = iAmImp && b.role === 'impostor';
-      if (b.isMe) b.showTag(nameOf(b) + (b.alive ? '' : ' 👻'), red ? ROLE_COLORS.impostor : '#ffffff');
+      const blue = iAmSh && b.role === 'sheriff';
+      if (b.isMe) b.showTag(nameOf(b) + (b.alive ? '' : ' 👻'), red ? ROLE_COLORS.impostor : blue ? ROLE_COLORS.sheriff : '#ffffff');
       else if (red) b.showTag(nameOf(b), ROLE_COLORS.impostor);
+      else if (blue) b.showTag(nameOf(b), ROLE_COLORS.sheriff);
       else b.showTag(this.online ? b.name : '', '#ffffff');
     });
   }
@@ -244,6 +247,7 @@ export class GameScene extends Phaser.Scene {
     const t = this.nearTask();
     if (!t) { if (this.nearEmergency()) this.pressEmergency(); return; }
     this.taskOpen = true;
+    this.releaseControls();
     this.releaseControls();   // panel açılırken parmak/tuş durumu temiz olsun (panel üstünde parmak kalkınca olay kaybolur)
     this.taskPanel.open(t.type, { onDone: () => this.completeTask(t), onClose: () => { this.taskOpen = false; this.releaseControls(); } });
   }
@@ -325,6 +329,8 @@ export class GameScene extends Phaser.Scene {
     } else {
       // Yanlış kişi: Şerif ölür, hedef yaşar
       this.die(sheriff);
+      if (this.meeting) this.meeting.sheriffMisfire = true;
+      else this._sheriffMisfire = true; // bir sonraki toplantıya taşı
       this.toast(i18n.t(sheriff.isMe ? 'game.youMisfired' : 'game.sheriffMisfired', { name: countryName(sheriff) }), '#ffb347');
     }
     this.checkEnd();
@@ -338,6 +344,12 @@ export class GameScene extends Phaser.Scene {
     if (!ball.isMe && ball.tasksLeft && !this.isClient) { this.taskTotal -= ball.tasksLeft; ball.tasksLeft = 0; this.publishTasks(); this.emitEv('tasks', [this.taskDone, this.taskTotal]); }
     if (ball.isMe && this.taskPanel) this.taskPanel.close();
     if (!opts.noBody) { this.spawnBody(ball); this.fxDeath(ball); }
+    // Şerif ölünce silahını düşür (masumlar alabilir)
+    if (ball.role === 'sheriff' && !opts.noGun) {
+      this.guns = this.guns || [];
+      this.guns.push({ x: ball.x, y: ball.y, taken: false, spr: null });
+      this.spawnGunPickup(this.guns[this.guns.length - 1]);
+    }
     if (ball.isMe) {
       // Ölüler sohbeti: sadece diğer ölüler görür
       ghostChat.show({ local: !this.online, me: { name: ball.name || net.profile.name || i18n.t('countries.' + ball.flag), flag: ball.flag } });
@@ -531,8 +543,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    // Gerçek geçen süre: telefon kasınca oyun AĞIR ÇEKİME girmesin (eskiden 0,1 sn ile sınırlıydı).
-    // Çok uzun takılmada (sekme arka plandaydı) en fazla 0,25 sn; hareket CountryBall.move içinde adımlara bölünür.
+    // Gerçek geçen süre: telefon kasınca oyun AĞIR ÇEKİME girmesin.
     const dt = Math.min(delta, 250) / 1000;
     this.netUpdate(dt);
     this.updateFx(dt, time);
@@ -540,32 +551,38 @@ export class GameScene extends Phaser.Scene {
     if (this.meeting) { this.registry.set('hud', { action: null }); return; }
     const ui = this.scene.get('UIScene');
     this.controls.joystick = ui && ui.joystick ? ui.joystick : null;
-    if (this.taskOpen && !this.taskPanel.isOpen) { this.taskOpen = false; this.releaseControls(); }   // panel başka yoldan kapandıysa kilit kalmasın
-    const dir = this.taskOpen ? { x: 0, y: 0 } : this.controls.update();   // görev açıkken yürüme yok
+    if (this.taskOpen && !this.taskPanel.isOpen) { this.taskOpen = false; this.releaseControls(); }
+    // Görev paneli açıkken ağır işleri atla (donma / kasma azaltır)
+    if (this.taskOpen) {
+      this.registry.set('hud', { action: null, task: true });
+      return;
+    }
+    const dir = this.controls.update();
     this.updateBotTasks(dt);
     if (!this.over && !this.sandbox) { this.updateSabotage(dt); this.updateBotReports(dt); }
-    if (this.meeting) return;   // bu karede toplantı başladıysa
+    if (this.meeting) return;
 
-    // canStand: yürünebilir alan kontrolü. Duvara çarpınca durur ama duvar boyunca kayar.
-    // Hayalet tüm duvarlardan geçer (sadece dünyanın sınırında kalır)
     const stand = this.player.alive ? canStand : (x, y) => x > 0 && y > 0 && x < WORLD.w && y < WORLD.h;
     if (this.player.inTunnel) { this.updateTunnelInput(dir); }
     const moved = this.player.inTunnel ? false : this.player.move(dir, dt, stand);
-    // Takılma koruması: yön verildiği halde 0,5 sn hiç kıpırdamadıysa ve eşyanın içindeyse kurtar
     if (this.player.alive && !this.player.inTunnel && (dir.x || dir.y) && !moved) { this.stuckT = (this.stuckT || 0) + dt; if (this.stuckT > 0.5) { this.stuckT = 0; this.unstick(this.player); } } else this.stuckT = 0;
 
     this.balls.forEach((b) => { if (b.cooldown > 0) b.cooldown = Math.max(0, b.cooldown - dt); });
 
-    // Botlar (oyun bittiyse dururlar)
+    // Botlar: kare atlatma (her 2. kare) — mobilde yük azalır
     if (!this.over) {
-      this.balls.forEach((b) => {
-        if (!b.brain || !b.alive) return;
-        const moved = b.move(this.botThink(b, dt), dt, canStand);
-        if (b.brain) b.brain.report(moved, dt);
-      });
+      this._botFrame = (this._botFrame || 0) + 1;
+      const runBots = (this._botFrame % 2) === 0 || this.balls.length <= 8;
+      if (runBots) {
+        const botDt = dt * (this._botFrame % 2 === 0 && this.balls.length > 8 ? 2 : 1);
+        this.balls.forEach((b) => {
+          if (!b.brain || !b.alive) return;
+          const mv = b.move(this.botThink(b, botDt), botDt, canStand);
+          if (b.brain) b.brain.report(mv, botDt);
+        });
+      }
     }
 
-    // Gözün konumu: ayak noktasının biraz yukarısı (ayak izi kutusunun içinde kalsın)
     this.fog.update(this.player.x, this.player.y - 16, this.visionRadius);
     this.updateSight(dt);
     this.updateCull(dt);
@@ -583,11 +600,17 @@ export class GameScene extends Phaser.Scene {
 
   // Görev/panel kapanınca: tüm sahnelerde basılı tuşları ve joystick'i bırak (takılı kalıp yürüyememe hatası)
   releaseControls() {
-    this.game.scene.getScenes(true).forEach((sc) => { try { sc.input.keyboard.resetKeys(); } catch (e) { /* yoksay */ } });
-    // Joystick'i kesin bırak: panel açıkken parmak kalkma olayı kaybolabildiği için "basılı" bilgisi güvenilmez.
-    // Joystick artık yeni dokunuşu devraldığı için (Joystick.onDown) bırakmak donma yapmaz.
+    this.game.scene.getScenes(true).forEach((sc) => {
+      try { sc.input.keyboard.resetKeys(); } catch (e) { /* yoksay */ }
+      try {
+        // Phaser pointer capture'ları temizle (görev paneli sonrası donma)
+        const mgr = sc.input && sc.input.manager;
+        if (mgr && mgr.pointers) mgr.pointers.forEach((ptr) => { try { if (ptr && ptr.active) ptr.reset(); } catch (e2) {} });
+      } catch (e) { /* yoksay */ }
+    });
     const ui = this.scene.get('UIScene');
     if (ui && ui.joystick && ui.joystick.reset) ui.joystick.reset();
+    try { if (this.input && this.input.keyboard) this.input.keyboard.resetKeys(); } catch (e) {}
     this.unstick(this.player);
   }
 

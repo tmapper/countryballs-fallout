@@ -527,9 +527,12 @@ export class TaskPanel {
   close(silent = false) {
     if (!this.isOpen) return;
     this.isOpen = false;
-    this.cleanups.forEach((f) => f()); this.cleanups = [];
+    this.cleanups.forEach((f) => { try { f(); } catch (e) {} }); this.cleanups = [];
     if (this.root) this.root.remove();
     this.root = null;
+    // Tarayıcıda kalmış pointer capture / seçim kilidi (donma önlemi)
+    try { if (window.getSelection) window.getSelection().removeAllRanges(); } catch (e) {}
+    try { document.body.style.pointerEvents = ''; } catch (e) {}
     const h = this.handlers; this.handlers = null;
     if (!silent && h && h.onClose) h.onClose();
   }

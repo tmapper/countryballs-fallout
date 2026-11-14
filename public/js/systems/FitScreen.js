@@ -25,10 +25,11 @@ const TARGETS = [
   ['.rh-panel', {}],
   ['.sab-panel', {}],
   ['.pass-card', { wide: true }],
-  ['.mk-card', { wide: true }],
-  ['.sg-card', {}]
+  ['.market > .mk-card', { wide: true }],
+  ['.sg-card', {}],
+  ['.ach-card', {}]
 ];
-const ALLOW = '.mt-chat-list, .lc-list, .pass-track, .fp-grid, .so-body, [data-scroll]';
+const ALLOW = '.mt-chat-list, .lc-list, .pass-track, .fp-grid, .so-body, .mt-quick-panel, .mk-body, .sp-market-pane, [data-scroll]';
 const MIN_Z = 0.42;
 const STEP = 0.04;
 const ALL_SEL = TARGETS.map((t) => t[0]).join(',');

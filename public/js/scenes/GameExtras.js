@@ -158,7 +158,8 @@ export function installExtras(GameScene) {
     stopKillCutscene();
     ghostChat.suspend(true);
     this.emitEv('meeting', [caller.id, body ? body.ball.id : null]);
-    const m = this.meeting = { caller, body, votes: new Map(), accuse: new Map(), phase: 'discuss', left: this.cfg.discuss, timers: [] };
+    const m = this.meeting = { caller, body, votes: new Map(), accuse: new Map(), phase: 'discuss', left: this.cfg.discuss, timers: [], sheriffMisfire: !!this._sheriffMisfire };
+    this._sheriffMisfire = false;
     this.cancelSabotage();
     if (this.taskPanel) this.taskPanel.close(true);
     this.taskOpen = false;
@@ -206,6 +207,9 @@ export function installExtras(GameScene) {
     if (!m || this.isClient || !sender || !sender.alive) return;
     const t = norm(text);
     if (/\b(skip|gec|gecelim|kanit yok|bilmiyorum)\b/.test(t)) return;
+    // Olumsuzlama: "X degil", "not X", "X innocent/masum", "X katil degil"
+    const NEG = /(degil|değil|not |yok|masum|innocent|temiz|crew|suspect degil|şüpheli degil|supheli degil|katil degil)/i;
+    const POS = /(supheli|şüpheli|suspect|katil|impostor|imposter|goruyorum|gördüm|gordum|vent|tunel|tünel|kill|oldur|öldür)/i;
     const d = i18n.data || {};
     let best = null, bestLen = 0;
     this.balls.forEach((o) => {
@@ -214,15 +218,27 @@ export function installExtras(GameScene) {
       names.forEach((n) => { const k = norm(n); if (k.length >= 3 && k.length > bestLen && t.includes(k)) { best = o; bestLen = k.length; } });
     });
     if (!best) return;
+    // İsim geçti ama olumsuz mu?
+    if (NEG.test(t) && !POS.test(t)) {
+      // Temize çıkarma: skor azalt, suçlama ekleme
+      if (m.weight && m.weight.has(sender)) m.weight.delete(sender);
+      if (m.accuse.get(sender) === best) m.accuse.delete(sender);
+      if (!m.clear) m.clear = new Map();
+      m.clear.set(best, (m.clear.get(best) || 0) + 1);
+      return;
+    }
+    // Sadece isim geçti, suçlama fiili yoksa zayıf say (kandırılma azalır)
+    const strong = POS.test(t);
     m.accuse.set(sender, best);
     if (!m.weight) m.weight = new Map();
-    m.weight.set(sender, 3);
-    // Tepki: suçlanan bot kendini savunur, aynı kişiden şüphelenen bir bot katılır
+    m.weight.set(sender, strong ? 3 : 1);
     const say = (b, key, target, ms) => m.timers.push(this.time.delayedCall(ms, () => { if (this.meeting === m && b.alive) this.showChat(b, key, target); }));
     if (best.brain && !m.defended) { m.defended = new Set(); }
-    if (best.brain && !m.defended.has(sender)) { m.defended.add(sender); say(best, 'chat.defend', sender, 1200 + Math.random() * 1500); }
-    const ally = this.balls.find((b) => b.brain && b.alive && b !== best && b.role !== 'impostor' && (b.brain.suspect === best || b.brain.lead === best));
-    if (ally) say(ally, 'chat.agree', best, 1800 + Math.random() * 1800);
+    if (strong && best.brain && !m.defended.has(sender)) { m.defended.add(sender); say(best, 'chat.defend', sender, 1200 + Math.random() * 1500); }
+    if (strong) {
+      const ally = this.balls.find((b) => b.brain && b.alive && b !== best && b.role !== 'impostor' && (b.brain.suspect === best || b.brain.lead === best));
+      if (ally) say(ally, 'chat.agree', best, 1800 + Math.random() * 1800);
+    }
   };
 
   P.onChatMsg = function (m) {
@@ -259,23 +275,64 @@ export function installExtras(GameScene) {
     let key, target = null;
     const s = b.brain && b.brain.suspect;
     const accuser = [...m.accuse.entries()].find(([, v]) => v === b);
-    if (s && s.alive && b.role !== 'impostor') { key = b.brain.sawVent ? 'chat.sawVent' : 'chat.sawKill'; target = s; }
-    else if (b.role === 'impostor') {
+    // Popüler suçlama (başkalarının söylediği)
+    const tallies = new Map();
+    m.accuse.forEach((t) => { if (t && t.alive) tallies.set(t, (tallies.get(t) || 0) + 1); });
+    let popular = null, popN = 0;
+    tallies.forEach((n, t) => { if (n > popN) { popN = n; popular = t; } });
+
+    if (s && s.alive && b.role !== 'impostor') {
+      // Gerçek tanık: katili gördü
+      key = b.brain.sawVent ? 'chat.sawVent' : (Math.random() < 0.5 ? 'chat.sawKill' : 'chat.suspect');
+      target = s;
+    } else if (b.role === 'impostor') {
+      // Katil: mümkün olduğunca masum gibi konuş; rastgele "şüpheli" demeyi AZALT
       const crew = others.filter((o) => o.role !== 'impostor');
-      if (accuser && accuser[0].alive) { key = 'chat.defend'; target = accuser[0]; m.accuse.set(b, accuser[0]); }
-      else if (m.body && b === m.caller) key = 'chat.bodyIn';
-      else if (Math.random() < 0.4 && crew.length) { key = 'chat.suspect'; target = pick(crew); }
-      else key = pick(['chat.notMe', 'chat.wasTasks', 'chat.noIdea']);
-    } else if (b.brain && b.brain.lead && b.brain.lead.alive) { key = 'chat.sawNear'; target = b.brain.lead; } else if (b === m.caller && m.body && room) key = 'chat.bodyIn';
-    else if (accuser) { key = 'chat.defend'; target = accuser[0]; }
-    else key = pick(['chat.wasTasks', 'chat.noIdea', 'chat.whereBody', 'chat.skipVote']);
+      if (accuser && accuser[0].alive) {
+        key = pick(['chat.defend', 'chat.notMe', 'chat.whyMe']);
+        target = accuser[0];
+        m.accuse.set(b, accuser[0]);
+      } else if (m.body && b === m.caller) {
+        key = pick(['chat.bodyIn', 'chat.foundBody', 'chat.whereBody']);
+      } else if (popular && popular.role !== 'impostor' && Math.random() < 0.35) {
+        // Sürüye uy: başkalarının şüphelendiği masumu destekle (kendini ele vermemek için)
+        key = pick(['chat.agree', 'chat.suspect', 'chat.lookAt']);
+        target = popular;
+      } else if (Math.random() < 0.18 && crew.length) {
+        // Nadiren rastgele suçla (eskiden %40'tı — bu yüzden her "şüpheli" katilden geliyordu)
+        key = pick(['chat.suspect', 'chat.lookAt', 'chat.weird']);
+        target = pick(crew);
+      } else {
+        key = pick(['chat.wasTasks', 'chat.noIdea', 'chat.skipVote', 'chat.needProof', 'chat.quiet', 'chat.whereWas']);
+      }
+    } else {
+      // Masum / şerif: daha aktif konuşsun
+      if (b.brain && b.brain.lead && b.brain.lead.alive) {
+        key = pick(['chat.sawNear', 'chat.suspect', 'chat.lookAt']);
+        target = b.brain.lead;
+      } else if (b === m.caller && m.body && room) {
+        key = pick(['chat.bodyIn', 'chat.foundBody']);
+      } else if (accuser) {
+        key = pick(['chat.defend', 'chat.notMe', 'chat.whyMe']);
+        target = accuser[0];
+      } else if (popular && popular !== b && Math.random() < 0.45) {
+        key = pick(['chat.agree', 'chat.suspect', 'chat.lookAt']);
+        target = popular;
+      } else if (Math.random() < 0.35 && others.length) {
+        // Zayıf şüphe: rastgele birine (gerçek oyuncu gibi spekülasyon)
+        key = pick(['chat.suspect', 'chat.weird', 'chat.lookAt', 'chat.whereWas']);
+        target = pick(others);
+      } else {
+        key = pick(['chat.wasTasks', 'chat.noIdea', 'chat.whereBody', 'chat.skipVote', 'chat.needProof', 'chat.quiet', 'chat.stayTogether']);
+      }
+    }
     this.showChat(b, key, target, room);
   };
 
   P.showChat = function (b, key, target, room) {
     const m = this.meeting;
     if (!m) return;
-    if (target && ['chat.sawKill', 'chat.sawVent', 'chat.suspect', 'chat.sawNear', 'chat.agree'].includes(key)) {
+    if (target && ['chat.sawKill', 'chat.sawVent', 'chat.suspect', 'chat.sawNear', 'chat.agree', 'chat.lookAt', 'chat.weird'].includes(key)) {
       m.accuse.set(b, target);
       if (!m.weight) m.weight = new Map();
       m.weight.set(b, key === 'chat.suspect' ? 1 : (key === 'chat.sawNear' || key === 'chat.agree') ? 2 : 4);
@@ -316,32 +373,35 @@ export function installExtras(GameScene) {
 
   P.botVoteFor = function (b) {
     const m = this.meeting;
-    const others = this.balls.filter((o) => o.alive && o !== b);
     const idOf = (o) => m.ids.get(o);
     const br = b.brain || {};
-    // Kesin bilgi (cinayet / tünel gördü)
+    // Şerif masum vurup öldüyse → kanıt karışık, skip eğilimi
+    if (m.sheriffMisfire) {
+      if (b.role !== 'impostor' && Math.random() < 0.75) return 'skip';
+    }
     if (b.role !== 'impostor' && br.suspect && br.suspect.alive) return idOf(br.suspect);
-    // Sohbetteki suçlamaları ağırlıklandır (görgü tanığı > ceset yanında gördüm > sadece şüphe)
     const score = new Map();
     m.accuse.forEach((t, who) => {
-      if (!t.alive || t === b || who === b || !who.alive) return;
-      score.set(t, (score.get(t) || 0) + ((m.weight && m.weight.get(who)) || 1));
+      if (!t || !t.alive || t === b || who === b || !who.alive) return;
+      let w = (m.weight && m.weight.get(who)) || 1;
+      // Temize çıkarıldıysa skor düşür
+      if (m.clear && m.clear.get(t)) w = Math.max(0, w - m.clear.get(t));
+      if (w > 0) score.set(t, (score.get(t) || 0) + w);
     });
     const ranked = [...score.entries()].sort((x, y) => y[1] - x[1]);
     if (b.role === 'impostor') {
       const crewTop = ranked.find(([t]) => t.role !== 'impostor');
-      // Katil: masum biri suçlanıyorsa kalabalığa katılır; ortağını asla oylamaz
-      if (crewTop && Math.random() < 0.85) return idOf(crewTop[0]);
+      if (crewTop && crewTop[1] >= 3 && Math.random() < 0.7) return idOf(crewTop[0]);
       return 'skip';
     }
     const top = ranked[0];
     const lead = br.lead && br.lead.alive ? br.lead : null;
-    if (top && top[1] >= 4) return idOf(top[0]);                     // görgü tanığı var
-    if (lead && top && top[0] === lead) return idOf(lead);            // kendi ipucu + başkası da diyor
-    if (top && top[1] >= 3 && Math.random() < 0.8) return idOf(top[0]);
-    if (lead && Math.random() < 0.6) return idOf(lead);
-    if (top && top[1] >= 2 && Math.random() < 0.4) return idOf(top[0]);
-    return 'skip';                                                   // kanıt yoksa rastgele oylamaz
+    if (top && top[1] >= 5) return idOf(top[0]);
+    if (lead && top && top[0] === lead && top[1] >= 2) return idOf(lead);
+    if (top && top[1] >= 4 && Math.random() < 0.7) return idOf(top[0]);
+    if (lead && Math.random() < 0.45) return idOf(lead);
+    if (top && top[1] >= 3 && Math.random() < 0.35) return idOf(top[0]);
+    return 'skip';
   };
 
   P.castVote = function (voter, id) {

@@ -67,14 +67,22 @@ const live = new Set();          // çalan tüm müzik/döngü sesleri (yetim ka
 
 // Her ses için küçük bir havuz: her çalışta yeni Audio oluşturmak (özellikle adım sesi) kasma yapıyordu
 const pools = {};
-export function sfx(name, k = 1) {
+export function sfx(name, k = 1, pitch = 1) {
   if (muted) return null;
   const pool = pools[name] || (pools[name] = []);
-  let a = pool.find((x) => x.paused || x.ended);
-  if (!a) {
-    if (pool.length >= 4) a = pool[0];
-    else { a = new Audio(url(name)); a.preload = 'auto'; pool.push(a); }
+  // pitch değişince aynı elemanı paylaşmak bozulabilir; pitch≈1 için havuz, değilse yeni
+  let a = null;
+  if (Math.abs(pitch - 1) < 0.001) {
+    a = pool.find((x) => x.paused || x.ended);
+    if (!a) {
+      if (pool.length >= 6) a = pool[0];
+      else { a = new Audio(url(name)); a.preload = 'auto'; pool.push(a); }
+    }
+  } else {
+    a = new Audio(url(name));
+    a.preload = 'auto';
   }
+  try { a.playbackRate = Math.max(0.5, Math.min(2, pitch)); } catch (e) {}
   a.currentTime = 0;
   a.volume = vol(name, SFX_VOL, k);
   tryPlay(a);

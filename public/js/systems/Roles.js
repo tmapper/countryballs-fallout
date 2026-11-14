@@ -35,13 +35,27 @@ export function roleChances(n) {
 // forced: 'random' ya da bir rol adı (rol testi için benim rolümü sabitler)
 export function assignRoles(n, forced = 'random') {
   const roles = buildRoleList(n);
-  for (let i = roles.length - 1; i > 0; i--) { // Fisher-Yates karıştırma
-    const j = Math.floor(Math.random() * (i + 1));
-    [roles[i], roles[j]] = [roles[j], roles[i]];
+  // Anti-streak (solo): son roller localStorage'da, katil tekrarını azalt
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem('cfs.roleHist') || '[]'); } catch (e) { hist = []; }
+  if (!Array.isArray(hist)) hist = [];
+  const recentImp = hist.slice(-5).filter((x) => x === 'impostor').length;
+  for (let attempt = 0; attempt < 12; attempt++) {
+    for (let i = roles.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [roles[i], roles[j]] = [roles[j], roles[i]];
+    }
+    if (forced !== 'random' && roles.includes(forced)) {
+      const i = roles.indexOf(forced);
+      [roles[0], roles[i]] = [roles[i], roles[0]];
+    }
+    // Ben (index 0) son 3 maçta 2+ katil olduysa yeniden dene
+    if (roles[0] === 'impostor' && recentImp >= 2 && forced === 'random') continue;
+    break;
   }
-  if (forced !== 'random' && roles.includes(forced)) {
-    const i = roles.indexOf(forced);
-    [roles[0], roles[i]] = [roles[i], roles[0]];
-  }
+  try {
+    hist.push(roles[0]);
+    localStorage.setItem('cfs.roleHist', JSON.stringify(hist.slice(-12)));
+  } catch (e) { /* yoksay */ }
   return roles;
 }

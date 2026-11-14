@@ -11,8 +11,9 @@ import { sfx } from '../systems/Sound.js';
 import { assetUrl } from '../systems/Assets.js';
 import { getFlagThumb, HIST_FLAGS, HIST_RARITY } from '../systems/Flags.js';
 import { PASS, CRATE_TIERS, CRATE_ICON, CRATE_ODDS, CRATE_PRICE, RARITY_COLOR, RARITY_ORDER, passReward, passStatus } from '../systems/Pass.js';
+import { market } from './Market.js';
 
-const TABS = ['pass', 'crates', 'coll'];
+const TABS = ['pass', 'crates', 'coll', 'market'];
 // İsteğe bağlı görseller (public/assets/menu/): yoksa emoji ve kodla çizilen arka plan kullanılır.
 // Dosya adları: pass_bg.jpg (arka plan), crate_common.png, crate_rare.png, crate_grand.png, coin.png. Promptlar: docs/GORSEL_PROMPTLARI.md (D bölümü)
 const ART_DIR = 'assets/menu/';
@@ -55,6 +56,7 @@ class ShelterPass {
         </section>
         <section class="pass-pane sp-crates" data-pane="crates"></section>
         <section class="pass-pane sp-coll" data-pane="coll"></section>
+      <section class="pass-pane sp-market-pane" data-pane="market"></section>
       </div>
       <p class="pass-how"></p>
     </div>
@@ -137,6 +139,12 @@ class ShelterPass {
     this.root.querySelectorAll('.pass-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
     this.root.querySelectorAll('.pass-pane').forEach((p) => p.classList.toggle('on', p.dataset.pane === t));
     if (t === 'pass') { this.updateArrows(); if (!this.centered) { this.centered = true; this.centerOn(this.focusLevel, false); } }
+    if (t === 'market') {
+      const pane = this.root && this.root.querySelector('.sp-market-pane');
+      if (pane) market.openEmbedded(pane);
+    } else {
+      try { market.unembed(); market.close(); } catch (e) {}
+    }
   }
 
   msg(text, bad) {
@@ -159,27 +167,26 @@ class ShelterPass {
     net.connect();
   }
 
-  close() { if (this.root) this.root.classList.add('hidden'); this.isOpen = false; }
+  close() {
+    try { market.unembed(); market.close(); } catch (e) {}
+ if (this.root) this.root.classList.add('hidden'); this.isOpen = false; }
 
-  hideReveal() { clearTimeout(this._spinTimer); const v = this.root.querySelector('.sp-reveal'); v.classList.add('hidden'); v.innerHTML = ''; }
+  hideReveal() { clearTimeout(this._spinTimer); clearInterval(this._spinTick); const v = this.root.querySelector('.sp-reveal'); v.classList.add('hidden'); v.innerHTML = ''; }
 
   // Kasa açıldı: önce hızlı dönen bayrak şeridi, yavaşlayarak ortadaki bayrakta durur
   reveal(c) {
-    sfx(c.rarity === 'legendary' || c.rarity === 'epic' ? 'task_done' : 'wire_connect');
     const v = this.root.querySelector('.sp-reveal');
     const col = RARITY_COLOR[c.rarity];
     v.style.setProperty('--rc', col);
 
-    // Bu kasanın çıkarabileceği nadirliklere göre havuz
     const odds = CRATE_ODDS[c.tier] || {};
     const pool = HIST_FLAGS.filter((f) => odds[HIST_RARITY[f]]);
     const list = pool.length ? pool : HIST_FLAGS.slice();
 
-    // Uzun şerit: ~40-50 bayrak, kazanılan bayrak ortalara yakın yerleştirilir
-    const ITEM_W = 120;           // her kutu genişliği (px)
-    const VISIBLE = 5;            // görünür kutu sayısı (ortadaki vurgulu)
+    const ITEM_W = 120;
+    const VISIBLE = 5;
     const total = 48;
-    const winIdx = 38 + Math.floor(Math.random() * 4); // 38..41 → yavaşlama bölgesi
+    const winIdx = 38 + Math.floor(Math.random() * 4);
     const strip = [];
     for (let i = 0; i < total; i++) {
       strip.push(i === winIdx ? c.flag : list[Math.floor(Math.random() * list.length)]);
@@ -204,28 +211,46 @@ class ShelterPass {
       track.appendChild(cell);
     });
 
-    // Başlangıç: solda, hızlı; hedef: winIdx ortada
     const centerOffset = (VISIBLE / 2 - 0.5) * ITEM_W;
     const targetX = -(winIdx * ITEM_W - centerOffset);
     track.style.transform = 'translateX(0)';
     track.style.transition = 'none';
-
-    // force reflow
     void track.offsetWidth;
 
-    // Ease-out cubic: hızlı başla, yavaş yavaş dur
-    const duration = 4200 + Math.random() * 800; // 4.2–5 sn
+    const duration = 4200 + Math.random() * 800;
     track.style.transition = `transform ${duration}ms cubic-bezier(0.12, 0.75, 0.18, 1)`;
     track.style.transform = `translateX(${targetX}px)`;
 
+    // Dönüş sesi: her bayrak geçişinde tick, pitch 1.05 → 0.95'e yaklaşır
+    clearInterval(this._spinTick);
+    clearTimeout(this._spinTimer);
+    const t0 = performance.now();
+    let lastIdx = -1;
+    this._spinTick = setInterval(() => {
+      const p = Math.min(1, (performance.now() - t0) / duration);
+      // cubic-bezier yaklaşık ilerleme
+      const eased = 1 - Math.pow(1 - p, 2.4);
+      const x = targetX * eased;
+      const idx = Math.round((-x + centerOffset) / ITEM_W);
+      if (idx !== lastIdx && idx >= 0 && idx < total) {
+        lastIdx = idx;
+        // sonlara doğru pitch 0.95'e yaklaşır
+        const pitch = 1.05 - p * 0.10 + (Math.random() * 0.04 - 0.02);
+        sfx('crate_spin', 0.55 + (1 - p) * 0.25, Math.max(0.92, Math.min(1.08, pitch)));
+      }
+      if (p >= 1) clearInterval(this._spinTick);
+    }, 30);
+
     const finish = () => {
-      // Ortadaki kazananı vurgula, sonra kartı göster
+      clearInterval(this._spinTick);
       const items = track.querySelectorAll('.sp-spin-item');
       items.forEach((el, i) => el.classList.toggle('landed', i === winIdx));
+      // Nadirlik çıkış sesi
+      const rarSfx = { rare: 'crate_rare', epic: 'crate_epic', legendary: 'crate_legendary', mystic: 'crate_legendary' };
+      sfx(rarSfx[c.rarity] || 'crate_rare', 1);
       setTimeout(() => this.showRevealCard(c, v), 650);
     };
     track.addEventListener('transitionend', finish, { once: true });
-    // güvenlik: transitionend gelmezse
     this._spinTimer = setTimeout(finish, duration + 200);
   }
 
@@ -255,7 +280,7 @@ class ShelterPass {
     const all = r.querySelector('.sp-all');
     all.textContent = st.claimable ? `${i18n.t('pass.claimAll')} (${st.claimable})` : i18n.t('pass.claimAll');
     all.disabled = !st.claimable;
-    const names = { pass: '🎟 ' + i18n.t('pass.tabPass'), crates: `📦 ${i18n.t('pass.tabCrates')}${st.crates ? ` (${st.crates})` : ''}`, coll: '🚩 ' + i18n.t('pass.tabColl') };
+    const names = { pass: '🎟 ' + i18n.t('pass.tabPass'), crates: `📦 ${i18n.t('pass.tabCrates')}${st.crates ? ` (${st.crates})` : ''}`, coll: '🚩 ' + i18n.t('pass.tabColl'), market: '⚖ ' + (i18n.t('pass.tabMarket') || 'PAZAR') };
     r.querySelectorAll('.pass-tabs button').forEach((b) => { b.textContent = names[b.dataset.tab]; b.classList.toggle('on', b.dataset.tab === this.tab); });
     r.querySelectorAll('.pass-pane').forEach((p) => p.classList.toggle('on', p.dataset.pane === this.tab));
 
@@ -316,7 +341,7 @@ class ShelterPass {
         </div>`;
       const openBtn = d.querySelector('.sp-open');
       openBtn.disabled = !n;
-      openBtn.addEventListener('click', () => net.send({ t: 'crateOpen', tier: t }));
+      openBtn.addEventListener('click', () => { sfx('crate_click', 1); net.send({ t: 'crateOpen', tier: t }); });
       const buyBtn = d.querySelector('.sp-buy');
       buyBtn.disabled = !canBuy;
       buyBtn.addEventListener('click', () => net.send({ t: 'buyCrate', tier: t, n: 1 }));
