@@ -567,17 +567,17 @@ canvas { display: block; }
 .game-vignette { position: fixed; inset: 0; z-index: 5; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.42) 100%); }
 /* ---------------- BM direği bayrak seçici ---------------- */
 .flagpick { position: fixed; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.55); animation: mtFade .25s ease; }
-.fp-card { width: 100%; max-width: 720px; max-height: 88vh; overflow: auto; background: linear-gradient(180deg,#14324f,#0d1f33); border: 2px solid #5b92e5; border-radius: 18px; padding: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.6); animation: sabPop .3s cubic-bezier(.2,1.5,.4,1); }
+.fp-card { width: 100%; max-width: 720px; max-height: 88vh; overflow: auto; background: linear-gradient(180deg,#0b2414,#030a05); border: 2px solid #3a8f4a; border-radius: 18px; padding: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 40px rgba(125,255,154,.08); animation: sabPop .3s cubic-bezier(.2,1.5,.4,1); }
 .fp-head { display: flex; align-items: center; gap: 12px; }
-.fp-head h2 { margin: 0; color: #fff; letter-spacing: .08em; font-size: 20px; flex: 1; }
-.fp-un { width: 46px; height: 30px; border-radius: 4px; background: #5b92e5 radial-gradient(circle, transparent 5px, #fff 6px, #fff 8px, transparent 9px); border: 2px solid #fff; }
-.fp-x { width: 36px; height: 36px; border-radius: 10px; border: 0; background: rgba(255,255,255,.12); color: #fff; font-size: 18px; cursor: pointer; }
-.fp-sub { margin: 8px 0 14px; color: #b9d0ee; font-size: 13px; }
+.fp-head h2 { margin: 0; color: #7dff9a; letter-spacing: .08em; font-size: 20px; flex: 1; }
+.fp-un { width: 46px; height: 30px; border-radius: 4px; background: #2f8f4a radial-gradient(circle, transparent 5px, #7dff9a 6px, #7dff9a 8px, transparent 9px); border: 2px solid #7dff9a; }
+.fp-x { width: 36px; height: 36px; border-radius: 10px; border: 0; background: rgba(125,255,154,.12); color: #7dff9a; font-size: 18px; cursor: pointer; }
+.fp-sub { margin: 8px 0 14px; color: #9fb89f; font-size: 13px; }
 .fp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
-.fp-flag { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px; border-radius: 12px; border: 2px solid transparent; background: rgba(255,255,255,.08); color: #fff; font: 700 12px system-ui; cursor: pointer; animation: cardIn .3s ease backwards; animation-delay: calc(var(--i) * 18ms); transition: transform .15s, border-color .15s; }
+.fp-flag { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px; border-radius: 12px; border: 2px solid transparent; background: rgba(125,255,154,.06); color: #e8f5e8; font: 700 12px system-ui; cursor: pointer; animation: cardIn .3s ease backwards; animation-delay: calc(var(--i) * 18ms); transition: transform .15s, border-color .15s; }
 .fp-flag img { width: 72px; height: 48px; border-radius: 6px; border: 1px solid #000; object-fit: cover; }
-.fp-flag:hover:not(:disabled) { transform: translateY(-3px); border-color: #ffd23f; }
-.fp-flag.on { border-color: #ffd23f; background: rgba(255,210,63,.18); }
+.fp-flag:hover:not(:disabled) { transform: translateY(-3px); border-color: #7dff9a; }
+.fp-flag.on { border-color: #7dff9a; background: rgba(125,255,154,.18); }
 .fp-flag:disabled { opacity: .3; cursor: not-allowed; filter: grayscale(1); }
 .rh-flagbtn { display: flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 14px; border: 2px solid #9cc4ff; background: linear-gradient(180deg,#3b78d0,#1f4f99); color: #fff; font: 900 16px system-ui; letter-spacing: .08em; cursor: pointer; box-shadow: 0 8px 22px rgba(60,120,210,.45); animation: rise .25s ease; }
 .rh-flagbtn span { font-size: 22px; }
@@ -797,8 +797,8 @@ canvas { display: block; }
   .lchat { bottom: max(80px, env(safe-area-inset-bottom)); }
 }
 
-/* ---------- Şapka dolabı ---------- */
-.hp-card { background: linear-gradient(180deg,#3a2a1a,#21170d); border-color: #c8913f; }
+/* ---------- Şapka dolabı (radyoaktif yeşil) ---------- */
+.hp-card { background: linear-gradient(180deg,#0b2414,#030a05); border-color: #3a8f4a; }
 .hp-ico { font-size: 28px; }
 .hp-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .hp-prev { position: relative; width: 76px; height: 78px; }
@@ -806,8 +806,8 @@ canvas { display: block; }
 .hp-ball i { position: absolute; top: 16px; width: 13px; height: 13px; border-radius: 50%; background: #fff; border: 2px solid #1d1d1d; }
 .hp-ball i:first-child { left: 13px; } .hp-ball i:last-child { right: 13px; }
 .hp-prev img { position: absolute; left: 50%; top: -6px; width: 72px; height: 72px; transform: translateX(-50%); pointer-events: none; }
-.hp-hat.on { border-color: #ffd23f; background: rgba(255,210,63,.15); }
-.rh-hatbtn { border-color: #e0b77a !important; background: linear-gradient(180deg,#9a6a2e,#5e3e17) !important; box-shadow: 0 8px 22px rgba(160,110,40,.45) !important; }
+.hp-hat.on { border-color: #7dff9a; background: rgba(125,255,154,.15); }
+.rh-hatbtn { border-color: #3a8f4a !important; background: linear-gradient(180deg,#2f8f4a,#1a3a22) !important; box-shadow: 0 8px 22px rgba(47,143,74,.45) !important; }
 .devlock { position: fixed; inset: 0; z-index: 99999; background: #050608; display: flex; align-items: center; justify-content: center; text-align: center; color: #e6edf3; font-family: system-ui; padding: 20px; }
 .devlock b { font-size: 56px; color: #ffd23f; } .devlock h2 { margin: 10px 0; color: #ff6a5f; } .devlock p { color: #9fb0c0; line-height: 1.6; }
 
@@ -833,11 +833,12 @@ canvas { display: block; }
 .gs-btn.danger { border-color: #6e1216; background: #4a0f12; }
 /* Jeton / dükkan */
 .hp-bar { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
-.hp-coins { padding: 6px 12px; border-radius: 999px; background: #2a2410; border: 1px solid #d9a400; color: #ffd23f; font: 900 15px system-ui; }
+.hp-coins { padding: 6px 12px; border-radius: 999px; background: #0f2a14; border: 1px solid #3a8f4a; color: #7dff9a; font: 900 15px system-ui; }
 .hp-msg { color: #b9f5c6; font: 700 13px system-ui; } .hp-msg.bad { color: #ff8a80; } .hp-msg.pop { animation: shake .35s; }
-.hp-price { font-style: normal; font: 800 12px system-ui; color: #ffd23f; } .hp-price.own { color: #8fdc9f; }
+.hp-price { font-style: normal; font: 800 12px system-ui; color: #7dff9a; } .hp-price.own { color: #8fdc9f; }
 .hp-hat.locked .hp-prev { filter: grayscale(.6) brightness(.8); }
-.hp-hat[data-confirm] { border-color: #46c46a; background: rgba(70,196,106,.15); }
+.hp-hat[data-confirm] { border-color: #7dff9a; background: rgba(125,255,154,.15); }
+.mk-hat-thumb { width: 56px; height: 56px; object-fit: contain; border-radius: 8px; background: rgba(0,0,0,.25); }
 .rr-coin { color: #ffd23f; }
 /* Harita butonu (harita sadece basınca açılır) */
 .mapbtn { position: fixed; z-index: 12; right: max(16px, env(safe-area-inset-right)); top: calc(104px + env(safe-area-inset-top)); display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; border: 1px solid #3a4452; background: rgba(10,13,18,.82); color: #fff; font: 900 14px system-ui; letter-spacing: .08em; cursor: pointer; }
@@ -1393,3 +1394,42 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 .mm-id-photo { overflow: hidden; padding: 0; }
 .mm-id-photo .pf-avatar-img { border-radius: 4px; }
 .pf-photo { overflow: hidden; padding: 0; }
+
+/* ========== Mobil yatay: üst üste binmeyi azalt ========== */
+@media (max-width: 900px) and (orientation: landscape) {
+  .quests-side {
+    width: min(200px, 32vw);
+    max-height: 70vh;
+    overflow-y: auto;
+    font-size: 11px;
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+  }
+  .qs-item { padding: 5px 6px; margin-bottom: 4px; }
+  .qs-name { font-size: 11px; }
+  .mm-id { width: min(240px, 36vw); transform: scale(0.92); transform-origin: top left; }
+  .mm-logo { max-height: 16vh; max-width: min(360px, 40vw); }
+  .mainmenu .mm-ui {
+    padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+             max(8px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+    gap: 8px;
+  }
+  .mm-btn { padding: 10px 12px; font-size: 13px; }
+  .pass-card { max-height: calc(100vh - 16px); }
+  .fp-card, .hp-card { max-height: 82vh; padding: 12px; }
+  .fp-grid, .hp-grid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; }
+  .mk-card { max-height: calc(100vh - 20px); }
+  .mapbtn { top: calc(56px + env(safe-area-inset-top)); padding: 6px 10px; font-size: 12px; }
+  .minimap { top: calc(72px + env(safe-area-inset-top)); width: min(140px, 22vw); }
+  .rh-panel { max-height: 58vh; width: min(240px, 38vw); }
+}
+
+/* Çok kısa yatay telefonlar */
+@media (max-height: 420px) and (orientation: landscape) {
+  .quests-side { display: none; }
+  .mm-id { display: none; }
+  .pass-how { display: none; }
+  .fp-sub { display: none; }
+  .mainmenu .mm-presents, .mainmenu .mm-kicker { display: none; }
+  .mm-btn { padding: 8px 10px; font-size: 12px; }
+}

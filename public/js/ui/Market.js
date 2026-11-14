@@ -6,7 +6,7 @@
 import { i18n } from '../systems/I18n.js';
 import { net } from '../systems/Net.js';
 import { getFlagThumb, HIST_FLAGS, HIST_RARITY } from '../systems/Flags.js';
-import { HATS, HAT_PRICE, ownsHat } from '../systems/Looks.js';
+import { HATS, HAT_PRICE, ownsHat, getHatThumb } from '../systems/Looks.js';
 import { RARITY_COLOR } from '../systems/Pass.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
@@ -197,7 +197,7 @@ class Market {
       const mine = x.sellerName === me;
       const thumb = x.type === 'flag'
         ? `<img class="mk-thumb" alt="" src="${getFlagThumb(x.item, 72, 48)}">`
-        : `<span class="mk-hat-ico">🎩</span>`;
+        : `<img class="mk-thumb mk-hat-thumb" alt="" src="${getHatThumb(x.item)}">`;
       const rar = x.type === 'flag' ? (HIST_RARITY[x.item] || '') : '';
       const col = rar ? (RARITY_COLOR[rar] || '#9fb3c8') : '#9fb3c8';
       return `<div class="mk-item" style="--rc:${col}">
@@ -248,7 +248,7 @@ class Market {
               </button>`;
             }
             return `<button type="button" class="mk-pick-item${sel}" data-item="${esc(id)}">
-              <span class="mk-hat-ico">🎩</span><span>${esc(this.itemLabel('hat', id))}</span>
+              <img class="mk-hat-thumb" alt="" src="${getHatThumb(id)}"><span>${esc(this.itemLabel('hat', id))}</span>
             </button>`;
           }).join('')}
         </div>
@@ -296,7 +296,7 @@ class Market {
     body.innerHTML = `<div class="mk-grid">${mine.map((x) => {
       const thumb = x.type === 'flag'
         ? `<img class="mk-thumb" alt="" src="${getFlagThumb(x.item, 72, 48)}">`
-        : `<span class="mk-hat-ico">🎩</span>`;
+        : `<img class="mk-thumb mk-hat-thumb" alt="" src="${getHatThumb(x.item)}">`;
       return `<div class="mk-item">
         ${thumb}
         <div class="mk-info">

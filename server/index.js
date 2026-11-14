@@ -881,15 +881,18 @@ function handle(c, m) {
         ensureWallet(u);
         if (!u.redeems || typeof u.redeems !== 'object') u.redeems = {};
         const code = String(m.code || '').trim().toLowerCase().replace(/\s+/g, '');
-        if (code === 'test1000') {
-          if (u.redeems.test1000) { send(c, { t: 'redeem', ok: false, err: 'used' }); break; }
-          u.redeems.test1000 = Date.now();
-          u.coins = (typeof u.coins === 'number' ? u.coins : 0) + 1000;
+        // Tek kullanımlık jeton kodları (tatil / test)
+        const CODES = { test1000: 1000, tatil: 1000, tatil2026: 1000, holiday: 1000 };
+        if (CODES[code]) {
+          if (u.redeems[code]) { send(c, { t: 'redeem', ok: false, err: 'used' }); break; }
+          u.redeems[code] = Date.now();
+          const amount = CODES[code];
+          u.coins = (typeof u.coins === 'number' ? u.coins : 0) + amount;
           try { ensureMeta(u); } catch (e) { console.error('redeem meta', e); }
           saveAccounts();
           let acc = null;
           try { acc = publicAcc(u); } catch (e) { console.error('redeem publicAcc', e); acc = { name: u.name, coins: u.coins }; }
-          send(c, { t: 'redeem', ok: true, coins: 1000, account: acc });
+          send(c, { t: 'redeem', ok: true, coins: amount, account: acc });
           if (acc) send(c, { t: 'account', account: acc });
           break;
         }

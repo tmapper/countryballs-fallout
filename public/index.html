@@ -8,10 +8,26 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0b0f0b" />
+  <meta name="screen-orientation" content="landscape" />
   <title>Countryballs: Fallout Suspects</title>
   <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* Mobil dikey uyarısı: yatay çevirilene kadar oyun kilitli */
+    #orient-lock {
+      display: none; position: fixed; inset: 0; z-index: 99999;
+      background: #0b0f0b; color: #7dff9a; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+      font: 800 18px system-ui; text-align: center; padding: 24px;
+    }
+    #orient-lock span { font-size: 48px; }
+    @media (max-width: 900px) and (orientation: portrait) {
+      #orient-lock { display: flex; }
+      #game, .mainmenu, .lobby, .flagpick, .market, .pass-root, .sp-root, .quests-side { visibility: hidden !important; pointer-events: none !important; }
+    }
+  </style>
 </head>
 <body>
+  <div id="orient-lock"><span>📱↔️</span>Lütfen telefonu yatay çevirin<br><small style="opacity:.7;font-weight:600">Oyun yalnızca yatay modda oynanır</small></div>
   <!-- Phaser oyunu bu div'in içine canvas olarak çizilir. Lobi ve rol animasyonu
        (HTML) JS tarafından body'ye eklenir. -->
   <div id="game"></div>

@@ -44,6 +44,21 @@ setChatGame(game);
 runStartPrompts();   // ilk açılış: Mobil mi PC mi? + Yeni Güncelleme! notu
 initFit();           // hiçbir pencerede kaydırma gerekmesin: ekrana sığacak şekilde küçültür (systems/FitScreen.js)
 
+// Mobilde ekranı yatay kilitle (destekleyen tarayıcılarda)
+(function lockLandscape() {
+  const tryLock = () => {
+    try {
+      const o = screen.orientation || screen.mozOrientation || screen.msOrientation;
+      if (o && typeof o.lock === 'function') o.lock('landscape').catch(() => {});
+      else if (typeof screen.lockOrientation === 'function') screen.lockOrientation('landscape');
+      else if (typeof screen.mozLockOrientation === 'function') screen.mozLockOrientation('landscape');
+    } catch (e) { /* yoksay */ }
+  };
+  tryLock();
+  window.addEventListener('orientationchange', () => setTimeout(tryLock, 200));
+  document.addEventListener('click', tryLock, { once: true, capture: true });
+})();
+
 // Konsol kapalı (hile zorlaşsın): F12 / Ctrl+Shift+I-J-C / Ctrl+U / sağ tık engellenir,
 // konsol çıktısı susturulur, oyun nesnesine konsoldan erişilemez.
 // Geliştirirken adrese ?debug=1 ekle: konsol açık, CFS.game erişilebilir.
