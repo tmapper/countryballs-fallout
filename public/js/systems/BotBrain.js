@@ -179,7 +179,8 @@ export class BotBrain {
       this.path = []; this.wait = 0;
       const dx = chase.x - this.ball.x, dy = chase.y - this.ball.y;
       const d = Math.hypot(dx, dy);
-      if (d > 40) { this.dir.x = (dx / d) * 0.9; this.dir.y = (dy / d) * 0.9; }
+      // Max 1.0 yön uzunluğu → oyuncu ile aynı üst hız (speedMul lobiden)
+      if (d > 40) { this.dir.x = (dx / d) * 1.0; this.dir.y = (dy / d) * 1.0; }
       return this.dir;
     }
     if (this.wait > 0) {
@@ -204,7 +205,8 @@ export class BotBrain {
       if (!this.path.length) this.wait = 1 + Math.random() * 3;
       return this.dir;
     }
-    const speed = 0.75;
+    // Normal gezinme: oyuncudan biraz yavaş, asla üstüne çıkmaz
+    const speed = 0.85;
     this.dir.x = (dx / d) * speed; this.dir.y = (dy / d) * speed;
     return this.dir;
   }

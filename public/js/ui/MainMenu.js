@@ -44,6 +44,7 @@ export class MainMenu {
     const r = this.root = document.createElement('div');
     r.className = 'mainmenu hidden';
     r.innerHTML = `
+      <div class="mm-anim-bg" aria-hidden="true"></div>
       <canvas class="mm-scene"></canvas>
       <div class="mm-photo"></div>
       <div class="mm-vignette"></div>
@@ -182,7 +183,7 @@ export class MainMenu {
       const el = r.querySelector('.mm-redeem-msg');
       if (!el) return;
       if (m.ok) {
-        el.textContent = (i18n.t('menu.redeemOk') || 'Kod kabul edildi!') + ' +' + (m.coins || 0) + ' 🪙';
+        el.textContent = (i18n.t('menu.redeemOk') || 'Kod kabul edildi!') + ' +' + (m.coins || 0) + ' <img class="coin-ico" alt="" src="assets/menu/coin.png" onerror="this.outerHTML='●'">';
         r.querySelector('.mm-redeem').value = '';
         if (m.account) net.account = m.account;
         this.renderAccount();
@@ -215,7 +216,14 @@ export class MainMenu {
     net.on('account', () => { this.renderAccount(); if (net.account && this.authPending) { const fn = this.authPending; this.authPending = null; this.closeModal(); fn(); } else if (net.account) this.closeModal(); });
     net.on('authError', (m) => { if (!m.silent) { const e = this.root.querySelector('.mm-auth-err'); e.textContent = i18n.t('menu.authErr.' + m.code); e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake'); } });
     // İsteğe bağlı görseller
-    loadOptional('assets/menu/menu_bg.jpg').then((im) => { if (im) { this.hasPhoto = true; r.querySelector('.mm-photo').style.backgroundImage = `url("${im.src}")`; r.classList.add('photo'); } });
+    // Animasyonlu arka plan birincil; eski menu_bg isteğe bağlı düşük opaklık
+    loadOptional('assets/menu/menu_bg.jpg').then((im) => {
+      if (im) {
+        const ph = r.querySelector('.mm-photo');
+        ph.style.backgroundImage = `url("${im.src}")`;
+        ph.style.opacity = '0.25';
+      }
+    });
     loadOptional('assets/menu/logo.png').then((im) => { if (im) { const l = r.querySelector('.mm-logo'); l.src = im.src; l.classList.remove('hidden'); r.querySelector('.mm-logotext').classList.add('hidden'); } });
   }
 

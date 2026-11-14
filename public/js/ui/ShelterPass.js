@@ -18,6 +18,13 @@ const TABS = ['pass', 'crates', 'coll', 'market'];
 // Dosya adları: pass_bg.jpg (arka plan), crate_common.png, crate_rare.png, crate_grand.png, coin.png. Promptlar: docs/GORSEL_PROMPTLARI.md (D bölümü)
 const ART_DIR = 'assets/menu/';
 const ART_FILES = { bg: 'pass_bg.jpg', common: 'crate_common.png', rare: 'crate_rare.png', grand: 'crate_grand.png', coin: 'coin.png' };
+const coinHtml = () => {
+  try {
+    const src = (typeof shelterPass !== 'undefined' && shelterPass.art && shelterPass.art.coin)
+      || assetUrl('assets/menu/coin.png');
+    return `<img class="coin-ico" alt="" src="${src}" onerror="this.outerHTML='<span class=coin-fallback>●</span>'">`;
+  } catch (e) { return `<span class="coin-fallback">●</span>`; }
+};
 
 class ShelterPass {
   constructor() { this.root = null; this.isOpen = false; this.tab = 'pass'; this.centered = false; this.art = {}; }
@@ -38,7 +45,7 @@ class ShelterPass {
   // Ödül simgesi: görsel varsa <img>, yoksa emoji
   icon(kind) {
     if (this.art[kind]) return `<img class="sp-art" alt="" src="${this.art[kind]}">`;
-    return kind === 'coin' ? '🪙' : CRATE_ICON[kind];
+    return kind === 'coin' ? coinHtml() : CRATE_ICON[kind];
   }
 
   build() {
@@ -84,7 +91,7 @@ class ShelterPass {
       else if (m.boughtCrate) {
         sfx('task_done');
         const b = m.boughtCrate;
-        this.msg(i18n.t('pass.boughtCrate', { tier: i18n.t('pass.tier.' + b.tier), n: b.n, cost: b.cost }) || `+${b.n} kasa (−${b.cost} 🪙)`);
+        this.msg(i18n.t('pass.boughtCrate', { tier: i18n.t('pass.tier.' + b.tier), n: b.n, cost: b.cost }) || `+${b.n} kasa (−${b.cost} <img class="coin-ico" alt="" src="assets/menu/coin.png" onerror="this.outerHTML='●'">)`);
       }
       this.render();
     });
@@ -273,7 +280,7 @@ class ShelterPass {
     const st = passStatus(acc);
     r.querySelector('h2').textContent = i18n.t('pass.title');
     r.querySelector('.sp-season').textContent = `${i18n.t('pass.season', { n: st.season })} · ${i18n.t('pass.daysLeft', { n: st.daysLeft })}`;
-    r.querySelector('.hp-coins').textContent = `🪙 ${acc.coins ?? 0}`;
+    r.querySelector('.hp-coins').textContent = `${coinHtml()} ${acc.coins ?? 0}`;
     r.querySelector('.sp-xp i').style.width = Math.min(100, (st.xp / PASS.MAX_XP) * 100) + '%';
     r.querySelector('.sp-xp b').textContent = `${st.xp} / ${PASS.MAX_XP} XP · ${i18n.t('pass.bars', { a: st.reached, b: PASS.LEVELS })}`;
     r.querySelector('.pass-how').textContent = i18n.t('pass.how', { n: PASS.BAR_XP });
@@ -337,7 +344,7 @@ class ShelterPass {
         <small>${odds}</small>
         <div class="sp-crate-acts">
           <button class="mm-tbtn small primary sp-open" type="button">${i18n.t('pass.open')}</button>
-          <button class="mm-tbtn small sp-buy" type="button" title="${i18n.t('pass.buyCrateHint') || ''}">🪙 ${price}</button>
+          <button class="mm-tbtn small sp-buy" type="button" title="${i18n.t('pass.buyCrateHint') || ''}">${coinHtml()} ${price}</button>
         </div>`;
       const openBtn = d.querySelector('.sp-open');
       openBtn.disabled = !n;

@@ -5,20 +5,18 @@ import { BootScene } from './scenes/BootScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { UIScene } from './scenes/UIScene.js';
 import { LobbyScene } from './scenes/LobbyScene.js';
-import { RES, measure, gameSize, attachResolution, getQuality } from './systems/Resolution.js';
+import { RES, measure, gameSize, attachResolution } from './systems/Resolution.js';
 import { initFlow } from './systems/GameFlow.js';
 import { setChatGame } from './ui/Chat.js';
 import { runStartPrompts } from './ui/StartPrompts.js';
 import { net } from './systems/Net.js';
 import { initFit } from './systems/FitScreen.js';
-import { isMobile } from './systems/Device.js';
 
 // iOS: iki parmakla yakınlaştırmayı engelle
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 
 measure();
 const size = gameSize();
-const lowGfx = getQuality() === 'low' || isMobile();
 
 const config = {
   type: Phaser.AUTO,            // WebGL varsa onu, yoksa Canvas kullan
@@ -31,15 +29,9 @@ const config = {
     height: size.height,
     zoom: 1 / RES.k
   },
-  // Mobil / düşük kalite: antialias kapalı, düşük güç → daha az ısınma ve kasma
-  render: {
-    antialias: !lowGfx,
-    roundPixels: !!lowGfx,
-    powerPreference: lowGfx ? 'low-power' : 'high-performance',
-    batchSize: lowGfx ? 2048 : 4096
-  },
-  // Gerçek kare süresi; mobilde hedef 30 FPS (pil + akıcılık dengesi)
-  fps: { smoothStep: false, target: lowGfx ? 30 : 60 },
+  render: { antialias: true },
+  // Gerçek kare süresi (yumuşatma yok): yavaş telefonda oyun hızı düşmesin
+  fps: { smoothStep: false },
   input: { activePointers: 3 },
   scene: [BootScene, LobbyScene, GameScene, UIScene]
 };

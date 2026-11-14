@@ -5,6 +5,21 @@ import { ACHIEVEMENTS, ACH_BY_ID } from '../systems/Achievements.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
+
+function showAchToast(name, reward) {
+  let el = document.getElementById('ach-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'ach-toast';
+    el.className = 'ach-toast';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<b>Başarım Açıldı!</b><span>${String(name).replace(/[<>]/g,'')}</span>`;
+  el.classList.add('show');
+  clearTimeout(showAchToast._t);
+  showAchToast._t = setTimeout(() => el.classList.remove('show'), 4200);
+}
+
 class AchievementsPanel {
   constructor() { this.root = null; this.isOpen = false; }
 
@@ -25,9 +40,12 @@ class AchievementsPanel {
     window.addEventListener('keydown', (e) => { if (this.isOpen && e.key === 'Escape') this.close(); });
     net.on('account', () => this.isOpen && this.render());
     net.on('achUnlock', (m) => {
-      if (!this.isOpen) return;
-      this.msg((i18n.t('ach.unlock') || 'Açıldı') + ': ' + (i18n.t('ach.' + m.id) || m.id) + ` (+${m.reward || 0} 🪙)`);
-      this.render();
+      const name = i18n.t('ach.' + m.id) || m.id;
+      if (this.isOpen) {
+        this.msg((i18n.t('ach.unlock') || 'Açıldı') + ': ' + name + ` (+${m.reward || 0})`);
+        this.render();
+      }
+      showAchToast(name, m.reward);
     });
     i18n.onChange(() => this.isOpen && this.render());
   }
@@ -62,12 +80,12 @@ class AchievementsPanel {
         return `<div class="ach-item locked"><div class="ach-ico">?</div>
           <div class="ach-info"><b>${esc(i18n.t('ach.hidden') || '???')}</b>
           <small>${esc(i18n.t('ach.hiddenHint') || 'Gizli başarım')}</small></div>
-          <span class="ach-rew">🪙 ${a.reward}</span></div>`;
+          <span class="ach-rew"><img class="coin-ico" alt="" src="assets/menu/coin.png" onerror="this.outerHTML='●'"> ${a.reward}</span></div>`;
       }
       return `<div class="ach-item on"><div class="ach-ico">★</div>
         <div class="ach-info"><b>${esc(i18n.t('ach.' + a.id) || a.id)}</b>
         <small>${esc(i18n.t('ach.desc_' + a.id) || '')}</small></div>
-        <span class="ach-rew">+${a.reward} 🪙</span></div>`;
+        <span class="ach-rew">+${a.reward} <img class="coin-ico" alt="" src="assets/menu/coin.png" onerror="this.outerHTML='●'"></span></div>`;
     }).join('');
   }
 }
