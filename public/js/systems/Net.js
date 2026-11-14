@@ -102,6 +102,13 @@ class Net {
         this.account = m.account;
         if (m.token) { this.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch (e) { /* yoksay */ } }
         if (m.account) { this.profile.name = m.account.name; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(this.profile)); } catch (e) { /* yoksay */ } }
+        // Uyarı / ban bildirimi
+        if (m.warn && m.warn.msg) {
+          try { setTimeout(() => window.alert((m.warn.msg || 'Uyarı Aldınız!') + (m.warn.danger ? ' (Seviye ' + m.warn.danger + '/3)' : '')), 300); } catch (e) { /* yoksay */ }
+        }
+        if (m.banned) {
+          try { setTimeout(() => window.alert('Hesabınız uyarılardan dolayı çok oyunculu moddan men edilmiştir. Sadece tek kişilik (bot) oynayabilirsiniz.'), 400); } catch (e) { /* yoksay */ }
+        }
       }
       if (m.t === 'authError' && m.code === 'expired') { this.token = ''; try { localStorage.removeItem(TOKEN_KEY); } catch (e) { /* yoksay */ } }
       if (m.t === 'matchReward') { this.account = m.account; this.lastReward = m; }

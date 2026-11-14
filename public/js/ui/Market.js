@@ -47,7 +47,6 @@ class Market {
     r.querySelector('.mk-x').addEventListener('click', () => this.close());
     r.querySelectorAll('.mk-tabs button').forEach((b) => b.addEventListener('click', () => {
       this.tab = b.dataset.tab;
-      r.querySelectorAll('.mk-tabs button').forEach((x) => x.classList.toggle('on', x.dataset.tab === this.tab));
       this.render();
     }));
     r.addEventListener('keydown', (e) => e.stopPropagation());
@@ -59,7 +58,8 @@ class Market {
   }
 
   msg(text, bad) {
-    const e = this.root && this.root.querySelector('.mk-msg');
+    const card = this.cardEl();
+    const e = card && card.querySelector('.mk-msg');
     if (!e) return;
     e.textContent = text;
     e.classList.toggle('bad', !!bad);
@@ -156,15 +156,27 @@ class Market {
     return this.list.filter((x) => x.sellerName === me || (net.account && x.seller === net.account._key));
   }
 
+  // Gömülü veya modal: her zaman .mk-card üzerinden seç (card host'a taşınabiliyor)
+  cardEl() {
+    return document.querySelector('.mk-card') || (this.root && this.root.querySelector('.mk-card'));
+  }
+
   render() {
-    const r = this.root, body = r.querySelector('.mk-body'), acc = net.account;
-    r.querySelector('.mk-coins').textContent = `🪙 ${acc ? (acc.coins ?? 0) : 0}`;
-    r.querySelector('h2').textContent = i18n.t('market.title') || 'PAZAR YERİ';
-    r.querySelectorAll('.mk-tabs button').forEach((b) => {
+    const card = this.cardEl();
+    if (!card) return;
+    const body = card.querySelector('.mk-body');
+    const acc = net.account;
+    const coinsEl = card.querySelector('.mk-coins');
+    if (coinsEl) coinsEl.textContent = `🪙 ${acc ? (acc.coins ?? 0) : 0}`;
+    const h2 = card.querySelector('h2');
+    if (h2) h2.textContent = i18n.t('market.title') || 'PAZAR YERİ';
+    card.querySelectorAll('.mk-tabs button').forEach((b) => {
       const keys = { browse: 'market.tabBrowse', sell: 'market.tabSell', mine: 'market.tabMine' };
       b.textContent = i18n.t(keys[b.dataset.tab]) || b.dataset.tab;
+      b.classList.toggle('on', b.dataset.tab === this.tab);
     });
 
+    if (!body) return;
     if (!acc) {
       body.innerHTML = `<p class="mk-empty">${esc(i18n.t('market.needLogin') || 'Giriş yapmalısın')}</p>`;
       return;

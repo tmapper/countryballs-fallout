@@ -320,8 +320,10 @@ function publicAcc(u) {
   const si = seasonInfo();
   const q = ensureQuests(u);
   const wf = q.weekFlag;
+  const danger = Math.max(0, Math.min(3, Number(u.danger) || 0));
   return { name: u.name, created: u.created, xp, level, xpInto: xp - base, xpNeed: Math.max(1, next - base), title, stats: { ...st }, coins: u.coins, hats: [...u.hats],
-    flags: [...u.flags], crates: { ...u.crates }, admin: u.admin ? 1 : 0, pass: { season: si.id, daysLeft: si.daysLeft, xp: u.pass.xp, claimed: [...u.pass.claimed] },
+    flags: [...u.flags], crates: { ...u.crates }, admin: u.admin ? 1 : 0, danger,
+    pass: { season: si.id, daysLeft: si.daysLeft, xp: u.pass.xp, claimed: [...u.pass.claimed] },
     achievements: [...u.achievements],
     quests: { daily: q.daily.map((x) => ({ ...x })), weekly: q.weekly.map((x) => ({ ...x })), weekFlag: { code: wf, owned: !!(u.flags && u.flags.includes(wf)) } }
   };
@@ -585,6 +587,7 @@ function findAccount(c, r, spec) {
 const HELP = [
   'ROL (lobide, sonraki maç): /imposter <hedef>  /sheriff <hedef>  /crew <hedef>  /roles  /clearroles',
   'HESAP: /coins <hedef> <±n>  /xp <hedef> <n> (bilet XP)  /crate <hedef> <common|rare|grand> [n]  /flag <hedef> <bayrak|all>  /hat <hedef> <şapka|all>',
+  'UYARI: /warn <hedef> [0-3]  /unwarn <hedef>   (3 = çok oyunculu ban, sadece tek kişilik)',
   'ODA: /kick <hedef>  /say <metin>  /who  /season  /admins  /reloadadmins',
   'Hedef: ben, hesap adı, bayrak (finland, turkey, FI) ya da oyuncu adı. Admin listesi Upstash cfs:admins hash\'inden gelir.'
 ];
@@ -612,6 +615,36 @@ function adminCommand(c, r, text) {
       if (!k || !n) { say('Kullanım: /coins <hedef> <±sayı>'); break; }
       const u = accounts.users[k]; ensureWallet(u); u.coins = Math.max(0, u.coins + n); saveAccounts(); pushAccount(k);
       say('✔ ' + u.name + ': ' + (n > 0 ? '+' : '') + n + ' 🪙 (yeni bakiye ' + u.coins + ')'); break;
+    }
+    case 'warn': case 'uyari': case 'uyarı': {
+      const k = findAccount(c, r, tok[0]);
+      if (!k) { say('Kullanım: /warn <hedef> [0-3]  (boş = +1)'); break; }
+      const u = accounts.users[k];
+      let d = Number(u.danger) || 0;
+      if (tok[1] !== undefined && tok[1] !== '') d = Math.max(0, Math.min(3, Math.floor(Number(tok[1]) || 0)));
+      else d = Math.min(3, d + 1);
+      u.danger = d;
+      saveAccounts(); pushAccount(k);
+      say('✔ ' + u.name + ' danger=' + d + (d >= 3 ? ' (çok oyunculu BAN)' : ''));
+      // Online ise anında uyar
+      clients.forEach((cl) => {
+        if (cl.account === k) {
+          if (d >= 3) send(cl, { t: 'account', account: publicAcc(u), banned: true });
+          else if (d >= 1) send(cl, { t: 'account', account: publicAcc(u), warn: { danger: d, msg: 'Uyarı Aldınız!' } });
+          else send(cl, { t: 'account', account: publicAcc(u) });
+        }
+      });
+      break;
+    }
+    case 'unwarn': case 'uyarikaldır': case 'uyarikaldır': {
+      const k = findAccount(c, r, tok[0]);
+      if (!k) { say('Kullanım: /unwarn <hedef>'); break; }
+      const u = accounts.users[k];
+      u.danger = 0;
+      saveAccounts(); pushAccount(k);
+      say('✔ ' + u.name + ' uyarıları temizlendi (danger=0)');
+      clients.forEach((cl) => { if (cl.account === k) send(cl, { t: 'account', account: publicAcc(u) }); });
+      break;
     }
     case 'xp': {
       const k = findAccount(c, r, tok[0]); const n = num(tok[1]);
@@ -1001,7 +1034,11 @@ function handle(c, m) {
       const u = accounts.users[key];
       if (!u || !crypto.timingSafeEqual(Buffer.from(hashPass(m.pass || '', u.salt), 'hex'), Buffer.from(u.hash, 'hex'))) { send(c, { t: 'authError', code: 'wrong' }); return; }
       c.account = key; c.name = u.name; applyFlag(c);
-      send(c, { t: 'account', account: publicAcc(u), token: newToken(key) });
+      const dang = Math.max(0, Math.min(3, Number(u.danger) || 0));
+      const payload = { t: 'account', account: publicAcc(u), token: newToken(key) };
+      if (dang >= 1 && dang < 3) payload.warn = { danger: dang, msg: 'Uyarı Aldınız!' };
+      if (dang >= 3) payload.banned = true;
+      send(c, payload);
       break;
     }
     case 'auth': {
@@ -1009,7 +1046,11 @@ function handle(c, m) {
       const u = tk && accounts.users[tk.key];
       if (!u) { send(c, { t: 'authError', code: 'expired', silent: true }); return; }
       c.account = tk.key; c.name = u.name; applyFlag(c);
-      send(c, { t: 'account', account: publicAcc(u) });
+      const dang = Math.max(0, Math.min(3, Number(u.danger) || 0));
+      const payload = { t: 'account', account: publicAcc(u) };
+      if (dang >= 1 && dang < 3) payload.warn = { danger: dang, msg: 'Uyarı Aldınız!' };
+      if (dang >= 3) payload.banned = true;
+      send(c, payload);
       break;
     }
     case 'logout': {
@@ -1023,6 +1064,10 @@ function handle(c, m) {
       break;
     case 'create': {
       if (!c.account) { send(c, { t: 'error', code: 'needLogin' }); return; }   // misafir başkasının adıyla giremesin
+      {
+        const bu = accounts.users[c.account];
+        if (bu && (Number(bu.danger) || 0) >= 3) { send(c, { t: 'error', code: 'banned' }); return; }
+      }
       if (rooms.size >= MAX_ROOMS) { send(c, { t: 'error', code: 'full' }); return; }
       leaveRoom(c);
       const code = makeCode();
@@ -1039,6 +1084,10 @@ function handle(c, m) {
     }
     case 'join': {
       if (!c.account) { send(c, { t: 'error', code: 'needLogin' }); return; }
+      {
+        const bu = accounts.users[c.account];
+        if (bu && (Number(bu.danger) || 0) >= 3) { send(c, { t: 'error', code: 'banned' }); return; }
+      }
       const r = rooms.get(String(m.code || '').toUpperCase());
       if (!r) { send(c, { t: 'error', code: 'notFound' }); return; }
       if (r.players.size >= r.max) { send(c, { t: 'error', code: 'roomFull' }); return; }
