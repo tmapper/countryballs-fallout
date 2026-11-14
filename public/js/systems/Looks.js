@@ -88,7 +88,25 @@ export const HATS = [
   { id: 'ninja', w: 170, sink: 30, draw(x) { x.beginPath(); x.moveTo(96, 420); x.bezierCurveTo(90, 240, 422, 240, 416, 420); x.closePath(); fo(x, '#1a1a1a'); x.fillStyle = '#111'; x.fillRect(100, 340, 312, 50); x.fillStyle = '#e5484d'; x.fillRect(120, 360, 40, 12); } },
   { id: 'helmet', w: 180, sink: 32, draw(x) { x.beginPath(); x.arc(256, 360, 150, Math.PI, 0); x.lineTo(406, 460); x.lineTo(106, 460); x.closePath(); fo(x, grad(x, 220, 460, '#8a9099', '#4a5058')); x.fillStyle = '#2a2e34'; x.fillRect(140, 400, 232, 36); } },
   { id: 'mushroom', w: 190, sink: 24, draw(x) { x.beginPath(); x.ellipse(256, 300, 180, 120, 0, 0, 7); fo(x, '#e5484d'); x.beginPath(); x.ellipse(256, 300, 180, 120, 0, 0, 7); x.fillStyle = '#fff'; for (const [a,b,r] of [[180,260,24],[300,250,30],[230,320,20],[320,310,18]]) { x.beginPath(); x.arc(a,b,r,0,7); x.fill(); } x.beginPath(); x.moveTo(180, 380); x.quadraticCurveTo(256, 420, 332, 380); x.lineTo(320, 460); x.lineTo(192, 460); x.closePath(); fo(x, '#f5d6a8'); } },
-  { id: 'afro', w: 220, sink: 40, draw(x) { for (const [a,b,r] of [[160,300,70],[352,300,70],[256,240,80],[200,360,55],[312,360,55],[256,340,70]]) { x.beginPath(); x.arc(a,b,r,0,7); fo(x, '#3b2412'); } } }
+  { id: 'afro', w: 220, sink: 40, draw(x) { for (const [a,b,r] of [[160,300,70],[352,300,70],[256,240,80],[200,360,55],[312,360,55],[256,340,70]]) { x.beginPath(); x.arc(a,b,r,0,7); fo(x, '#3b2412'); } } },
+  { id: 'turban', w: 200, sink: 28, draw(x) {
+    x.beginPath(); x.ellipse(256, 420, 200, 50, 0, 0, 7); fo(x, '#e8e0d0');
+    x.beginPath(); x.moveTo(80, 420); x.bezierCurveTo(80, 180, 432, 180, 432, 420); x.closePath(); fo(x, grad(x, 220, 420, '#f5f0e6', '#c8b090'));
+    x.strokeStyle = '#8b6914'; x.lineWidth = 10; x.beginPath(); x.arc(256, 300, 90, 0.2, Math.PI - 0.2); x.stroke();
+    x.fillStyle = '#c0262d'; x.beginPath(); x.arc(256, 250, 22, 0, 7); x.fill();
+  } },
+  { id: 'plague', w: 180, sink: 30, draw(x) {
+    brim(x, 200, 28, 450, '#1a1a1a');
+    x.beginPath(); x.moveTo(120, 450); x.bezierCurveTo(110, 200, 402, 200, 392, 450); x.closePath(); fo(x, '#2a2a2a');
+    x.fillStyle = '#e0a800'; x.beginPath(); x.moveTo(256, 380); x.lineTo(200, 520); x.lineTo(312, 520); x.closePath(); x.fill();
+    x.fillStyle = '#1a1a1a'; x.beginPath(); x.arc(220, 340, 18, 0, 7); x.fill(); x.beginPath(); x.arc(292, 340, 18, 0, 7); x.fill();
+  } },
+  { id: 'astronaut', w: 210, sink: 50, draw(x) {
+    x.beginPath(); x.arc(256, 340, 160, 0, 7); fo(x, grad(x, 200, 480, '#e8eef5', '#a0b0c0'));
+    x.strokeStyle = '#4a5560'; x.lineWidth = 14; x.stroke();
+    x.beginPath(); x.arc(256, 340, 110, 0, 7); fo(x, 'rgba(100,180,255,0.35)');
+    x.fillStyle = '#2a3038'; x.fillRect(180, 480, 152, 40);
+  } }
 ];
 
 function capDraw(x, c0, c1) {
@@ -146,7 +164,7 @@ export function botHat(flag) {
 }
 
 // ---------------- Jeton fiyatları (sunucudaki HAT_PRICE ile aynı) ----------------
-export const HAT_PRICE = {"none":0,"cap_red":0,"cap_blue":0,"beanie":0,"fedora":100,"party":100,"chef":100,"beret":100,"bowler":100,"army":100,"hardhat":100,"cowboy":250,"fez":250,"santa":250,"grad":250,"headphones":250,"flowers":250,"ushanka":250,"cat":250,"bunny":250,"tophat":500,"viking":500,"witch":500,"pirate":500,"propeller":500,"sombrero":500,"antenna":500,"gasmask":500,"crown":1000,"halo":1000,"bandana":250,"ninja":500,"helmet":500,"mushroom":500,"afro":500};
+export const HAT_PRICE = {"none":0,"cap_red":0,"cap_blue":0,"beanie":0,"fedora":100,"party":100,"chef":100,"beret":100,"bowler":100,"army":100,"hardhat":100,"cowboy":250,"fez":250,"santa":250,"grad":250,"headphones":250,"flowers":250,"ushanka":250,"cat":250,"bunny":250,"tophat":500,"viking":500,"witch":500,"pirate":500,"propeller":500,"sombrero":500,"antenna":500,"gasmask":500,"crown":1000,"halo":1000,"bandana":250,"ninja":500,"helmet":500,"mushroom":500,"afro":500,"turban":500,"plague":750,"astronaut":750};
 export const hatPrice = (id) => HAT_PRICE[id] ?? 0;
 // Bu şapka takılabilir mi? (bedava ya da hesapta alınmış)
 export const ownsHat = (account, id) => hatPrice(id) === 0 || !!(account && account.hats && account.hats.includes(id));

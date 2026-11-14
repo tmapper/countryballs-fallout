@@ -176,8 +176,8 @@ class ShelterPass {
   // Kasa açıldı: önce hızlı dönen bayrak şeridi, yavaşlayarak ortadaki bayrakta durur
   reveal(c) {
     const v = this.root.querySelector('.sp-reveal');
-    const col = RARITY_COLOR[c.rarity];
-    v.style.setProperty('--rc', col);
+    // Sürpriz bozulmasın: nadirlik rengi (mor vs) dönüş sırasında gösterilmez
+    v.style.setProperty('--rc', '#5b92e5');
 
     const odds = CRATE_ODDS[c.tier] || {};
     const pool = HIST_FLAGS.filter((f) => odds[HIST_RARITY[f]]);
@@ -206,7 +206,7 @@ class ShelterPass {
     const track = v.querySelector('.sp-spin-track');
     strip.forEach((code, i) => {
       const cell = document.createElement('div');
-      cell.className = 'sp-spin-item' + (i === winIdx ? ' win' : '');
+      cell.className = 'sp-spin-item';
       cell.innerHTML = `<img alt="" src="${getFlagThumb(code, 100, 66)}"><span>${i18n.t('countries.' + code)}</span>`;
       track.appendChild(cell);
     });

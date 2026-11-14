@@ -548,7 +548,10 @@
     "bunny": "Tavşan Kulağı",
     "cat": "Kedi Kulağı",
     "antenna": "Uzaylı",
-    "gasmask": "Radyasyon Başlığı"
+    "gasmask": "Radyasyon Başlığı",
+    "turban": "Türban",
+    "plague": "Veba Maskesi",
+    "astronaut": "Astronot Kaskı"
   },
   "shop": {
     "sub": "Jeton maçlardan kazanılır (oyna +10, kazan +25, görev +2, öldürme +5). Gerçek para değildir.",

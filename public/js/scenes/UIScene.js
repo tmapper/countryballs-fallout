@@ -39,28 +39,19 @@ export class UIScene extends Phaser.Scene {
     this.roleText = this.add.text(16, y3 + lh + 4, '', { ...style, fontSize: small ? '18px' : '22px', fontStyle: 'bold' });
     this.goalText = this.add.text(16, y3 + lh * 2 + 10, '', { ...style, fontSize: small ? '13px' : '16px', wordWrap: { width: 300 } });
 
-    // Sol üstteki bilgi yazıları açılıp kapanabilir (H tuşu / Bilgi butonu). Tercih hatırlanır.
+    // Bilgi paneli ve Rolleri göster kaldırıldı (kullanıcı isteği)
     this.infoOpen = false;
-    try { this.infoOpen = localStorage.getItem('cfs.hudInfo') === '1'; } catch (e) { /* yoksay */ }
     this.info = this.add.container(0, small ? 40 : 48);
     this.info.add([this.title, this.help, this.pos, this.roomText, this.roleText, this.goalText]);
-    this.infoBtn = this.add.text(16, 10, '', { ...style, strokeThickness: 0, backgroundColor: 'rgba(14,18,25,0.82)', padding: { x: 12, y: 7 } })
-      .setInteractive({ useHandCursor: true }).setDepth(600);
-    this.infoBtn.on('pointerdown', (pointer, lx, ly, event) => { event.stopPropagation(); this.toggleInfo(); });
-    this.input.keyboard.on('keydown-H', () => this.toggleInfo());
+    this.info.setVisible(false);
+    this.infoBtn = null;
+    this.rolesBtn = null;
 
-    // Sağ üst: Lobi butonu + Rolleri göster (rol testleri için) + tam ekran
+    // Sağ üst: Lobi butonu + tam ekran
     const btn = { ...style, strokeThickness: 0, backgroundColor: 'rgba(14,18,25,0.82)', padding: { x: 12, y: 8 } };
     this.lobbyBtn = this.add.text(0, 12, '', btn).setOrigin(1, 0).setInteractive({ useHandCursor: true });
     this.lobbyBtn.on('pointerdown', (pointer, lx, ly, event) => event.stopPropagation()); // joystick almasın
     this.lobbyBtn.on('pointerup', () => gameSettings.open({ onLeave: () => backToLobby() }));
-
-    this.rolesBtn = this.add.text(0, small ? 50 : 58, '', btn).setOrigin(1, 0).setInteractive({ useHandCursor: true });
-    this.rolesBtn.on('pointerdown', (pointer, lx, ly, event) => {
-      event.stopPropagation();
-      this.registry.set('showRoles', !this.registry.get('showRoles')); // GameScene dinler
-      this.refreshTexts();
-    });
 
     // Joystick sadece dokunmatik cihazda (veya adres sonuna ?joystick=1 yazılırsa)
     const touch = isMobile() || /[?&]joystick=1/.test(location.search);   // oyuncunun seçtiği cihaz
@@ -240,7 +231,6 @@ export class UIScene extends Phaser.Scene {
 
   update() {
     const online = !!this.registry.get('online');
-    this.rolesBtn.setVisible(!online);
     const p = this.registry.get('playerPos');
     if (p) this.pos.setText(i18n.t('ui.position', p));
     const room = this.registry.get('room');
@@ -275,7 +265,7 @@ export class UIScene extends Phaser.Scene {
   drawTasks() {
     const tasks = this.registry.get('tasks') || [];
     const pr = this.registry.get('taskProgress') || { done: 0, total: 0 };
-    const ty = this.infoOpen ? this.info.y + this.goalText.y + this.goalText.height + 14 : this.infoBtn.y + this.infoBtn.height + 10;
+    const ty = 48; // bilgi paneli kaldırıldığı için sabit üst boşluk
     this.taskText.setPosition(26, ty + 8);
     const fake = !!this.registry.get('fakeTasks');
     const lines = tasks.length ? [i18n.t(fake ? 'tasks.fakeTitle' : 'tasks.title')].concat(tasks.map((t) => `${t.done ? '✔' : t.step ? '①' : '•'} ${i18n.t('tasks.' + t.type)} (${i18n.t('rooms.' + t.room)})`)) : [];
@@ -318,7 +308,6 @@ export class UIScene extends Phaser.Scene {
     this.cameras.main.setZoom(RES.k);
     const W = RES.cssW, H = RES.cssH;
     this.lobbyBtn.x = W - 16;
-    this.rolesBtn.x = W - 16;
     if (this.fsBtn) this.fsBtn.x = W - 16;
     if (this.joyResetBtn) this.joyResetBtn.x = W - 16;
     const a = this.actionBtn, t = this.tunnelBtn;
@@ -334,7 +323,6 @@ export class UIScene extends Phaser.Scene {
     this.help.setText(this.isTouch ? i18n.t('ui.controlsMobile') : i18n.t('ui.controlsPc'));
     this.lobbyBtn.setText('⚙ ' + i18n.t('ui.settings'));
     if (this.joyResetBtn) this.joyResetBtn.setText('🎮 ' + i18n.t('ui.joyReset'));
-    this.rolesBtn.setText(`${i18n.t('ui.showRoles')}: ${this.registry.get('showRoles') ? i18n.t('ui.on') : i18n.t('ui.off')}`);
     const role = this.registry.get('role');
     const dead = !!this.registry.get('dead');
     if (role) {

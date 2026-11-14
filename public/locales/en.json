@@ -548,7 +548,10 @@
     "bunny": "Bunny Ears",
     "cat": "Cat Ears",
     "antenna": "Alien",
-    "gasmask": "Rad Hood"
+    "gasmask": "Rad Hood",
+    "turban": "Turban",
+    "plague": "Plague Doctor",
+    "astronaut": "Astronaut Helmet"
   },
   "shop": {
     "sub": "Earn coins in matches (play +10, win +25, task +2, kill +5). Not real money.",
