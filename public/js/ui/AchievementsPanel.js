@@ -80,12 +80,12 @@ class AchievementsPanel {
         return `<div class="ach-item locked"><div class="ach-ico">?</div>
           <div class="ach-info"><b>${esc(i18n.t('ach.hidden') || '???')}</b>
           <small>${esc(i18n.t('ach.hiddenHint') || 'Gizli başarım')}</small></div>
-          <span class="ach-rew"><img class="coin-ico" alt="" src="assets/menu/coin.png" onerror="this.outerHTML='●'"> ${a.reward}</span></div>`;
+          <span class="ach-rew"><img class="coin-ico" alt="" src="assets/menu/coin.png"> ${a.reward}</span></div>`;
       }
       return `<div class="ach-item on"><div class="ach-ico">★</div>
         <div class="ach-info"><b>${esc(i18n.t('ach.' + a.id) || a.id)}</b>
         <small>${esc(i18n.t('ach.desc_' + a.id) || '')}</small></div>
-        <span class="ach-rew">+${a.reward} <img class="coin-ico" alt="" src="assets/menu/coin.png" onerror="this.outerHTML='●'"></span></div>`;
+        <span class="ach-rew">+${a.reward} <img class="coin-ico" alt="" src="assets/menu/coin.png"></span></div>`;
     }).join('');
   }
 }

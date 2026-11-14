@@ -183,7 +183,7 @@ export class MainMenu {
       const el = r.querySelector('.mm-redeem-msg');
       if (!el) return;
       if (m.ok) {
-        el.textContent = (i18n.t('menu.redeemOk') || 'Kod kabul edildi!') + ' +' + (m.coins || 0) + ' <img class="coin-ico" alt="" src="assets/menu/coin.png" onerror="this.outerHTML='●'">';
+        el.textContent = (i18n.t('menu.redeemOk') || 'Kod kabul edildi!') + ' +' + (m.coins || 0) + ' jeton';
         r.querySelector('.mm-redeem').value = '';
         if (m.account) net.account = m.account;
         this.renderAccount();

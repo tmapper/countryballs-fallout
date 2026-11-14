@@ -32,7 +32,7 @@ class Market {
       <div class="mk-card">
         <div class="mk-head">
           <h2 data-t="market.title">PAZAR YERİ</h2>
-          <div class="mk-coins"><img class="coin-ico" alt="" src="assets/menu/coin.png" onerror="this.outerHTML='●'"> 0</div>
+          <div class="mk-coins"><img class="coin-ico" alt="" src="assets/menu/coin.png"> 0</div>
           <button class="mk-x" type="button" aria-label="kapat">✕</button>
         </div>
         <div class="mk-tabs">
@@ -168,7 +168,7 @@ class Market {
     const body = card.querySelector('.mk-body');
     const acc = net.account;
     const coinsEl = card.querySelector('.mk-coins');
-    if (coinsEl) coinsEl.innerHTML = `<img class="coin-ico" alt="" src="${assetUrl('assets/menu/coin.png')}" onerror="this.outerHTML='●'"> ${acc ? (acc.coins ?? 0) : 0}`;
+    if (coinsEl) coinsEl.innerHTML = `<img class="coin-ico" alt="" src="${assetUrl('assets/menu/coin.png')}"> ${acc ? (acc.coins ?? 0) : 0}`;
     const h2 = card.querySelector('h2');
     if (h2) h2.textContent = i18n.t('market.title') || 'PAZAR YERİ';
     card.querySelectorAll('.mk-tabs button').forEach((b) => {
@@ -206,7 +206,7 @@ class Market {
         <div class="mk-info">
           <b>${esc(this.itemLabel(x.type, x.item))}</b>
           <small>${x.type === 'flag' ? (i18n.t('pass.rarity.' + rar) || rar) : (i18n.t('market.hat') || 'Şapka')} · ${esc(x.sellerName)}</small>
-          <div class="mk-price"><img class="coin-ico" alt="" src="assets/menu/coin.png" onerror="this.outerHTML='●'"> ${x.price}</div>
+          <div class="mk-price"><img class="coin-ico" alt="" src="assets/menu/coin.png"> ${x.price}</div>
         </div>
         ${mine
           ? `<button type="button" class="mk-btn ghost" data-cancel="${esc(x.id)}">${esc(i18n.t('market.cancel') || 'İptal')}</button>`
@@ -302,7 +302,7 @@ class Market {
         ${thumb}
         <div class="mk-info">
           <b>${esc(this.itemLabel(x.type, x.item))}</b>
-          <div class="mk-price"><img class="coin-ico" alt="" src="assets/menu/coin.png" onerror="this.outerHTML='●'"> ${x.price}</div>
+          <div class="mk-price"><img class="coin-ico" alt="" src="assets/menu/coin.png"> ${x.price}</div>
         </div>
         <button type="button" class="mk-btn ghost" data-cancel="${esc(x.id)}">${esc(i18n.t('market.cancel') || 'İptal')}</button>
       </div>`;

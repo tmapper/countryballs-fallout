@@ -22,7 +22,7 @@ const coinHtml = () => {
   try {
     const src = (typeof shelterPass !== 'undefined' && shelterPass.art && shelterPass.art.coin)
       || assetUrl('assets/menu/coin.png');
-    return `<img class="coin-ico" alt="" src="${src}" onerror="this.outerHTML='<span class=coin-fallback>●</span>'">`;
+    return `<img class="coin-ico" alt="" src="${src}">`;
   } catch (e) { return `<span class="coin-fallback">●</span>`; }
 };
 
@@ -91,7 +91,7 @@ class ShelterPass {
       else if (m.boughtCrate) {
         sfx('task_done');
         const b = m.boughtCrate;
-        this.msg(i18n.t('pass.boughtCrate', { tier: i18n.t('pass.tier.' + b.tier), n: b.n, cost: b.cost }) || `+${b.n} kasa (−${b.cost} <img class="coin-ico" alt="" src="assets/menu/coin.png" onerror="this.outerHTML='●'">)`);
+        this.msg(i18n.t('pass.boughtCrate', { tier: i18n.t('pass.tier.' + b.tier), n: b.n, cost: b.cost }) || `+${b.n} kasa (−${b.cost} <img class="coin-ico" alt="" src="assets/menu/coin.png">)`);
       }
       this.render();
     });
@@ -280,7 +280,7 @@ class ShelterPass {
     const st = passStatus(acc);
     r.querySelector('h2').textContent = i18n.t('pass.title');
     r.querySelector('.sp-season').textContent = `${i18n.t('pass.season', { n: st.season })} · ${i18n.t('pass.daysLeft', { n: st.daysLeft })}`;
-    r.querySelector('.hp-coins').textContent = `${coinHtml()} ${acc.coins ?? 0}`;
+    r.querySelector('.hp-coins').innerHTML = `${coinHtml()} ${acc.coins ?? 0}`;
     r.querySelector('.sp-xp i').style.width = Math.min(100, (st.xp / PASS.MAX_XP) * 100) + '%';
     r.querySelector('.sp-xp b').textContent = `${st.xp} / ${PASS.MAX_XP} XP · ${i18n.t('pass.bars', { a: st.reached, b: PASS.LEVELS })}`;
     r.querySelector('.pass-how').textContent = i18n.t('pass.how', { n: PASS.BAR_XP });

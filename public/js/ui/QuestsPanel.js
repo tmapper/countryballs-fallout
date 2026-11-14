@@ -44,7 +44,7 @@ class QuestsPanel {
         return `<div class="qs-item${done ? ' done' : ''}">
           <div class="qs-name">${esc(i18n.t('quest.' + row.id) || row.id)}</div>
           <div class="qs-bar"><i style="width:${pct}%"></i></div>
-          <div class="qs-meta"><span>${prog}/${def.goal}</span><span><img class="coin-ico" alt="" src="assets/menu/coin.png" onerror="this.outerHTML='●'"> ${def.reward}</span>
+          <div class="qs-meta"><span>${prog}/${def.goal}</span><span><img class="coin-ico" alt="" src="assets/menu/coin.png"> ${def.reward}</span>
           ${done && !row.claimed ? `<button type="button" data-claim="${esc(row.id)}" class="qs-claim">${esc(i18n.t('quest.claim') || 'AL')}</button>` : (row.claimed ? '✓' : '')}
           </div></div>`;
       }).join('') || `<div class="qs-empty">${esc(i18n.t('quest.login') || 'Giriş yap')}</div>`;
