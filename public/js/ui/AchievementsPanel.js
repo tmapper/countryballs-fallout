@@ -1,10 +1,23 @@
 // AchievementsPanel.js - Gizli başarımlar (kilitli: siyah ?)
+// + Alttan "Başarım Tamamlandı" popup
 import { i18n } from '../systems/I18n.js';
 import { net } from '../systems/Net.js';
 import { ACHIEVEMENTS, ACH_BY_ID } from '../systems/Achievements.js';
 import { icon, COIN_IMG, coinHtml } from './Icons.js';
+import { sfx } from '../systems/Sound.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+
+function showAchToast(id) {
+  const name = i18n.t('ach.' + id) || id;
+  const label = i18n.t('ui.achCompleted') || i18n.t('ach.completed') || 'Başarım Tamamlandı';
+  const d = document.createElement('div');
+  d.className = 'ach-toast';
+  d.innerHTML = `<span class="ach-star">★</span><div class="ach-body"><div class="ach-label">${esc(label)}</div><div class="ach-name">${esc(name)}</div></div>`;
+  document.body.appendChild(d);
+  try { sfx('task_done'); } catch (e) {}
+  setTimeout(() => d.remove(), 4000);
+}
 
 class AchievementsPanel {
   constructor() { this.root = null; this.isOpen = false; }
@@ -26,9 +39,11 @@ class AchievementsPanel {
     window.addEventListener('keydown', (e) => { if (this.isOpen && e.key === 'Escape') this.close(); });
     net.on('account', () => this.isOpen && this.render());
     net.on('achUnlock', (m) => {
-      if (!this.isOpen) return;
-      this.msg((i18n.t('ach.unlock') || 'Açıldı') + ': ' + (i18n.t('ach.' + m.id) || m.id) + ` (+${m.reward || 0})`);
-      this.render();
+      showAchToast(m.id);
+      if (this.isOpen) {
+        this.msg((i18n.t('ach.unlock') || 'Açıldı') + ': ' + (i18n.t('ach.' + m.id) || m.id) + ` (+${m.reward || 0})`);
+        this.render();
+      }
     });
     i18n.onChange(() => this.isOpen && this.render());
   }
@@ -74,3 +89,5 @@ class AchievementsPanel {
 }
 
 export const achievementsPanel = new AchievementsPanel();
+// Panel hiç açılmasa bile toast çalışsın diye dinleyiciyi başlat
+achievementsPanel.ensure();

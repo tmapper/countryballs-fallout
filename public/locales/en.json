@@ -53,7 +53,10 @@
     "resume": "RESUME",
     "autoLow": "Slow device: graphics set to Low automatically (change in Settings)",
     "device": "Device (next match)",
-    "tunnelHint": "In tunnel: use arrows / joystick to hop to another tunnel, EXIT to leave"
+    "tunnelHint": "In tunnel: use arrows / joystick to hop to another tunnel, EXIT to leave",
+    "specialThanks": "Special Thanks",
+    "credits": "Creator- doors4131 and Turk Mapper\nPublisher- Turk Mapper\nSpecial Thanks- Fiex, Turan123, Alexander",
+    "achCompleted": "Achievement Unlocked"
   },
   "lobby": {
     "kicker": "Bunker Lobby",
@@ -767,7 +770,8 @@
     "last_crew": "Last Crew",
     "desc_last_crew": "Last Crew",
     "double_sheriff_kill": "Double Sheriff Kill",
-    "desc_double_sheriff_kill": "Double Sheriff Kill"
+    "desc_double_sheriff_kill": "Double Sheriff Kill",
+    "completed": "Achievement Unlocked"
   },
   "quest": {
     "title": "QUESTS",

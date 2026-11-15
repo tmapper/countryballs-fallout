@@ -53,7 +53,10 @@
     "resume": "DEVAM ET",
     "autoLow": "Cihaz yavaş: grafik otomatik olarak Düşük yapıldı (Ayarlar'dan değiştirilebilir)",
     "device": "Cihaz (sonraki maçta)",
-    "tunnelHint": "Tünelde: yön tuşları / joystick ile başka tünele geç, ÇIK ile dışarı çık"
+    "tunnelHint": "Tünelde: yön tuşları / joystick ile başka tünele geç, ÇIK ile dışarı çık",
+    "specialThanks": "Özel Teşekkürler",
+    "credits": "Yapımcı- doors4131 ve Turk Mapper\nYayıncı- Turk Mapper\nÖzel Teşekkürler- Fiex, Turan123, Alexander",
+    "achCompleted": "Başarım Tamamlandı"
   },
   "lobby": {
     "kicker": "Sığınak Lobisi",
@@ -767,7 +770,8 @@
     "last_crew": "Son masum",
     "desc_last_crew": "Son masum",
     "double_sheriff_kill": "Çifte şerif vuruşu",
-    "desc_double_sheriff_kill": "Çifte şerif vuruşu"
+    "desc_double_sheriff_kill": "Çifte şerif vuruşu",
+    "completed": "Başarım Tamamlandı"
   },
   "quest": {
     "title": "GÖREVLER",

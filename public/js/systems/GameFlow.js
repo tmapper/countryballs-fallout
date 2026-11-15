@@ -130,7 +130,18 @@ function flash(text) {
 }
 
 function stopScenes() {
-  ['LobbyScene', 'UIScene', 'GameScene', 'BootScene'].forEach((k) => { if (isRunning(k)) game.scene.stop(k); });
+  // Tüm sahneleri durdur; çok maç sonrası biriken dinleyici/obje sızıntısını azaltmak için
+  ['LobbyScene', 'UIScene', 'GameScene', 'BootScene'].forEach((k) => {
+    if (isRunning(k)) {
+      try { game.scene.stop(k); } catch (e) { /* yoksay */ }
+    }
+  });
+  // Phaser bazen stop sonrası bir frame daha tutar; remotes/bots için garanti
+  try {
+    const lobbySc = game.scene.getScene('LobbyScene');
+    if (lobbySc && lobbySc.bots) { lobbySc.bots.forEach((b) => { try { b.destroy(); } catch (e) {} }); lobbySc.bots = []; }
+    if (lobbySc && lobbySc.remotes) { lobbySc.remotes.forEach((b) => { try { b.destroy(); } catch (e) {} }); lobbySc.remotes.clear(); }
+  } catch (e) { /* yoksay */ }
 }
 
 // ---------------- Ana menü ----------------

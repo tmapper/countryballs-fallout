@@ -2,6 +2,7 @@
 // GameSettings.js - Oyun içi Ayarlar paneli (⚙ butonu ya da Esc)
 // ============================================================
 // Müzik / efekt sesi, sessiz, dil, grafik kalitesi, tam ekran, lobiye dön.
+// + Özel Teşekkürler sayfası
 import { exitGame } from '../systems/ExitGame.js';
 import { i18n } from '../systems/I18n.js';
 import { getVolumes, setMusicVolume, setSfxVolume, isMuted, toggleMute, sfx } from '../systems/Sound.js';
@@ -11,7 +12,7 @@ import { setDevice, isMobile } from '../systems/Device.js';
 import { perfHud } from '../systems/PerfHud.js';
 
 class GameSettings {
-  constructor() { this.root = null; this.isOpen = false; }
+  constructor() { this.root = null; this.isOpen = false; this.creditsRoot = null; }
 
   build() {
     const r = this.root = document.createElement('div');
@@ -26,6 +27,7 @@ class GameSettings {
       <div class="gs-row"><span data-t="ui.showFps"></span><button class="gs-tog gs-fps" type="button"></button></div>
       <div class="gs-row"><span data-t="ui.device"></span><div class="gs-seg gs-dev"><button type="button" data-v="mobile">Mobil</button><button type="button" data-v="pc">PC</button></div></div>
       <div class="gs-row gs-fsrow"><span data-t="ui.fullscreen"></span><button class="gs-tog gs-fs" type="button"></button></div>
+      <div class="gs-row"><span data-t="ui.specialThanks"></span><button class="gs-tog gs-thanks" type="button">★</button></div>
       <div class="gs-foot"><button class="gs-btn gs-resume" type="button" data-t="ui.resume"></button><button class="gs-btn danger gs-leave" type="button" data-t="ui.backToLobby"></button><button class="gs-btn danger gs-exit" type="button" data-t="ui.exit"></button></div>
     </div>`;
     document.body.appendChild(r);
@@ -49,8 +51,36 @@ class GameSettings {
       else d.documentElement.requestFullscreen && d.documentElement.requestFullscreen().catch(() => {});
       setTimeout(() => this.render(), 300);
     });
+    q('.gs-thanks').addEventListener('click', () => this.openCredits());
     window.addEventListener('keydown', (e) => { if (this.isOpen && e.key === 'Escape') { e.stopPropagation(); this.close(); } }, true);
     i18n.onChange(() => this.isOpen && this.render());
+  }
+
+  openCredits() {
+    if (!this.creditsRoot) {
+      const c = this.creditsRoot = document.createElement('div');
+      c.className = 'credits-panel hidden';
+      c.innerHTML = `<div class="credits-card">
+        <div class="credits-head"><h2 data-t="ui.specialThanks"></h2><button class="credits-x" type="button">✕</button></div>
+        <div class="credits-scroll"><div class="credits-text"></div></div>
+      </div>`;
+      document.body.appendChild(c);
+      c.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (e.target === c) this.closeCredits(); });
+      c.querySelector('.credits-x').addEventListener('click', () => this.closeCredits());
+      window.addEventListener('keydown', (e) => { if (!c.classList.contains('hidden') && e.key === 'Escape') { e.stopPropagation(); this.closeCredits(); } }, true);
+    }
+    const text = (i18n.t('ui.credits') || '').replace(/\\n/g, '\n');
+    this.creditsRoot.querySelector('.credits-text').textContent = text;
+    this.creditsRoot.querySelector('h2').textContent = i18n.t('ui.specialThanks') || 'Özel Teşekkürler';
+    this.creditsRoot.classList.remove('hidden');
+    const tx = this.creditsRoot.querySelector('.credits-text');
+    tx.style.animation = 'none';
+    void tx.offsetWidth;
+    tx.style.animation = '';
+  }
+
+  closeCredits() {
+    if (this.creditsRoot) this.creditsRoot.classList.add('hidden');
   }
 
   render() {
@@ -74,14 +104,14 @@ class GameSettings {
   open({ onLeave } = {}) {
     if (!this.root) this.build();
     this.onLeave = onLeave;
-    this.root.querySelector('.gs-leave').classList.toggle('hidden', !onLeave);   // oyun dışında 'Lobiye dön' anlamsız
+    this.root.querySelector('.gs-leave').classList.toggle('hidden', !onLeave);
     releaseGameKeys();
     this.root.classList.remove('hidden');
     this.isOpen = true;
     this.render();
   }
 
-  close() { if (this.root) this.root.classList.add('hidden'); this.isOpen = false; }
+  close() { if (this.root) this.root.classList.add('hidden'); this.isOpen = false; this.closeCredits(); }
 }
 
 export const gameSettings = new GameSettings();

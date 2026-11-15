@@ -1608,3 +1608,36 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 .mt-eject { background: radial-gradient(ellipse at center, #0c1f14 0%, #000 75%); }
 @media (max-height: 520px) { .mt-where { display: none; } .mt-steps { display: none; } }
 @media (prefers-reduced-motion: reduce) { .meeting.urgent .mt-time { animation: none; } }
+
+/* Özel Teşekkürler / Credits */
+.credits-panel { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 14px; background: rgba(0,0,0,.75); }
+.credits-panel.hidden { display: none; }
+.credits-card { width: 100%; max-width: 420px; max-height: 70vh; display: flex; flex-direction: column; background: linear-gradient(180deg,#1a1528,#0d0a14); border: 2px solid #6b5b8c; border-radius: 16px; color: #e8e0f5; font-family: system-ui; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.7); }
+.credits-head { display: flex; align-items: center; padding: 14px 16px; border-bottom: 2px solid rgba(107,91,140,.4); }
+.credits-head h2 { margin: 0; flex: 1; font-size: 18px; letter-spacing: .08em; color: #c4b0ff; }
+.credits-x { background: none; border: none; color: #c4b0ff; font-size: 22px; cursor: pointer; }
+.credits-scroll { flex: 1; overflow: hidden; position: relative; height: 280px; mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent); }
+.credits-text { position: absolute; left: 0; right: 0; padding: 40px 24px; text-align: center; font: 700 16px/1.8 system-ui; color: #e8e0f5; white-space: pre-line; animation: creditsScroll 12s linear infinite; }
+@keyframes creditsScroll {
+  0% { transform: translateY(100%); }
+  100% { transform: translateY(-120%); }
+}
+
+/* Başarım tamamlandı toast (alttan) */
+.ach-toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(120%);
+  z-index: 70; min-width: 260px; max-width: 90vw;
+  background: linear-gradient(135deg, #2a1f3d 0%, #1a1228 100%);
+  border: 2px solid #9b7bff; border-radius: 14px;
+  padding: 14px 22px; color: #f0e8ff; font-family: system-ui;
+  box-shadow: 0 12px 40px rgba(0,0,0,.55), 0 0 24px rgba(155,123,255,.25);
+  display: flex; align-items: center; gap: 12px;
+  animation: achIn .45s cubic-bezier(.2,1.4,.4,1) forwards, achOut .5s ease 3.2s forwards;
+  pointer-events: none;
+}
+.ach-toast .ach-star { font-size: 28px; color: #ffd23f; filter: drop-shadow(0 0 6px #ffd23f88); }
+.ach-toast .ach-body { flex: 1; }
+.ach-toast .ach-label { font-size: 11px; letter-spacing: .12em; color: #c4b0ff; font-weight: 800; text-transform: uppercase; }
+.ach-toast .ach-name { font-size: 16px; font-weight: 900; color: #fff; margin-top: 2px; }
+@keyframes achIn { to { transform: translateX(-50%) translateY(0); } }
+@keyframes achOut { to { transform: translateX(-50%) translateY(140%); opacity: 0; } }
