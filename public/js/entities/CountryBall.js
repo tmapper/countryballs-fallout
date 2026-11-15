@@ -87,6 +87,8 @@ export class CountryBall extends Phaser.GameObjects.Container {
     this.idleT = this.isMoving ? 0 : this.idleT + dt;
     this.blinkT -= dt;
     if (this.blinkT < -0.13) this.blinkT = 2.2 + Math.random() * 3.5;
+    // PERFORMANS: duvar arkasında / kamera dışında (gizli) toplar için göz-şapka konumu hesaplanmaz (her kare, her top)
+    if (!this.visible || this.alpha <= 0.02) return;
     let style = 'round', k = 1;
     if (this.mood) { style = this.mood.style; if (style === 'wide') { style = 'round'; k = 1.22; } }
     else if (this.blinkT < 0) style = 'closed';

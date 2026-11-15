@@ -464,12 +464,71 @@ const server = http.createServer((req, res) => {
   if (url === '/api/rooms') { res.writeHead(200, { 'Content-Type': MIME['.json'], 'Access-Control-Allow-Origin': '*' }); res.end(JSON.stringify(listRooms())); return; }
   const file = path.normalize(path.join(PUBLIC, url));
   if (!file.startsWith(PUBLIC)) { res.writeHead(403); res.end(); return; }
+  serveStatic(req, res, file);
+});
+
+// PERFORMANS: eskiden hiç önbellek başlığı yoktu; tarayıcı her açılışta ~25 MB'ı (videolar, resimler, sesler) baştan
+// indiriyordu, animasyonlar bu yüzden geç geliyordu. Artık:
+//   - Büyük medya dosyaları (png/webp/mp4/mp3...) 1 gün önbellekte kalır (içerik değişirse dosya adı/?v= değişmeli)
+//   - js/css/html/json her seferinde ETag ile sorulur (değişmediyse 304, içerik inmez)
+//   - Metin dosyaları gzip ile sıkıştırılır (phaser.min.js ~1.1 MB -> ~340 KB)
+//   - Range desteği: iPhone/Safari video ve sesi ancak böyle oynatır, seek ve hızlı başlama da buna bağlı
+const zlib = require('zlib');
+const COMPRESSIBLE = new Set(['.html', '.js', '.css', '.json', '.svg']);
+const LONG_CACHE = new Set(['.png', '.jpg', '.webp', '.mp4', '.mp3', '.ico']);
+const gzCache = new Map();   // dosya -> { mtime, buf } (küçük sayıda statik dosya; bellekte tutmak güvenli)
+
+function serveStatic(req, res, file) {
   fs.stat(file, (err, st) => {
     if (err || !st.isFile()) { res.writeHead(404); res.end('Not found'); return; }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream', 'Content-Length': st.size });
+    const ext = path.extname(file).toLowerCase();
+    const etag = '"' + st.size.toString(16) + '-' + Math.floor(st.mtimeMs).toString(16) + '"';
+    const headers = {
+      'Content-Type': MIME[ext] || 'application/octet-stream',
+      'ETag': etag,
+      'Last-Modified': st.mtime.toUTCString(),
+      'Cache-Control': LONG_CACHE.has(ext) ? 'public, max-age=86400' : 'no-cache',
+      'Accept-Ranges': 'bytes'
+    };
+    if (req.headers['if-none-match'] === etag) { res.writeHead(304, headers); res.end(); return; }
+
+    // Range (video/ses): 206 Partial Content
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (range && (range[1] || range[2])) {
+      let start = range[1] ? parseInt(range[1], 10) : Math.max(0, st.size - parseInt(range[2], 10));
+      let end = range[1] && range[2] ? parseInt(range[2], 10) : st.size - 1;
+      end = Math.min(end, st.size - 1);
+      if (start > end || start >= st.size) { res.writeHead(416, { 'Content-Range': 'bytes */' + st.size }); res.end(); return; }
+      res.writeHead(206, { ...headers, 'Content-Range': `bytes ${start}-${end}/${st.size}`, 'Content-Length': end - start + 1 });
+      if (req.method === 'HEAD') { res.end(); return; }
+      fs.createReadStream(file, { start, end }).pipe(res);
+      return;
+    }
+
+    // Metin dosyaları: gzip
+    if (COMPRESSIBLE.has(ext) && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
+      const hit = gzCache.get(file);
+      const send = (buf) => {
+        res.writeHead(200, { ...headers, 'Content-Encoding': 'gzip', 'Vary': 'Accept-Encoding', 'Content-Length': buf.length });
+        res.end(req.method === 'HEAD' ? undefined : buf);
+      };
+      if (hit && hit.mtime === st.mtimeMs) { send(hit.buf); return; }
+      fs.readFile(file, (e, raw) => {
+        if (e) { res.writeHead(500); res.end(); return; }
+        zlib.gzip(raw, { level: 6 }, (e2, buf) => {
+          if (e2) { res.writeHead(500); res.end(); return; }
+          if (gzCache.size < 200) gzCache.set(file, { mtime: st.mtimeMs, buf });
+          send(buf);
+        });
+      });
+      return;
+    }
+
+    res.writeHead(200, { ...headers, 'Content-Length': st.size });
+    if (req.method === 'HEAD') { res.end(); return; }
     fs.createReadStream(file).pipe(res);
   });
-});
+}
 
 // ---------------- Küçük WebSocket uygulaması (RFC 6455) ----------------
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';

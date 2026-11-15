@@ -30,6 +30,21 @@ export function assetUrl(path) {
   return emb;
 }
 
+// Dosyaları tarayıcı önbelleğine ısıt: tek tek, boşta kalan zamanda, oyunu yavaşlatmadan.
+// (Gömülü tek dosya sürümünde zaten bellekte; atlanır.) Sunucu Cache-Control gönderdiği için sonraki istek ağa gitmez.
+const warmed = new Set();
+export function prefetchAssets(paths) {
+  const todo = paths.filter((p) => !warmed.has(p) && typeof embedded(p) !== 'string');
+  todo.forEach((p) => warmed.add(p));
+  const next = () => {
+    const p = todo.shift();
+    if (!p) return;
+    fetch(p).then((r) => r.arrayBuffer()).catch(() => { warmed.delete(p); }).then(() => setTimeout(next, 250));
+  };
+  const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 800));
+  idle(next, { timeout: 3000 });
+}
+
 export async function loadJSON(path) {
   const emb = embedded(path);
   if (emb && typeof emb === 'object') return emb;

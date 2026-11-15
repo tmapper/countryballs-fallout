@@ -15,7 +15,7 @@ import { sfx } from '../systems/Sound.js';
 const TYPE_CUES = [0.02, 0.1, 0.18, 0.26, 0.34, 0.42];
 const REVEAL_AT = 1.4;
 const REVEAL_SFX = { impostor: ['kill', 1], sheriff: ['shoot', 1], crewmate: ['win', 0.8] };
-import { assetUrl, loadJSON } from '../systems/Assets.js';
+import { assetUrl, loadJSON, prefetchAssets } from '../systems/Assets.js';
 import { getFlagCanvas } from '../systems/Flags.js';
 import { i18n } from '../systems/I18n.js';
 import { ROLE_COLORS } from '../systems/Roles.js';
@@ -23,6 +23,8 @@ import { ROLE_COLORS } from '../systems/Roles.js';
 let META = null;
 export async function loadRoleMeta() {
   META = await loadJSON('assets/videos/roles.json');
+  // 3 rol videosu (~650 KB) menü açıkken önceden indirilir: "SENİN ROLÜN" animasyonu tıklanınca beklemeden başlar
+  prefetchAssets(Object.keys(META).map((r) => `assets/videos/role_${r}.mp4`));
 }
 
 const VERT = `

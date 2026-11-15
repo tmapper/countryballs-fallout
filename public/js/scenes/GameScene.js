@@ -13,7 +13,7 @@ import { i18n } from '../systems/I18n.js';
 import { InputController } from '../systems/InputController.js';
 import { FogOfWar } from '../systems/FogOfWar.js';
 import { CountryBall } from '../entities/CountryBall.js';
-import { BotBrain } from '../systems/BotBrain.js';
+import { BotBrain, navFrameStart, warmNav } from '../systems/BotBrain.js';
 import { ROLE_COLORS, impCount } from '../systems/Roles.js';
 import { RES, getQuality, setQuality } from '../systems/Resolution.js';
 import { backToLobby, playKillCutscene, gameOver } from '../systems/GameFlow.js';
@@ -84,6 +84,7 @@ export class GameScene extends Phaser.Scene {
       return ball;
     });
     this.player = this.balls.find((b) => b.isMe);
+    if (this.balls.some((b) => b.brain)) warmNav();   // yol ızgarasını ilk bot hareketinde değil, yükleme sırasında kur
     this.bodies = [];
     this.setupNet(mode);
     this.registry.set('online', this.online);
@@ -581,6 +582,7 @@ export class GameScene extends Phaser.Scene {
       // Eskiden yürüme de seyrekti, botlar ekranda 20-30 FPS'de zıplıyormuş gibi görünüyordu.
       if (runBots) {
         const botDt = Math.min(this._botAcc, 0.25); this._botAcc = 0;
+        navFrameStart();   // bu karede yol bulmaya ayrılan süre (~3 ms) sıfırlanır; botlar sırayla yol alır, hepsi birden dondurmaz
         this.balls.forEach((b) => { if (b.brain && b.alive) b.botDir = this.botThink(b, botDt); });
       }
       this.balls.forEach((b) => {

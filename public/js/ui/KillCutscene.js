@@ -7,7 +7,7 @@
 // Bu dosya, oyunun üstünde şeffaf bir WebGL tuvalinde kareleri sırayla çizer;
 // gövdelere öldürenin ve ölenin bayrağını giydirir.
 // Sadece bu cihazdaki oyuncu olayın içindeyse (öldüren/ölen/vuran) oynatılır.
-import { loadJSON, loadImage } from '../systems/Assets.js';
+import { loadJSON, loadImage, assetUrl, prefetchAssets } from '../systems/Assets.js';
 import { getFlagCanvas } from '../systems/Flags.js';
 import { RES } from '../systems/Resolution.js';
 
@@ -23,6 +23,9 @@ export async function loadKillMeta() {
 // en fazla birini görür; artık sadece oynayacağı klibin resimleri yüklenir ve bitince bellekten atılır.
 export function preloadKills() {
   if (!META) loadKillMeta().catch(() => {});
+  // Animasyon dosyaları (6 PNG, ~4 MB) maç başında boşta kalan zamanda indirilip tarayıcı önbelleğine alınır.
+  // Çözülmüş resim bellekte TUTULMAZ (yukarıdaki bellek notu); ama öldürme anında artık ağ beklenmez, sadece çözme kalır.
+  prefetchAssets([...KILL_CLIPS, SHOOT_CLIP].flatMap((c) => [`assets/kills/${c}_overlay.png`, `assets/kills/${c}_data.png`]));
 }
 function loadClip(clip) {
   ['overlay', 'data'].forEach((layer) => {

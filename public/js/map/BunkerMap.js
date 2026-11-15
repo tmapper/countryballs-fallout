@@ -189,6 +189,7 @@ export function useMap(id) {
   WALKABLE.length = 0; WALKABLE.push(...Object.values(ROOMS), ...CORRIDORS);
   PROPS.length = 0; PROPS.push(...buildProps(ROOMS));
   SOLIDS.length = 0; SOLIDS.push(...PROPS.filter((p) => p.solid));
+  indexSolids();
   hooks.forEach((fn) => fn(mid));
 }
 
@@ -212,9 +213,42 @@ export function inWalkable(x, y) {
 // Üst gövde duvarın/eşyanın üstüne taşabilir (kuşbakışı görünüm).
 const FOOT_HALF_W = 26, FOOT_DEPTH = 22;
 
+// PERFORMANS: eskiden her canStand çağrısı TÜM eşyaları tek tek tarıyordu. Bot yol bulma saniyede on binlerce
+// canStand çağırdığı için bu donmaların ana nedeniydi. Eşyalar artık 200 px'lik kovalara dağıtılır;
+// sadece ayak izinin değdiği kovalardaki eşyalar denenir.
+const BUCKET = 200;
+let buckets = new Map();
+const bkey = (i, j) => i * 100003 + j;
+function indexSolids() {
+  buckets = new Map();
+  for (const p of SOLIDS) {
+    const bx0 = p.shape === 'circle' ? p.x - p.r : p.x, bx1 = p.shape === 'circle' ? p.x + p.r : p.x + p.w;
+    const by0 = p.shape === 'circle' ? p.y - p.r : p.y, by1 = p.shape === 'circle' ? p.y + p.r : p.y + p.h;
+    for (let i = Math.floor(bx0 / BUCKET); i <= Math.floor(bx1 / BUCKET); i++) {
+      for (let j = Math.floor(by0 / BUCKET); j <= Math.floor(by1 / BUCKET); j++) {
+        const k = bkey(i, j);
+        let a = buckets.get(k);
+        if (!a) buckets.set(k, a = []);
+        a.push(p);
+      }
+    }
+  }
+}
+
 function hitsSolid(x, y) {
   const x0 = x - FOOT_HALF_W, x1 = x + FOOT_HALF_W, y0 = y - FOOT_DEPTH, y1 = y;
-  for (const p of SOLIDS) {
+  const i0 = Math.floor(x0 / BUCKET), i1 = Math.floor(x1 / BUCKET), j0 = Math.floor(y0 / BUCKET), j1 = Math.floor(y1 / BUCKET);
+  for (let i = i0; i <= i1; i++) {
+    for (let j = j0; j <= j1; j++) {
+      const list = buckets.get(bkey(i, j));
+      if (list && hitsList(list, x0, x1, y0, y1)) return true;
+    }
+  }
+  return false;
+}
+
+function hitsList(list, x0, x1, y0, y1) {
+  for (const p of list) {
     if (p.shape === 'circle') {
       // Kutunun daireye en yakın noktası daire içindeyse çarpışma var
       const nx = Math.max(x0, Math.min(p.x, x1)), ny = Math.max(y0, Math.min(p.y, y1));
