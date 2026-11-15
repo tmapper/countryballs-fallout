@@ -549,7 +549,15 @@ export class GameScene extends Phaser.Scene {
     this.netUpdate(dt);
     this.updateFx(dt, time);
     // Toplantıda herkes donar
-    if (this.meeting) { this.registry.set('hud', { action: null }); return; }
+    if (this.meeting) {
+      if (!this._lastHud || this._lastHud.action !== null) {
+        this._lastHud = { action: null };
+        this.registry.set('hud', this._lastHud);
+      }
+      const lookDt = Math.min(delta, 250) / 1000;
+      this.balls.forEach((b) => b.updateLooks(lookDt, time));
+      return;
+    }
     const ui = this.scene.get('UIScene');
     this.controls.joystick = ui && ui.joystick ? ui.joystick : null;
     if (this.taskOpen && !this.taskPanel.isOpen) { this.taskOpen = false; this.releaseControls(); }
@@ -557,7 +565,12 @@ export class GameScene extends Phaser.Scene {
     // ve rapor kontrolü görev bitene kadar DONUYORDU. Artık dünya akmaya devam eder; sadece oyuncunun kendi hareketi,
     // sis, mini harita ve arayüz hesabı atlanır (panel açıkken zaten görünmüyorlar).
     const busy = !!this.taskOpen;
-    if (busy) this.registry.set('hud', { action: null, task: true });
+    if (busy) {
+      if (!this._lastHud || this._lastHud.task !== true || this._lastHud.action !== null) {
+        this._lastHud = { action: null, task: true };
+        this.registry.set('hud', this._lastHud);
+      }
+    }
     const dir = busy ? { x: 0, y: 0 } : this.controls.update();
     this.updateBotTasks(dt);
     if (!this.over && !this.sandbox) { this.updateSabotage(dt); this.updateBotReports(dt); }
@@ -594,21 +607,43 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
-    if (busy) { this.updateSight(dt); this.updateCull(dt); return; }   // panel açık: oyuncu duruyor, sis/harita/arayüz yeniden hesaplanmaz
+    if (busy) {
+      this.updateSight(dt); this.updateCull(dt);
+      const lookDt = Math.min(delta, 250) / 1000;
+      this.balls.forEach((b) => b.updateLooks(lookDt, time));
+      return;
+    }   // panel açık: oyuncu duruyor, sis/harita/arayüz yeniden hesaplanmaz
 
     this.fog.update(this.player.x, this.player.y - 16, this.visionRadius);
     this.updateSight(dt);
     this.updateCull(dt);
 
-    // Arayüze bilgi ver
-    this.registry.set('playerPos', { x: Math.round(this.player.x), y: Math.round(this.player.y) });
+    // Arayüze bilgi ver — sadece değişince yaz (her kare registry event'i tetiklemeyi önler)
+    const px = Math.round(this.player.x), py = Math.round(this.player.y);
+    const lastPos = this._lastPlayerPos;
+    if (!lastPos || lastPos.x !== px || lastPos.y !== py) {
+      this._lastPlayerPos = { x: px, y: py };
+      this.registry.set('playerPos', this._lastPlayerPos);
+    }
     const room = getRoomAt(this.player.x, this.player.y - 8);
     if (room !== this.registry.get('room')) this.registry.set('room', room);
     const hud = this.hudState();
-    this.registry.set('hud', hud);
+    // Basit shallow karşılaştırma; sık değişen alanlar
+    const lastHud = this._lastHud;
+    if (!lastHud || lastHud.action !== hud.action || lastHud.ready !== hud.ready || lastHud.task !== hud.task ||
+        lastHud.report !== hud.report || lastHud.sabotage !== hud.sabotage || lastHud.useLabel !== hud.useLabel ||
+        lastHud.cooldown !== hud.cooldown || lastHud.tunnel !== hud.tunnel || lastHud.inGame !== hud.inGame ||
+        lastHud.sabReady !== hud.sabReady || lastHud.cdFrac !== hud.cdFrac || lastHud.sabFrac !== hud.sabFrac ||
+        lastHud.tunnelExit !== hud.tunnelExit) {
+      this._lastHud = Object.assign({}, hud);
+      this.registry.set('hud', hud);
+    }
     this.updateMoods(hud);
     this.registry.set('taskArrow', this.arrowTarget());
     this.updateMinimap();
+    // Göz/şapka güncellemesi: tek döngü (eski: her top kendi postupdate dinleyicisi)
+    const lookDt = Math.min(delta, 250) / 1000;
+    this.balls.forEach((b) => b.updateLooks(lookDt, time));
   }
 
   // Görev/panel kapanınca: tüm sahnelerde basılı tuşları ve joystick'i bırak (takılı kalıp yürüyememe hatası)

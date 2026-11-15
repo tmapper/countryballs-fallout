@@ -19,12 +19,11 @@ const images = {};
 export async function loadKillMeta() {
   META = await loadJSON('assets/kills/kills.json');
 }
-// BELLEK: eskiden maç başında 3 animasyonun 6 büyük resmi (~130 MB) önceden açılıyordu. Oyuncu maç başına
-// en fazla birini görür; artık sadece oynayacağı klibin resimleri yüklenir ve bitince bellekten atılır.
+// BELLEK: atlaslar yarı çözünürlüğe indirildi (~5 MB GPU / klibe). Sadece oynayacağı klibin resimleri yüklenir ve bitince atılır.
 export function preloadKills() {
   if (!META) loadKillMeta().catch(() => {});
-  // Animasyon dosyaları (6 PNG, ~4 MB) maç başında boşta kalan zamanda indirilip tarayıcı önbelleğine alınır.
-  // Çözülmüş resim bellekte TUTULMAZ (yukarıdaki bellek notu); ama öldürme anında artık ağ beklenmez, sadece çözme kalır.
+  // Animasyon dosyaları (6 PNG, ~2 MB) maç başında boşta kalan zamanda indirilip tarayıcı önbelleğine alınır.
+  // Çözülmüş resim bellekte TUTULMAZ; öldürme anında sadece çözme kalır.
   prefetchAssets([...KILL_CLIPS, SHOOT_CLIP].flatMap((c) => [`assets/kills/${c}_overlay.png`, `assets/kills/${c}_data.png`]));
 }
 function loadClip(clip) {

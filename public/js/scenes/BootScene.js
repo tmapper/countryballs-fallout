@@ -24,11 +24,15 @@ export class BootScene extends Phaser.Scene {
       .then(([tr, en]) => {
         i18n.init({ tr, en });
         msg.setText(i18n.t('ui.loading'));
-        return Promise.all([loadCharacters(), loadRoleMeta(), loadKillMeta(), loadPropImages(), loadFlagImages()]);
+        // Kritik olanları bekle; prop/flag arka planda (menü hemen açılsın)
+        return Promise.all([loadCharacters(), loadRoleMeta(), loadKillMeta()]);
       })
       .then(() => {
         msg.setVisible(false);
         showMainMenu();
+        // Arka plan yükleme — menü açıldıktan sonra
+        loadPropImages().catch(() => {});
+        loadFlagImages().catch(() => {});
       })
       .catch((err) => {
         console.error(err);

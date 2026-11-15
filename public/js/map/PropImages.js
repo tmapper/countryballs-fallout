@@ -15,6 +15,6 @@ export function loadPropImages() {
     const im = new Image();
     im.onload = () => { PROP_IMG[n] = im; res(); };
     im.onerror = () => res();          // eksikse kodla çizilir
-    im.src = assetUrl('assets/props/' + n + '.png');
+    im.src = assetUrl('assets/props/' + n + '.webp');
   })));
 }

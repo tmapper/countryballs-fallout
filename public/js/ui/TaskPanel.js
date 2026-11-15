@@ -5,7 +5,7 @@
 // Tipler: wires · levers · valve · geiger · filter · keypad · simon · swipe · align · download/upload
 //         + yeni: fuel (yakıt) · order (sıralı düğme) · pipes (boru) · waste (atık) · freq (frekans) · scan (tarama)
 // Her mini oyun kendi küçük fonksiyonu; bitince done() çağırır.
-// Görsel: assets/props/*.png (kablo panosu ve şalter paneli gerçek resmin üstüne çizilir).
+// Görsel: assets/props/*.webp (kablo panosu ve şalter paneli gerçek resmin üstüne çizilir).
 import { i18n } from '../systems/I18n.js';
 import { assetUrl } from '../systems/Assets.js';
 import { sfx, startLoop, stopLoop } from '../systems/Sound.js';
@@ -14,7 +14,7 @@ const NS = 'http://www.w3.org/2000/svg';
 const COLORS = { red: '#e53935', blue: '#1e88e5', yellow: '#fdd835', pink: '#ec407a' };
 const S = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v)); if (parent) parent.appendChild(e); return e; };
 const H = (tag, cls, parent) => { const e = document.createElement(tag); if (cls) e.className = cls; if (parent) parent.appendChild(e); return e; };
-const img = (name, cls, parent) => { const e = H('img', cls, parent); e.src = assetUrl(`assets/props/${name}.png`); e.alt = ''; e.draggable = false; return e; };
+const img = (name, cls, parent) => { const e = H('img', cls, parent); e.src = assetUrl(`assets/props/${name}.webp`); e.alt = ''; e.draggable = false; return e; };
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 // ---------------- Kablo: soldaki terminali sürükle, aynı renkli sağdakine bırak ----------------

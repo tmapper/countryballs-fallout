@@ -331,5 +331,10 @@ export class LobbyScene extends Phaser.Scene {
       }
       if (!b.move(dir, dt, lobbyStand) && (dir.x || dir.y)) b.target = null;
     });
+    // Göz/şapka: tek döngü (eski: her top kendi postupdate dinleyicisi)
+    const lookDt = Math.min(delta, 250) / 1000;
+    this.player.updateLooks(lookDt, time);
+    this.bots.forEach((b) => b.updateLooks(lookDt, time));
+    this.remotes.forEach((b) => b.updateLooks(lookDt, time));
   }
 }

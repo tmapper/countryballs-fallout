@@ -62,9 +62,7 @@ export class CountryBall extends Phaser.GameObjects.Container {
     this.refreshVisual();
     this.setHat(opts.hat || 'none');
     this.setDepth(y);
-    this.onLooks = (time, delta) => this.updateLooks(Math.min(delta, 250) / 1000, time);
-    scene.events.on('postupdate', this.onLooks);
-    this.once('destroy', () => scene.events.off('postupdate', this.onLooks));
+    // postupdate dinleyicisi sahne tarafında tek döngüde toplanır (her top için ayrı event maliyeti yok)
     this.updateLooks(0, 0);
   }
 
