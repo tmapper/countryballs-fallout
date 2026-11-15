@@ -553,20 +553,22 @@ export class GameScene extends Phaser.Scene {
     const ui = this.scene.get('UIScene');
     this.controls.joystick = ui && ui.joystick ? ui.joystick : null;
     if (this.taskOpen && !this.taskPanel.isOpen) { this.taskOpen = false; this.releaseControls(); }
-    // Görev paneli açıkken ağır işleri atla (donma / kasma azaltır)
-    if (this.taskOpen) {
-      this.registry.set('hud', { action: null, task: true });
-      return;
-    }
-    const dir = this.controls.update();
+    // HATA DÜZELTMESİ: eskiden görev paneli açılınca update() tamamen duruyordu; botlar, öldürme/sabotaj sayaçları
+    // ve rapor kontrolü görev bitene kadar DONUYORDU. Artık dünya akmaya devam eder; sadece oyuncunun kendi hareketi,
+    // sis, mini harita ve arayüz hesabı atlanır (panel açıkken zaten görünmüyorlar).
+    const busy = !!this.taskOpen;
+    if (busy) this.registry.set('hud', { action: null, task: true });
+    const dir = busy ? { x: 0, y: 0 } : this.controls.update();
     this.updateBotTasks(dt);
     if (!this.over && !this.sandbox) { this.updateSabotage(dt); this.updateBotReports(dt); }
     if (this.meeting) return;
 
-    const stand = this.player.alive ? canStand : (x, y) => x > 0 && y > 0 && x < WORLD.w && y < WORLD.h;
-    if (this.player.inTunnel) { this.updateTunnelInput(dir); }
-    const moved = this.player.inTunnel ? false : this.player.move(dir, dt, stand);
-    if (this.player.alive && !this.player.inTunnel && (dir.x || dir.y) && !moved) { this.stuckT = (this.stuckT || 0) + dt; if (this.stuckT > 0.5) { this.stuckT = 0; this.unstick(this.player); } } else this.stuckT = 0;
+    if (!busy) {
+      const stand = this.player.alive ? canStand : (x, y) => x > 0 && y > 0 && x < WORLD.w && y < WORLD.h;
+      if (this.player.inTunnel) { this.updateTunnelInput(dir); }
+      const moved = this.player.inTunnel ? false : this.player.move(dir, dt, stand);
+      if (this.player.alive && !this.player.inTunnel && (dir.x || dir.y) && !moved) { this.stuckT = (this.stuckT || 0) + dt; if (this.stuckT > 0.5) { this.stuckT = 0; this.unstick(this.player); } } else this.stuckT = 0;
+    }
 
     this.balls.forEach((b) => { if (b.cooldown > 0) b.cooldown = Math.max(0, b.cooldown - dt); });
 
@@ -591,6 +593,8 @@ export class GameScene extends Phaser.Scene {
         if (b.brain) b.brain.report(mv, dt);
       });
     }
+
+    if (busy) { this.updateSight(dt); this.updateCull(dt); return; }   // panel açık: oyuncu duruyor, sis/harita/arayüz yeniden hesaplanmaz
 
     this.fog.update(this.player.x, this.player.y - 16, this.visionRadius);
     this.updateSight(dt);
