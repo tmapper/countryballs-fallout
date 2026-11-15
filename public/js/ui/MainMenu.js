@@ -462,12 +462,12 @@ export class MainMenu {
   buildLayers(W, H) {
     const mk = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; };
     const L = { W, H };
-    // arka plan + duvar panelleri
+    // arka plan + duvar panelleri (hafif radyoaktif yeşil ton)
     L.bg = mk(W, H); let c = L.bg.getContext('2d');
-    const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#05070a'); g.addColorStop(0.6, '#10141b'); g.addColorStop(1, '#07090c');
+    const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#041a0a'); g.addColorStop(0.55, '#0d2a16'); g.addColorStop(1, '#062012');
     c.fillStyle = g; c.fillRect(0, 0, W, H);
-    c.fillStyle = '#151a22'; for (let i = -1; i < 9; i++) c.fillRect(i * W * 0.14, 0, 3, H);
-    c.fillStyle = 'rgba(255,255,255,.025)'; for (let j = 0; j < 8; j++) c.fillRect(0, j * H * 0.13, W, 2);
+    c.fillStyle = '#132a1a'; for (let i = -1; i < 9; i++) c.fillRect(i * W * 0.14, 0, 3, H);
+    c.fillStyle = 'rgba(125,255,154,.04)'; for (let j = 0; j < 8; j++) c.fillRect(0, j * H * 0.13, W, 2);
     // kasa kapısı (çerçeve + kapak ayrı: kapak döner)
     const R = Math.min(W, H) * 0.33; L.R = R;
     const S = Math.ceil(R * 2.3);
