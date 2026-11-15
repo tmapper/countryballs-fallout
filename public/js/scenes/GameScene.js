@@ -585,7 +585,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.updateNearbySteps(dt);
-    this.tryAutoPickGun();
     this.fog.update(this.player.x, this.player.y - 16, this.visionRadius);
     this.updateSight(dt);
     this.updateCull(dt);
@@ -788,15 +787,6 @@ export class GameScene extends Phaser.Scene {
       if (d < bd) { bd = d; best = g; }
     });
     return best;
-  }
-
-  // Düşen silaha çok yaklaşınca (E'ye basmadan) otomatik al. Uzaktan E ile almak için interact() hâlâ var.
-  tryAutoPickGun() {
-    const me = this.player;
-    if (!this.guns || !this.guns.length || this.over || this.meeting) return;
-    if (!me || !me.alive || me.inTunnel || me.role === 'impostor' || me.role === 'sheriff') return;
-    const gun = this.nearestGun(36);
-    if (gun) this.pickGun(gun);
   }
 
   pickGun(g) {
