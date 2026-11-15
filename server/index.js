@@ -96,7 +96,7 @@ function saveAccounts() {
 // ---------------- JETON (oyun içi para, gerçek para DEĞİL) ----------------
 // Maçlardan kazanılır, şapka almak için harcanır. Bakiye ve alınan şapkalar SUNUCUDA tutulur (hile ile artırılamaz).
 // Fiyatlar istemcideki systems/Looks.js HAT_PRICE ile aynı olmalı.
-const HAT_PRICE = {"none":0,"cap_red":0,"cap_blue":0,"beanie":0,"fedora":100,"party":100,"chef":100,"beret":100,"bowler":100,"army":100,"hardhat":100,"cowboy":250,"fez":250,"santa":250,"grad":250,"headphones":250,"flowers":250,"ushanka":250,"cat":250,"bunny":250,"tophat":500,"viking":500,"witch":500,"pirate":500,"propeller":500,"sombrero":500,"antenna":500,"gasmask":500,"crown":1000,"halo":1000};
+const HAT_PRICE = {"none":0,"cap_red":0,"cap_blue":0,"beanie":0,"fedora":100,"party":100,"chef":100,"beret":100,"bowler":100,"army":100,"hardhat":100,"cowboy":250,"fez":250,"santa":250,"grad":250,"headphones":250,"flowers":250,"ushanka":250,"cat":250,"bunny":250,"tophat":500,"viking":500,"witch":500,"pirate":500,"propeller":500,"sombrero":500,"antenna":500,"gasmask":500,"crown":1000,"halo":1000,"bandana":250,"ninja":500,"helmet":500,"mushroom":500,"afro":500,"turban":500,"plague":750,"astronaut":750};
 const START_COINS = 200;                                  // yeni hesaba hoş geldin jetonu
 const COIN = { played: 10, win: 25, task: 2, kill: 5 };
 function ensureWallet(u) { if (typeof u.coins !== 'number') u.coins = START_COINS; if (!Array.isArray(u.hats)) u.hats = []; return u; }
@@ -693,7 +693,7 @@ function adminCommand(c, r, text) {
       if (!u.hats) u.hats = [];
       if (what === 'all') {
         // Tüm bilinen şapkaları ver (Looks.js HAT_IDS ile aynı olmalı; sunucuda sabit liste)
-        const ALL_HATS = ['tophat','cowboy','crown','beanie','cap_red','cap_blue','fedora','party','chef','viking','army','hardhat','fez','beret','santa','witch','pirate','grad','headphones','flowers','halo','propeller','bowler','sombrero','ushanka','bunny','cat','antenna','gasmask'];
+        const ALL_HATS = ['tophat','cowboy','crown','beanie','cap_red','cap_blue','fedora','party','chef','viking','army','hardhat','fez','beret','santa','witch','pirate','grad','headphones','flowers','halo','propeller','bowler','sombrero','ushanka','bunny','cat','antenna','gasmask','bandana','ninja','helmet','mushroom','afro','turban','plague','astronaut'];
         ALL_HATS.forEach((h) => { if (!u.hats.includes(h)) u.hats.push(h); });
         saveAccounts(); pushAccount(k); say('✔ ' + u.name + ': tüm şapkalar verildi'); break;
       }
@@ -789,9 +789,7 @@ function handle(c, m) {
       const text = String(m.text || '').trim().slice(0, 280);
       if (!text || text.length < 3) return;
       if (!accounts.suggestions) accounts.suggestions = [];
-      let image = null;
-      if (typeof m.image === 'string' && m.image.startsWith('data:image/') && m.image.length < 900000) image = m.image;
-      accounts.suggestions.push({ name: u ? u.name : 'anon', account: c.account || null, text, image, at: Date.now() });
+      accounts.suggestions.push({ name: u ? u.name : 'anon', account: c.account || null, text, at: Date.now() });
       if (accounts.suggestions.length > 500) accounts.suggestions = accounts.suggestions.slice(-400);
       saveAccounts();
       send(c, { t: 'suggestOk' });

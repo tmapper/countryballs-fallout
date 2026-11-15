@@ -12,8 +12,7 @@
     "bombTitle": "☢ THE NUKE HAS FALLEN!",
     "bombSub": "The bunker is sealed. There is no way back outside.",
     "emergencyUsed": "You have no emergency meetings left.",
-    "gunPickup": "You picked up the Sheriff gun!",
-    "gotGun": "You took the Sheriff gun!"
+    "gunPickup": "You picked up the Sheriff gun!"
   },
   "ui": {
     "language": "Language",
@@ -91,8 +90,7 @@
     "sabotage": "SABOTAGE",
     "fix": "FIX",
     "meeting": "MEETING",
-    "tunnelExit": "EXIT",
-    "gun": "Take gun"
+    "tunnelExit": "EXIT"
   },
   "goals": {
     "impostor": "Kill everyone without being seen. Escape through tunnels.",

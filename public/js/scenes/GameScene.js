@@ -241,8 +241,6 @@ export class GameScene extends Phaser.Scene {
     const me = this.player;
     if (this.over || this.meeting) return;
     if (me.inTunnel) { this.useTunnel(); return; }
-    const gun = this.nearestGun(70);
-    if (gun && me.alive && me.role !== 'impostor' && me.role !== 'sheriff') { this.pickGun(gun); return; }
     if (this.canFix()) { this.fixSabotage(); return; }
     if (me.role === 'impostor' && this.nearestTunnelOk()) { this.useTunnel(); return; }
     if (this.taskPanel.isOpen) return;
@@ -571,20 +569,21 @@ export class GameScene extends Phaser.Scene {
 
     this.balls.forEach((b) => { if (b.cooldown > 0) b.cooldown = Math.max(0, b.cooldown - dt); });
 
-    // Botlar: her karede, lobi hız ayarı (speedMul) ile aynı max hız
+    // Botlar: kare atlatma — düşük kalite / kalabalık odada daha seyrek
     if (!this.over) {
-      this.balls.forEach((b) => {
-        if (!b.brain || !b.alive) return;
-        // Yön vektörü uzunluğu en fazla 1 → max hız = SPEED * cfg.speed
-        const dir = this.botThink(b, dt);
-        const m = Math.hypot(dir.x || 0, dir.y || 0);
-        if (m > 1) { dir.x /= m; dir.y /= m; }
-        const mv = b.move(dir, dt, canStand);
-        if (b.brain) b.brain.report(mv, dt);
-      });
+      this._botFrame = (this._botFrame || 0) + 1;
+      const botSkip = (getQuality() === 'low' || this.balls.length > 12) ? 3 : 2;
+      const runBots = (this._botFrame % botSkip) === 0 || this.balls.length <= 6;
+      if (runBots) {
+        const botDt = dt * botSkip;
+        this.balls.forEach((b) => {
+          if (!b.brain || !b.alive) return;
+          const mv = b.move(this.botThink(b, botDt), botDt, canStand);
+          if (b.brain) b.brain.report(mv, botDt);
+        });
+      }
     }
 
-    this.updateNearbySteps(dt);
     this.fog.update(this.player.x, this.player.y - 16, this.visionRadius);
     this.updateSight(dt);
     this.updateCull(dt);
@@ -643,7 +642,8 @@ export class GameScene extends Phaser.Scene {
   updateCull(dt) {
     this.cullT -= dt;
     if (this.cullT > 0 || !this.cullList) return;
-    this.cullT = 0.16;
+    // Düşük kalitede daha seyrek cull (CPU tasarrufu)
+    this.cullT = getQuality() === 'low' ? 0.28 : 0.16;
     const v = this.cameras.main.worldView, M = 160;
     const me = this.player, seeAll = !me.alive || !this.fog.enabled;
     const R = this.visionRadius + 260;
@@ -673,7 +673,7 @@ export class GameScene extends Phaser.Scene {
     const all = !me.alive || !this.fog.enabled;
     this.sightT = (this.sightT || 0) - dt;
     if (this.sightT <= 0) {
-      this.sightT = 0.08;
+      this.sightT = getQuality() === 'low' ? 0.14 : 0.08;
       const r = this.visionRadius + 30;
       const see = (o) => all || canSee(this.grid, me, o, r);
       this.balls.forEach((b) => { if (!b.isMe && b.alive) b.seen = see(b); });
@@ -732,8 +732,6 @@ export class GameScene extends Phaser.Scene {
     else if (!st.task && !this.taskOpen && this.nearEmergency() && this.emergencyLeft > 0) { st.task = true; st.useLabel = 'meeting'; }
     if (!me.alive) return st;
     st.report = !me.inTunnel && !!this.nearestBody(me, REPORT_RANGE);
-    st.gun = !me.inTunnel && me.role !== 'impostor' && me.role !== 'sheriff' && !!this.nearestGun(70);
-    if (st.gun) { st.task = true; st.useLabel = 'gun'; }
     if (me.role === 'impostor') { st.sabotage = true; st.sabReady = !this.sabotage && this.sabCd <= 0; st.sabCd = this.sabotage ? 0 : Math.max(0, Math.ceil(this.sabCd)); st.sabFrac = Math.min(1, Math.max(0, this.sabCd) / 30); }
     if (me.role === 'impostor') {
       st.action = 'kill';
@@ -749,59 +747,6 @@ export class GameScene extends Phaser.Scene {
     st.cdFrac = Math.min(1, me.cooldown / cdMax);
     return st;
   }
-
-  // Yakındaki yürüyen oyuncuların ayak sesi (mesafeye göre kısık)
-  updateNearbySteps(dt) {
-    if (!this.player || this.meeting || this.over) return;
-    const me = this.player;
-    this.balls.forEach((b) => {
-      if (!b.alive || b.isMe || !b.isMoving) return;
-      const d = Math.hypot(b.x - me.x, b.y - me.y);
-      if (d > 320) return;
-      b._stepT = (b._stepT || 0) - dt;
-      if (b._stepT > 0) return;
-      b._stepT = 0.38;
-      const k = Math.max(0.04, 0.22 * (1 - d / 320));
-      sfx('step', k, 0.92 + Math.random() * 0.12);
-    });
-  }
-
-  spawnGunPickup(g) {
-    if (!g || g.spr) return;
-    const s = this.add.container(g.x, g.y - 8);
-    const body = this.add.rectangle(0, 0, 28, 14, 0xc0a050).setStrokeStyle(2, 0x3a2a10);
-    const tip = this.add.rectangle(14, 0, 10, 6, 0x888888);
-    s.add([body, tip]);
-    s.setDepth(g.y + 2);
-    this.tweens.add({ targets: s, y: g.y - 16, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    g.spr = s;
-  }
-
-  nearestGun(range = 70) {
-    const me = this.player;
-    if (!me || !me.alive || !this.guns) return null;
-    let best = null, bd = range;
-    this.guns.forEach((g) => {
-      if (g.taken) return;
-      const d = Math.hypot(g.x - me.x, g.y - me.y);
-      if (d < bd) { bd = d; best = g; }
-    });
-    return best;
-  }
-
-  pickGun(g) {
-    const me = this.player;
-    if (!g || g.taken || !me || !me.alive) return;
-    if (me.role === 'impostor' || me.role === 'sheriff') return;
-    g.taken = true;
-    if (g.spr) { g.spr.destroy(); g.spr = null; }
-    me.role = 'sheriff';
-    me.cooldown = 8;
-    this.applyRoleTags();
-    this.toast(i18n.t('game.gotGun') || 'Şerif silahını aldın!', '#5dade2');
-    sfx('power_up', 0.7);
-  }
-
 }
 
 installExtras(GameScene);

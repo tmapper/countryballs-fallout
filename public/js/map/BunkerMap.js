@@ -178,7 +178,7 @@ export const onMapChange = (fn) => hooks.push(fn);
 export function useMap(id) {
   const m = MAPS[id] || MAPS[DEFAULT_MAP];
   const mid = MAPS[id] ? id : DEFAULT_MAP;
-  // Aynı harita olsa bile veriyi taze yaz (siyah ekran / boş WORLD riskini azaltır)
+  if (MAP.id === mid) return;
   MAP.id = mid; MAP.doorX = m.doorX;
   Object.assign(WORLD, m.world);
   Object.keys(ROOMS).forEach((k) => delete ROOMS[k]);

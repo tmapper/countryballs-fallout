@@ -13,8 +13,8 @@ import { RES } from '../systems/Resolution.js';
 import { ROLE_COLORS } from '../systems/Roles.js';
 import { backToLobby } from '../systems/GameFlow.js';
 
-const ICONS = { kill: '🔪', shoot: '🎯', tunnel: '🕳', report: '📢', sabotage: '☢', use: '✋', fix: '🔧', meeting: '🚨', gun: '🔫' };
-const ACTION_COLORS = { kill: 0xc0262d, shoot: 0x2d6fd6, tunnel: 0x5f7a2a, report: 0xd6452f, sabotage: 0x8a1c22, use: 0xd9a400, fix: 0x2f9e5a, meeting: 0xc0262d, gun: 0x5dade2 };
+const ICONS = { kill: '🔪', shoot: '🎯', tunnel: '🕳', report: '📢', sabotage: '☢', use: '✋', fix: '🔧', meeting: '🚨' };
+const ACTION_COLORS = { kill: 0xc0262d, shoot: 0x2d6fd6, tunnel: 0x5f7a2a, report: 0xd6452f, sabotage: 0x8a1c22, use: 0xd9a400, fix: 0x2f9e5a, meeting: 0xc0262d };
 
 export class UIScene extends Phaser.Scene {
   constructor() { super('UIScene'); }

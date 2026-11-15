@@ -1,4 +1,3 @@
-import { MAP_IDS } from '../map/BunkerMap.js';
 // ============================================================
 // Lobby.js - Lobi arayüzü (HTML), yürünen lobi odasının (LobbyScene) üstünde durur
 // ============================================================
@@ -16,12 +15,7 @@ const SETTINGS_KEY = 'cfs_lobby';
 
 // Ayarlar butonu kaldırıldı: tek kişilik maç her zaman 6 kişi (5 bot), rol rastgele
 function loadSettings() {
-  try {
-    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-    return { playerCount: 6, forcedRole: 'random', bots: true, mapId: MAP_IDS.includes(s.mapId) ? s.mapId : (MAP_IDS[0] || 'classic') };
-  } catch (e) {
-    return { playerCount: 6, forcedRole: 'random', bots: true, mapId: MAP_IDS[0] || 'classic' };
-  }
+  return { playerCount: 6, forcedRole: 'random', bots: true };
 }
 
 const pct = (v) => `%${Math.round(v * 100)}`;
@@ -42,12 +36,12 @@ export class Lobby {
 
   save() {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots, mapId: this.mapId }));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots }));
     } catch (e) { /* yoksay */ }
   }
 
   state() {
-    return { myFlag: this.myFlag, botFlags: this.bots ? [...this.botFlags] : [], playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots, mapId: this.mapId || MAP_IDS[0] };
+    return { myFlag: this.myFlag, botFlags: this.bots ? [...this.botFlags] : [], playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots };
   }
 
   // Botlar için benimkinden farklı, birbirinden farklı rastgele bayraklar
@@ -84,10 +78,6 @@ export class Lobby {
         <button class="btn lh-btn flag-open hidden" type="button"><span class="ico">🇺🇳</span><span data-t="lobby.pickFlagBtn"></span></button>
         <button class="btn lh-btn hat-open hidden" type="button"><span class="ico">🎩</span><span data-t="lobby.pickHatBtn"></span></button>
         <button class="btn btn-start lh-start" type="button" data-t="lobby.start"></button>
-      </div>
-      <div class="lh-maprow">
-        <span class="lh-maplabel" data-t="online.cfg_map">Harita</span>
-        <div class="seg map-seg"></div>
       </div>
 
       <div class="sheet settings-sheet hidden" role="dialog">
@@ -131,16 +121,6 @@ export class Lobby {
       this.changed();
     }));
     r.querySelector('.bots-toggle').addEventListener('change', (e) => { this.bots = e.target.checked; this.changed(); });
-    const mapSeg = r.querySelector('.map-seg');
-    if (mapSeg) {
-      MAP_IDS.forEach((id) => {
-        const b = document.createElement('button');
-        b.type = 'button'; b.className = 'seg-btn'; b.dataset.map = id;
-        b.textContent = id;
-        b.addEventListener('click', () => { this.mapId = id; this.save(); this.changed(); });
-        mapSeg.appendChild(b);
-      });
-    }
     r.querySelector('.lang-btn').addEventListener('click', () => i18n.toggle());
     r.querySelector('.menu-btn').addEventListener('click', () => this.onMenu && this.onMenu());
     r.querySelector('.flag-open').addEventListener('click', () => this.onFlag && this.onFlag());
@@ -175,10 +155,6 @@ export class Lobby {
     r.querySelector('[data-step="-1"]').disabled = this.playerCount <= MIN_PLAYERS;
     r.querySelector('[data-step="1"]').disabled = this.playerCount >= MAX_PLAYERS;
     r.querySelector('.bots-toggle').checked = this.bots;
-    r.querySelectorAll('.map-seg .seg-btn').forEach((b) => {
-      b.classList.toggle('on', b.dataset.map === this.mapId);
-      b.textContent = i18n.t('maps.' + b.dataset.map) || b.dataset.map;
-    });
     r.querySelector('.bots-hint').textContent = i18n.t(this.bots ? 'lobby.botsOnHint' : 'lobby.botsOffHint');
 
     const chips = r.querySelector('.chips');
@@ -240,9 +216,9 @@ export class Lobby {
     if (this.root) this.root.querySelector('.hat-open').classList.toggle('hidden', !on);
   }
 
-  // Başlat butonu: single'da her zaman görünür (bölge şartı kaldırıldı, devam etmeme sorunu giderildi)
+  // Başlat butonu sadece oyuncu kapıdaki başlat bölgesindeyken görünür
   setStartReady(on) {
-    if (this.root) this.root.querySelector('.lh-start').classList.remove('hidden');
+    if (this.root) this.root.querySelector('.lh-start').classList.toggle('hidden', !on);
   }
 
   hide() {

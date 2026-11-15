@@ -12,8 +12,7 @@
     "bombTitle": "☢ NÜKLEER BOMBA DÜŞTÜ!",
     "bombSub": "Sığınak mühürlendi. Artık dışarı çıkış yok.",
     "emergencyUsed": "Acil toplantı hakkın bitti.",
-    "gunPickup": "Şerif silahını aldın!",
-    "gotGun": "Şerif silahını aldın!"
+    "gunPickup": "Şerif silahını aldın!"
   },
   "ui": {
     "language": "Dil",
@@ -91,8 +90,7 @@
     "sabotage": "SABOTAJ",
     "fix": "TAMİR",
     "meeting": "TOPLANTI",
-    "tunnelExit": "ÇIK",
-    "gun": "Silahı al"
+    "tunnelExit": "ÇIK"
   },
   "goals": {
     "impostor": "Kimse görmeden herkesi öldür. Tünellerle kaç.",
