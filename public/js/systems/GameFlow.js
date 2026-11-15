@@ -234,18 +234,14 @@ export function startFromLobby() {
   if (mode === 'offline' && lobby && isRunning('LobbyScene')) { lobby.closeSheets(); startMatch(lobby.state()); }
 }
 
-// Oyun sahnesini kur. Animasyon hâlâ oynuyorsa kurulunca uyut (çizim/güncelleme yapmasın).
+// Oyun sahnesini kur. Sleep KALDIRILDI (siyah ekranın ana sebebiydi).
 function buildGame(m) {
   if (m.built || match !== m) return;
   m.built = true;
   flushSkins(m.flags);
-  // create biter bitmez uyut (rol videosu bitene kadar çizim/CPU israf etmesin)
-  game.scene.getScene('GameScene').events.once('create', (scene) => {
-    if (match === m && !m.revealDone) {
-      try { scene.scene.sleep(); } catch (e) { /* yoksay */ }
-    }
-  });
   try {
+    if (isRunning('GameScene')) game.scene.stop('GameScene');
+    if (isRunning('UIScene')) game.scene.stop('UIScene');
     game.scene.start('GameScene', { players: m.players, net: m.net, cfg: m.cfg });
   } catch (e) {
     console.error('[buildGame]', e);
@@ -259,41 +255,28 @@ function enterGame(m) {
   if (!m.built) buildGame(m);
   try { game.scene.run('UIScene'); } catch (e) { console.error('[UIScene]', e); }
   playMusic('music_game');
-  // Uyandır + kamera/oyuncu hazır olana kadar dene, sonra bomba + fade
-  let tries = 0, ready = 0;
-  const wake = () => {
+
+  // Sahne + oyuncu hazır olunca bomba + rol animasyonunu kaldır
+  let tries = 0;
+  const go = () => {
     if (match !== m) return;
-    try {
-      if (game.scene.isSleeping('GameScene')) game.scene.wake('GameScene');
-      const sc = game.scene.getScene('GameScene');
-      if (sc && game.scene.isActive('GameScene') && !game.scene.isSleeping('GameScene')) {
-        ready++;
-        // Kamera oyuncuyu görsün (siyah ekran önlemi)
-        if (sc.player && sc.cameras && sc.cameras.main) {
-          sc.cameras.main.centerOn(sc.player.x, sc.player.y - 40);
-        }
-      }
-    } catch (e) { /* yoksay */ }
-    if (ready >= 2) {
+    const sc = game.scene.getScene('GameScene');
+    const ready = sc && game.scene.isActive('GameScene') && sc.player && sc.cameras && sc.cameras.main;
+    if (ready) {
       try {
-        const sc = game.scene.getScene('GameScene');
-        if (sc && sc.playBomb) sc.playBomb();
-      } catch (e) {}
+        sc.cameras.main.centerOn(sc.player.x, sc.player.y - 40);
+        if (sc.playBomb) sc.playBomb();
+      } catch (e) { console.error('[enterGame]', e); }
       reveal.fadeOut();
       return;
     }
-    if (++tries < 90) requestAnimationFrame(wake);
+    if (++tries < 120) requestAnimationFrame(go);
     else {
-      // Son çare: ne olursa olsun animasyonu kaldır, sahneyi zorla uyandır
-      try { if (game.scene.isSleeping('GameScene')) game.scene.wake('GameScene'); } catch (e) {}
-      try {
-        const sc = game.scene.getScene('GameScene');
-        if (sc && sc.playBomb) sc.playBomb();
-      } catch (e) {}
+      try { if (sc && sc.playBomb) sc.playBomb(); } catch (e) {}
       reveal.fadeOut();
     }
   };
-  wake();
+  go();
 }
 
 // settings: { myFlag, botFlags, playerCount, forcedRole }
