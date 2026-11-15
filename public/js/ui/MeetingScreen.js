@@ -8,6 +8,7 @@
 import { i18n } from '../systems/I18n.js';
 import { getFlagThumb } from '../systems/Flags.js';
 import { wireChatInput, releaseGameKeys } from './Chat.js';
+import { icon } from './Icons.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
@@ -22,8 +23,11 @@ export class MeetingScreen {
         <div class="mt-head">
           <img class="mt-reporter" alt="">
           <div><h1 class="mt-title"></h1><div class="mt-sub"></div></div>
+          <div class="mt-steps"><i data-s="discuss"></i><i data-s="vote"></i><i data-s="results"></i></div>
           <div class="mt-timer"><span class="mt-phase"></span><b class="mt-time"></b></div>
         </div>
+        <div class="mt-bar"><i></i></div>
+        <div class="mt-where">${icon('users')}<span></span></div>
         <div class="mt-body">
           <div class="mt-grid-wrap">
             <div class="mt-grid"></div>
@@ -31,14 +35,15 @@ export class MeetingScreen {
           </div>
           <div class="mt-chat"><div class="mt-chat-title"></div><div class="mt-chat-list"></div>
           <div class="mt-quick">
-            <button type="button" class="mt-qbtn" data-q="phrases">💬</button>
-            <button type="button" class="mt-qbtn" data-q="suspect">⚠</button>
+            <button type="button" class="mt-qbtn" data-q="phrases">${icon('chat')}</button>
+            <button type="button" class="mt-qbtn" data-q="suspect">${icon('eye')}</button>
           </div>
-          <div class="mt-chat-row"><input class="mt-chat-input" autocomplete="off" spellcheck="false" enterkeyhint="send"><button class="mt-chat-send" type="button">➤</button></div></div>
+          <div class="mt-chat-row"><input class="mt-chat-input" autocomplete="off" spellcheck="false" enterkeyhint="send"><button class="mt-chat-send" type="button">${icon('send')}</button></div></div>
         </div>
         <div class="mt-foot">
-          <button class="btn mt-skip" type="button"></button>
+          <button class="btn mt-skip" type="button">${icon('close')}<span></span></button>
           <div class="mt-skipvotes"></div>
+          <div class="mt-count"></div>
           <div class="mt-note"></div>
         </div>
       </div>
@@ -81,19 +86,32 @@ export class MeetingScreen {
     r.querySelector('.mt-chat-row').classList.toggle('hidden', !opts.onChat);
     r.querySelector('.mt-chat').classList.toggle('ghost', !!opts.ghost);
     releaseGameKeys();
-    r.querySelector('.mt-skip').textContent = i18n.t('meeting.skip');
+    r.querySelector('.mt-skip span').textContent = i18n.t('meeting.skip');
+    r.querySelector('.mt-skip').classList.remove('chosen');
+    r.querySelector('.mt-where span').textContent = i18n.t('meeting.gathered');
+    r.querySelectorAll('.mt-steps i').forEach((x) => { x.textContent = i18n.t(x.dataset.s === 'vote' ? 'meeting.vote' : x.dataset.s === 'results' ? 'meeting.results' : 'meeting.discuss'); });
+    this.lastPhase = null; this.votedN = 0;
+    this.aliveN = opts.players.filter((p) => p.alive).length;
     r.querySelector('.mt-skipvotes').innerHTML = '';
     r.querySelector('.mt-note').textContent = opts.canVote ? '' : i18n.t('meeting.ghostNoVote');
     const grid = r.querySelector('.mt-grid');
     grid.innerHTML = opts.players.map((p, i) => `
       <button style="--i:${i}" class="mt-player${p.alive ? '' : ' dead'}${p.me ? ' me' : ''}" type="button" data-id="${p.id}" ${p.alive ? '' : 'disabled'}>
-        <span class="mt-ball" style="background-image:url(${getFlagThumb(p.flag, 60, 40)})"></span>
+        <span class="mt-ball" style="background-image:url(${getFlagThumb(p.flag, 60, 40)})">${p.alive ? '' : `<b class="mt-dead">${icon('ghost')}</b>`}</span>
         <span class="mt-name">${esc(p.name)}${p.me ? ` <i>(${esc(i18n.t('ui.you'))})</i>` : ''}</span>
-        <span class="mt-voted">${esc(i18n.t('meeting.voted'))}</span>
+        <span class="mt-voted">${icon('check')}${esc(i18n.t('meeting.voted'))}</span>
+        <span class="mt-num"></span>
         <span class="mt-votes"></span>
       </button>`).join('');
     grid.querySelectorAll('.mt-player').forEach((b) => b.addEventListener('click', () => this.vote(b.dataset.id)));
     this.setPhase('discuss', 0);
+    this.renderCount();
+  }
+
+  // "5 canlı · 2 oy verdi"
+  renderCount() {
+    const el = this.root && this.root.querySelector('.mt-count');
+    if (el) el.innerHTML = `${icon('user')} ${this.aliveN || 0} ${esc(i18n.t('meeting.alive'))} · ${icon('check')} ${this.votedN || 0} ${esc(i18n.t('meeting.votedN'))}`;
   }
 
   setPhase(phase, secs) {
@@ -103,6 +121,14 @@ export class MeetingScreen {
     r.dataset.phase = phase;
     r.querySelector('.mt-phase').textContent = i18n.t(phase === 'vote' ? 'meeting.vote' : phase === 'results' ? 'meeting.results' : 'meeting.discuss');
     r.querySelector('.mt-time').textContent = secs > 0 ? i18n.t('meeting.timeLeft', { s: Math.ceil(secs) }) : '';
+    // Süre çubuğu: her evrenin başındaki süre = tam çubuk
+    if (phase !== this.lastPhase) { this.lastPhase = phase; this.total = Math.max(1, secs || 1); }
+    else this.total = Math.max(this.total || 1, secs || 0);   // evre 0 sn ile açıldıysa ilk gerçek süre tam çubuk olur
+    const frac = phase === 'results' ? 0 : Math.max(0, Math.min(1, (secs || 0) / this.total));
+    r.querySelector('.mt-bar i').style.transform = `scaleX(${frac})`;
+    r.classList.toggle('urgent', secs > 0 && secs <= 5 && phase !== 'results');
+    const order = ['discuss', 'vote', 'results'], at = order.indexOf(phase);
+    r.querySelectorAll('.mt-steps i').forEach((x) => { const k = order.indexOf(x.dataset.s); x.classList.toggle('on', k === at); x.classList.toggle('done', k < at); });
     const canVote = this.opts && this.opts.canVote && phase === 'vote' && !this.myVote;
     r.classList.toggle('can-vote', !!canVote);
   }
@@ -149,7 +175,7 @@ export class MeetingScreen {
 
   markVoted(id) {
     const b = this.root && this.root.querySelector(`.mt-player[data-id="${id}"]`);
-    if (b) b.classList.add('has-voted');
+    if (b && !b.classList.contains('has-voted')) { b.classList.add('has-voted'); this.votedN = (this.votedN || 0) + 1; this.renderCount(); }
   }
 
   addChat(flag, name, text, opt = {}) {
@@ -157,7 +183,7 @@ export class MeetingScreen {
     const list = this.root.querySelector('.mt-chat-list');
     const d = document.createElement('div');
     d.className = 'mt-msg' + (opt.ghost ? ' ghost' : '') + (opt.mine ? ' mine' : '');
-    d.innerHTML = `<img alt="" src="${getFlagThumb(flag, 30, 20)}"><div><b>${opt.ghost ? '👻 ' : ''}${esc(name)}</b><span>${esc(text)}</span></div>`;
+    d.innerHTML = `<img alt="" src="${getFlagThumb(flag, 30, 20)}"><div><b>${opt.ghost ? icon('ghost') + ' ' : ''}${esc(name)}</b><span>${esc(text)}</span></div>`;
     list.appendChild(d);
     list.scrollTop = list.scrollHeight;
   }
@@ -168,6 +194,8 @@ export class MeetingScreen {
     r.querySelectorAll('.mt-player').forEach((b) => {
       const v = votes[b.dataset.id] || [];
       b.querySelector('.mt-votes').innerHTML = v.map((f, k) => `<img style="--k:${k}" alt="" src="${getFlagThumb(f, 24, 16)}">`).join('');
+      b.querySelector('.mt-num').textContent = v.length ? String(v.length) : '';
+      b.classList.toggle('top', v.length > 0 && v.length === Math.max(...Object.values(votes).map((x) => x.length)));
     });
     r.querySelector('.mt-skipvotes').innerHTML = skips.length
       ? `<span>${esc(i18n.t('meeting.skipped'))}:</span>` + skips.map((f, k) => `<img style="--k:${k}" alt="" src="${getFlagThumb(f, 24, 16)}">`).join('')
@@ -210,7 +238,7 @@ export class SabotageMenu {
       document.body.appendChild(r);
       r.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (e.target === r) this.close(); });
     }
-    const icons = { lights: '⚡', reactor: '☢', o2: '💨' };
+    const icons = { lights: icon('bolt'), reactor: icon('radiation'), o2: icon('gauge') };
     this.root.innerHTML = `<div class="sab-panel"><h2>${esc(i18n.t('sabotage.title'))}</h2>
       ${types.map((t, i) => `<button class="btn sab-opt" type="button" data-t="${t}"><span class="sab-ico">${icons[t]}</span>${esc(i18n.t('sabotage.' + t))}<kbd>${i + 1}</kbd></button>`).join('')}
       <button class="btn sab-close" type="button">${esc(i18n.t('sabotage.close'))}</button></div>`;

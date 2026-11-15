@@ -10,6 +10,8 @@ import { i18n } from '../systems/I18n.js';
 import { FLAG_LIST, getFlagThumb, getSavedFlag, saveFlag } from '../systems/Flags.js';
 import { ROLES, ROLE_COLORS, MIN_PLAYERS, MAX_PLAYERS, roleChances } from '../systems/Roles.js';
 import { requestSkins } from '../systems/CharacterAtlas.js';
+import { icon } from './Icons.js';
+import { gameSettings } from './GameSettings.js';
 
 const SETTINGS_KEY = 'cfs_lobby';
 
@@ -72,11 +74,11 @@ export class Lobby {
           <div class="lh-title" data-t="game.title"></div>
           <div class="lh-hint"></div>
         </div>
-        <div class="lh-topbtns"><button class="btn btn-ghost menu-btn" type="button">‹ ${'MENU'}</button><button class="btn btn-ghost lang-btn" type="button"></button></div>
+        <div class="lh-topbtns"><button class="btn btn-ghost gear-btn" type="button" title="Ayarlar">${icon('gear')}</button><button class="btn btn-ghost menu-btn" type="button">‹ ${'MENU'}</button><button class="btn btn-ghost lang-btn" type="button"></button></div>
       </header>
       <div class="lh-actions">
-        <button class="btn lh-btn flag-open hidden" type="button"><span class="ico">🇺🇳</span><span data-t="lobby.pickFlagBtn"></span></button>
-        <button class="btn lh-btn hat-open hidden" type="button"><span class="ico">🎩</span><span data-t="lobby.pickHatBtn"></span></button>
+        <button class="btn lh-btn flag-open hidden" type="button"><span class="ico">${icon('flag')}</span><span data-t="lobby.pickFlagBtn"></span></button>
+        <button class="btn lh-btn hat-open hidden" type="button"><span class="ico">${icon('hat')}</span><span data-t="lobby.pickHatBtn"></span></button>
         <button class="btn btn-start lh-start" type="button" data-t="lobby.start"></button>
       </div>
 
@@ -122,6 +124,7 @@ export class Lobby {
     }));
     r.querySelector('.bots-toggle').addEventListener('change', (e) => { this.bots = e.target.checked; this.changed(); });
     r.querySelector('.lang-btn').addEventListener('click', () => i18n.toggle());
+    r.querySelector('.gear-btn').addEventListener('click', () => gameSettings.open({}));
     r.querySelector('.menu-btn').addEventListener('click', () => this.onMenu && this.onMenu());
     r.querySelector('.flag-open').addEventListener('click', () => this.onFlag && this.onFlag());
     r.querySelector('.hat-open').addEventListener('click', () => this.onHat && this.onHat());

@@ -9,6 +9,7 @@ import { ROLE_COLORS } from '../systems/Roles.js';
 import { teamOf } from '../systems/Combat.js';
 import { net } from '../systems/Net.js';
 import { titleName, xpPercent } from '../systems/Levels.js';
+import { icon, COIN_IMG, coinHtml } from './Icons.js';
 
 export class ResultScreen {
   constructor() { this.root = null; }
@@ -43,7 +44,7 @@ export class ResultScreen {
     const line2 = g.levelUp
       ? `<div class="rr-lvl up">${i18n.t('result.levelUp', { a: g.oldLevel, b: a.level })}</div>`
       : `<div class="rr-lvl">${i18n.t('levels.level', { n: a.level })} · ${titleName(a.title)}</div>`;
-    box.innerHTML = `<div class="rr-xp">+${g.xp} XP${g.coins ? ` · <span class="rr-coin">+${g.coins} 🪙</span>` : ''}${g.passXp ? ` · <span class="rr-coin">+${g.passXp} 🎟 ${i18n.t('pass.passXp')}</span>` : ''}</div>${line2}<div class="rr-bar"><i></i></div>`;
+    box.innerHTML = `<div class="rr-xp">+${g.xp} XP${g.coins ? ` · <span class="rr-coin">+${g.coins} ${COIN_IMG}</span>` : ''}${g.passXp ? ` · <span class="rr-coin">+${g.passXp} ${icon('ticket')} ${i18n.t('pass.passXp')}</span>` : ''}</div>${line2}<div class="rr-bar"><i></i></div>`;
     box.classList.remove('hidden');
     const bar = box.querySelector('.rr-bar i');
     setTimeout(() => { bar.style.width = xpPercent(a) + '%'; }, 80);

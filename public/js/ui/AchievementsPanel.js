@@ -2,6 +2,7 @@
 import { i18n } from '../systems/I18n.js';
 import { net } from '../systems/Net.js';
 import { ACHIEVEMENTS, ACH_BY_ID } from '../systems/Achievements.js';
+import { icon, COIN_IMG, coinHtml } from './Icons.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
@@ -26,7 +27,7 @@ class AchievementsPanel {
     net.on('account', () => this.isOpen && this.render());
     net.on('achUnlock', (m) => {
       if (!this.isOpen) return;
-      this.msg((i18n.t('ach.unlock') || 'Açıldı') + ': ' + (i18n.t('ach.' + m.id) || m.id) + ` (+${m.reward || 0} 🪙)`);
+      this.msg((i18n.t('ach.unlock') || 'Açıldı') + ': ' + (i18n.t('ach.' + m.id) || m.id) + ` (+${m.reward || 0})`);
       this.render();
     });
     i18n.onChange(() => this.isOpen && this.render());
@@ -62,12 +63,12 @@ class AchievementsPanel {
         return `<div class="ach-item locked"><div class="ach-ico">?</div>
           <div class="ach-info"><b>${esc(i18n.t('ach.hidden') || '???')}</b>
           <small>${esc(i18n.t('ach.hiddenHint') || 'Gizli başarım')}</small></div>
-          <span class="ach-rew">🪙 ${a.reward}</span></div>`;
+          <span class="ach-rew">${coinHtml(a.reward)}</span></div>`;
       }
       return `<div class="ach-item on"><div class="ach-ico">★</div>
         <div class="ach-info"><b>${esc(i18n.t('ach.' + a.id) || a.id)}</b>
         <small>${esc(i18n.t('ach.desc_' + a.id) || '')}</small></div>
-        <span class="ach-rew">+${a.reward} 🪙</span></div>`;
+        <span class="ach-rew">+${a.reward} ${COIN_IMG}</span></div>`;
     }).join('');
   }
 }

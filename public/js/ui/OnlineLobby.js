@@ -8,6 +8,7 @@ import { net } from '../systems/Net.js';
 import { FLAG_LIST, getFlagThumb, saveFlag } from '../systems/Flags.js';
 import { DEFAULT_CFG, CFG_RANGES } from '../systems/RoomConfig.js';
 import { MAP_IDS } from '../map/BunkerMap.js';
+import { icon } from './Icons.js';
 
 // Sadece içerik değiştiyse yeniden çiz: basılıyken buton yeniden oluşursa tıklama kayboluyordu
 const setHtml = (el, html) => { if (el._html !== html) { el._html = html; el.innerHTML = html; } };
@@ -27,6 +28,7 @@ export class LobbyBrowser {
           <h1 data-t="online.title"></h1>
           <span class="br-status"></span>
           <button class="br-refresh" type="button" data-t="online.refresh"></button>
+          <button class="br-gear" type="button" title="Ayarlar">${icon('gear')}</button>
         </header>
         <div class="br-body">
           <section class="br-lists">
@@ -56,6 +58,7 @@ export class LobbyBrowser {
     this.max = 25; this.pub = true;
     r.querySelector('.br-back').addEventListener('click', () => this.onBack && this.onBack());
     r.querySelector('.br-refresh').addEventListener('click', () => net.list());
+    r.querySelector('.br-gear').addEventListener('click', () => import('./GameSettings.js').then((x) => x.gameSettings.open({})).catch(() => {}));
     r.querySelector('[data-act="join"]').addEventListener('click', () => this.joinCode());
     r.querySelector('[data-act="create"]').addEventListener('click', () => {
       net.create({ name: r.querySelector('.br-name').value.trim(), max: this.max, public: this.pub });
@@ -150,7 +153,7 @@ export class RoomHud {
     r.innerHTML = `
       <div class="rh-top">
         <div class="rh-namebox"><div class="rh-name"></div><button class="rh-code" type="button"></button></div>
-        <div class="rh-topbtns"><button class="rh-settings" type="button" title="Ayarlar">⚙</button><button class="rh-invite" type="button" data-t="social.inviteBtn"></button><button class="rh-leave" type="button" data-t="online.leave"></button></div>
+        <div class="rh-topbtns"><button class="rh-settings" type="button" title="Ayarlar">${icon('gear')}</button><button class="rh-invite" type="button" data-t="social.inviteBtn"></button><button class="rh-leave" type="button" data-t="online.leave"></button></div>
       </div>
       <div class="rh-panel">
         <div class="rh-players"></div>
@@ -161,7 +164,7 @@ export class RoomHud {
         <div class="rh-cfg"><button class="rh-cfg-toggle" type="button"></button><div class="rh-cfg-body hidden"></div></div>
 
       </div>
-      <div class="rh-bottom"><button class="rh-flagbtn hidden" type="button"><span>🇺🇳</span><b data-t="lobby.pickFlagBtn"></b></button><button class="rh-flagbtn rh-hatbtn hidden" type="button"><span>🎩</span><b data-t="lobby.pickHatBtn"></b></button><button class="rh-passbtn" type="button"><span>🎟</span><b data-t="online.passBtn">Sığınak Bileti</b></button><div class="rh-note"></div><button class="rh-start" type="button" data-t="online.start"></button></div>`;
+      <div class="rh-bottom"><button class="rh-flagbtn hidden" type="button"><span>${icon('flag')}</span><b data-t="lobby.pickFlagBtn"></b></button><button class="rh-flagbtn rh-hatbtn hidden" type="button"><span>${icon('hat')}</span><b data-t="lobby.pickHatBtn"></b></button><button class="rh-passbtn" type="button"><span>🎟</span><b data-t="online.passBtn">Sığınak Bileti</b></button><div class="rh-note"></div><button class="rh-start" type="button" data-t="online.start"></button></div>`;
     document.body.appendChild(r);
     r.querySelector('.rh-leave').addEventListener('click', () => this.onLeave && this.onLeave());
     r.querySelector('.rh-settings').addEventListener('click', () => {
@@ -232,9 +235,9 @@ export class RoomHud {
     setHtml(r.querySelector('.rh-players'), room.players.map((p) => `
       <div class="rh-p${p.id === net.id ? ' me' : ''}">
         <img alt="" src="${getFlagThumb(p.flag, 36, 24)}"><span>${esc(p.name)}${p.id === net.id ? ` <i>(${esc(i18n.t('online.you'))})</i>` : ''}</span>
-        ${p.id === room.hostId ? `<b title="${esc(i18n.t('online.host'))}">👑</b>` : ''}
+        ${p.id === room.hostId ? `<b title="${esc(i18n.t('online.host'))}">${icon('crown', 'ic-crown')}</b>` : ''}
         ${net.isHost && p.id !== net.id ? `<span class="rh-pbtns"><button type="button" class="rh-pbtn${this.isSure('host:' + p.id) ? ' sure' : ''}" data-host="${esc(p.id)}" title="${esc(i18n.t('online.giveHost'))}">${this.isSure('host:' + p.id) ? '?' : '👑'}</button><button type="button" class="rh-pbtn kick${this.isSure('kick:' + p.id) ? ' sure' : ''}" data-kick="${esc(p.id)}" title="${esc(i18n.t('online.kick'))}">${this.isSure('kick:' + p.id) ? '?' : '✕'}</button></span>` : ''}
-      </div>`).join('') + (room.bots ? `<div class="rh-p bot"><span>🤖 × ${this.botsToAdd()}</span></div>` : ''));
+      </div>`).join('') + (room.bots ? `<div class="rh-p bot"><span>${icon('robot')} × ${this.botsToAdd()}</span></div>` : ''));
     const host = net.isHost;
     r.querySelector('.rh-host').classList.toggle('hidden', !host);
     r.querySelector('.rh-bots').checked = !!room.bots;
@@ -255,7 +258,7 @@ export class RoomHud {
   renderCfg(room, host) {
     const cfg = { ...DEFAULT_CFG, ...(room.cfg || {}) };
     const r = this.root;
-    r.querySelector('.rh-cfg-toggle').textContent = `⚙ ${i18n.t('online.roomSettings')} ${this.cfgOpen ? '▲' : '▼'}`;
+    r.querySelector('.rh-cfg-toggle').innerHTML = `${icon('gear')} ${esc(i18n.t('online.roomSettings'))} ${this.cfgOpen ? '▲' : '▼'}`;
     const body = r.querySelector('.rh-cfg-body');
     body.classList.toggle('hidden', !this.cfgOpen);
     if (!this.cfgOpen) return;

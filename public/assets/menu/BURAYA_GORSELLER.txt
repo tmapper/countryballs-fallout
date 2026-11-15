@@ -1,5 +1,6 @@
 Bu klasöre şu dosyaları koy (isimler aynen böyle olmalı). Hepsi isteğe bağlı: yoksa oyun kodla çizilen hâlini kullanır.
-  menu_bg.jpg       -> ana menü arka planı (2560x1440, JPG)
+  menu_bg_reactor.jpg -> ana menü arka planı, reaktör sığınağı (2560x1440, JPG)
+  menu_bg.jpg       -> eski kasa kapısı arka planı (artık kullanılmıyor)
   logo.png          -> oyun logosu (şeffaf arka planlı PNG)
   pass_bg.jpg       -> Sığınak Bileti arka planı (1920x1080, JPG)
   crate_common.png  -> Sığınak Kasası simgesi (şeffaf PNG, kare)

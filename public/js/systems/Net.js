@@ -101,6 +101,7 @@ class Net {
       if (m.t === 'account') {
         this.account = m.account;
         if (m.token) { this.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch (e) { /* yoksay */ } }
+        if (m.deleted) { this.token = ''; try { localStorage.removeItem(TOKEN_KEY); } catch (e) { /* yoksay */ } }   // hesap moderatörce silindi
         if (m.account) { this.profile.name = m.account.name; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(this.profile)); } catch (e) { /* yoksay */ } }
         // Uyarı / ban bildirimi
         if (m.warn && m.warn.msg) {

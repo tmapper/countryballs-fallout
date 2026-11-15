@@ -7,6 +7,7 @@ import { i18n } from '../systems/I18n.js';
 import { FLAG_LIST, HIST_FLAGS, HIST_RARITY, getFlagThumb } from '../systems/Flags.js';
 import { net } from '../systems/Net.js';
 import { RARITY_COLOR } from '../systems/Pass.js';
+import { icon } from './Icons.js';
 
 class FlagPicker {
   constructor() { this.root = null; this.isOpen = false; }
@@ -52,7 +53,7 @@ class FlagPicker {
       b.style.setProperty('--i', FLAG_LIST.length + i);
       b.disabled = !has || (taken.has(code) && code !== current);
       b.title = i18n.t('countries.' + code);
-      b.innerHTML = `<img alt="" src="${getFlagThumb(code, 72, 48)}"><span>${has ? '' : '🔒 '}${i18n.t('countries.' + code)}</span><small>${i18n.t('pass.rarity.' + HIST_RARITY[code])}</small>`;
+      b.innerHTML = `<img alt="" src="${getFlagThumb(code, 72, 48)}"><span>${has ? '' : icon('lock') + ' '}${i18n.t('countries.' + code)}</span><small>${i18n.t('pass.rarity.' + HIST_RARITY[code])}</small>`;
       b.addEventListener('click', () => { if (b.disabled) return; this.close(); onPick(code); });
       grid.appendChild(b);
     });

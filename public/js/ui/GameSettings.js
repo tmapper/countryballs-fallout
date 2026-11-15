@@ -8,6 +8,7 @@ import { getVolumes, setMusicVolume, setSfxVolume, isMuted, toggleMute, sfx } fr
 import { getQuality, setQuality } from '../systems/Resolution.js';
 import { releaseGameKeys } from './Chat.js';
 import { setDevice, isMobile } from '../systems/Device.js';
+import { perfHud } from '../systems/PerfHud.js';
 
 class GameSettings {
   constructor() { this.root = null; this.isOpen = false; }
@@ -21,8 +22,9 @@ class GameSettings {
       <label class="gs-row"><span data-t="ui.sfxVol"></span><input class="gs-sfx" type="range" min="0" max="100"><b class="gs-sv"></b></label>
       <div class="gs-row"><span data-t="ui.mute"></span><button class="gs-tog gs-mute" type="button"></button></div>
       <div class="gs-row"><span data-t="ui.language"></span><div class="gs-seg gs-lang"><button type="button" data-v="tr">Türkçe</button><button type="button" data-v="en">English</button></div></div>
-      <div class="gs-row"><span data-t="ui.quality"></span><div class="gs-seg gs-q"><button type="button" data-v="high" data-t="ui.qHigh"></button><button type="button" data-v="low" data-t="ui.qLow"></button></div></div>
-      <div class="gs-row"><span data-t="ui.device"></span><div class="gs-seg gs-dev"><button type="button" data-v="mobile">📱</button><button type="button" data-v="pc">🖥</button></div></div>
+      <div class="gs-row"><span data-t="ui.quality"></span><div class="gs-seg gs-q"><button type="button" data-v="high" data-t="ui.qHigh"></button><button type="button" data-v="med" data-t="ui.qMed"></button><button type="button" data-v="low" data-t="ui.qLow"></button></div></div>
+      <div class="gs-row"><span data-t="ui.showFps"></span><button class="gs-tog gs-fps" type="button"></button></div>
+      <div class="gs-row"><span data-t="ui.device"></span><div class="gs-seg gs-dev"><button type="button" data-v="mobile">Mobil</button><button type="button" data-v="pc">PC</button></div></div>
       <div class="gs-row gs-fsrow"><span data-t="ui.fullscreen"></span><button class="gs-tog gs-fs" type="button"></button></div>
       <div class="gs-foot"><button class="gs-btn gs-resume" type="button" data-t="ui.resume"></button><button class="gs-btn danger gs-leave" type="button" data-t="ui.backToLobby"></button><button class="gs-btn danger gs-exit" type="button" data-t="ui.exit"></button></div>
     </div>`;
@@ -37,6 +39,7 @@ class GameSettings {
     q('.gs-sfx').addEventListener('input', (e) => { setSfxVolume(e.target.value / 100); this.render(); });
     q('.gs-sfx').addEventListener('change', () => sfx('ui_click'));
     q('.gs-mute').addEventListener('click', () => { toggleMute(); this.render(); });
+    q('.gs-fps').addEventListener('click', () => { perfHud.setEnabled(!perfHud.enabled); this.render(); });
     r.querySelectorAll('.gs-lang button').forEach((b) => b.addEventListener('click', () => { i18n.setLanguage(b.dataset.v); this.render(); }));
     r.querySelectorAll('.gs-q button').forEach((b) => b.addEventListener('click', () => { setQuality(b.dataset.v); this.render(); }));
     r.querySelectorAll('.gs-dev button').forEach((b) => b.addEventListener('click', () => { setDevice(b.dataset.v); this.render(); this.msgDev = true; }));
@@ -60,7 +63,9 @@ class GameSettings {
     q('.gs-mute').textContent = i18n.t(m ? 'ui.on' : 'ui.off'); q('.gs-mute').classList.toggle('on', m);
     r.querySelectorAll('.gs-lang button').forEach((b) => b.classList.toggle('on', b.dataset.v === i18n.lang));
     r.querySelectorAll('.gs-q button').forEach((b) => b.classList.toggle('on', b.dataset.v === getQuality()));
+    q('.gs-fps').textContent = i18n.t(perfHud.enabled ? 'ui.on' : 'ui.off'); q('.gs-fps').classList.toggle('on', perfHud.enabled);
     r.querySelectorAll('.gs-dev button').forEach((b) => b.classList.toggle('on', b.dataset.v === (isMobile() ? 'mobile' : 'pc')));
+    q('.gs-dev [data-v="mobile"]').textContent = i18n.lang === 'en' ? 'Mobile' : 'Mobil';
     const fs = !!document.fullscreenElement;
     q('.gs-fsrow').classList.toggle('hidden', !document.fullscreenEnabled);
     q('.gs-fs').textContent = i18n.t(fs ? 'ui.on' : 'ui.off'); q('.gs-fs').classList.toggle('on', fs);
@@ -69,6 +74,7 @@ class GameSettings {
   open({ onLeave } = {}) {
     if (!this.root) this.build();
     this.onLeave = onLeave;
+    this.root.querySelector('.gs-leave').classList.toggle('hidden', !onLeave);   // oyun dışında 'Lobiye dön' anlamsız
     releaseGameKeys();
     this.root.classList.remove('hidden');
     this.isOpen = true;

@@ -6,6 +6,7 @@
 //   state = { me: {x,y,alive}, tasks: [{x,y,done}], sabotage: {x,y}|null, room }
 import { WORLD, ROOMS, CORRIDORS } from '../map/BunkerMap.js';
 import { i18n } from '../systems/I18n.js';
+import { icon } from './Icons.js';
 
 const ROOM_COLOR = {
   entrance: '#2f5a2a', hall: '#4b5260', reactor: '#5a3a33', security: '#2f3b52', control: '#2b3444', o2: '#2c5157',
@@ -31,7 +32,7 @@ export class MiniMap {
     this.label = r.querySelector('.minimap-label');
     r.addEventListener('pointerdown', (e) => { e.stopPropagation(); this.close(); });
     const b = this.btn = document.createElement('button');
-    b.type = 'button'; b.className = 'mapbtn hidden'; b.innerHTML = '🗺<span></span>';
+    b.type = 'button'; b.className = 'mapbtn hidden'; b.innerHTML = icon('map') + '<span></span>';
     b.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); this.toggle(); });
     document.body.appendChild(b);
     window.addEventListener('keydown', (e) => {

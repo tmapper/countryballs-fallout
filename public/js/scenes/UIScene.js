@@ -12,8 +12,10 @@ import { Joystick } from '../systems/Joystick.js';
 import { RES } from '../systems/Resolution.js';
 import { ROLE_COLORS } from '../systems/Roles.js';
 import { backToLobby } from '../systems/GameFlow.js';
+import { iconTextures } from '../ui/Icons.js';
 
-const ICONS = { kill: '🔪', shoot: '🎯', tunnel: '🕳', report: '📢', sabotage: '☢', use: '✋', fix: '🔧', meeting: '🚨' };
+// Buton ikonları: emoji değil, ui/Icons.js'teki kendi çizimlerimiz ('ic_<ad>' dokuları)
+const ICONS = { kill: 'knife', shoot: 'crosshair', tunnel: 'hatch', report: 'megaphone', sabotage: 'radiation', use: 'hand', fix: 'wrench', meeting: 'siren' };
 const ACTION_COLORS = { kill: 0xc0262d, shoot: 0x2d6fd6, tunnel: 0x5f7a2a, report: 0xd6452f, sabotage: 0x8a1c22, use: 0xd9a400, fix: 0x2f9e5a, meeting: 0xc0262d };
 
 export class UIScene extends Phaser.Scene {
@@ -48,7 +50,7 @@ export class UIScene extends Phaser.Scene {
     this.rolesBtn = null;
 
     // Sağ üst: Lobi butonu + tam ekran
-    const btn = { ...style, strokeThickness: 0, backgroundColor: 'rgba(14,18,25,0.82)', padding: { x: 12, y: 8 } };
+    const btn = { ...style, strokeThickness: 0, backgroundColor: 'rgba(14,18,25,0.82)', padding: { left: 38, right: 14, top: 8, bottom: 8 } };
     this.lobbyBtn = this.add.text(0, 12, '', btn).setOrigin(1, 0).setInteractive({ useHandCursor: true });
     this.lobbyBtn.on('pointerdown', (pointer, lx, ly, event) => event.stopPropagation()); // joystick almasın
     this.lobbyBtn.on('pointerup', () => gameSettings.open({ onLeave: () => backToLobby() }));
@@ -61,7 +63,7 @@ export class UIScene extends Phaser.Scene {
 
     this.fsBtn = null;
     if (touch && this.sys.game.device.fullscreen.available) {
-      this.fsBtn = this.add.text(0, small ? 88 : 104, '⛶', { ...style, fontSize: '22px', backgroundColor: '#1d3a1d', padding: { x: 10, y: 4 } })
+      this.fsBtn = this.add.text(0, small ? 88 : 104, ' ', { ...style, fontSize: '22px', backgroundColor: 'rgba(29,58,29,0.9)', padding: { left: 30, right: 6, top: 4, bottom: 4 } })
         .setOrigin(1, 0).setInteractive();
       this.fsBtn.on('pointerdown', (pointer, lx, ly, event) => event.stopPropagation());
       this.fsBtn.on('pointerup', () => {
@@ -72,7 +74,7 @@ export class UIScene extends Phaser.Scene {
     // Mobil: küçük "Joystik resetle" butonu (joystick takılırsa basılır)
     this.joyResetBtn = null;
     if (touch) {
-      this.joyResetBtn = this.add.text(0, small ? 126 : 146, '', { ...style, fontSize: '12px', strokeThickness: 0, backgroundColor: 'rgba(40,60,90,0.85)', padding: { x: 8, y: 5 } })
+      this.joyResetBtn = this.add.text(0, small ? 126 : 146, '', { ...style, fontSize: '12px', strokeThickness: 0, backgroundColor: 'rgba(40,60,90,0.85)', padding: { left: 28, right: 8, top: 5, bottom: 5 } })
         .setOrigin(1, 0).setInteractive().setDepth(600);
       this.joyResetBtn.on('pointerdown', (pointer, lx, ly, event) => event.stopPropagation());
       this.joyResetBtn.on('pointerup', () => this.resetControls());
@@ -115,6 +117,14 @@ export class UIScene extends Phaser.Scene {
     this.onToast = (text, color) => this.showToast(text, color);
     this.game.events.on('toast', this.onToast);
 
+    // Kendi ikonlarımız (doku olarak bir kez hazırlanır)
+    this.hudIcons = [];
+    iconTextures(this).then(() => {
+      if (!this.sys || !this.sys.isActive()) return;
+      this.hudIcons = [[this.lobbyBtn, 'gear', 20], [this.fsBtn, 'expand', 20], [this.joyResetBtn, 'gamepad', 16]].filter(([t]) => t)
+        .map(([t, name, sz]) => ({ t, sz, img: this.add.image(0, 0, 'ic_' + name).setDisplaySize(sz, sz).setDepth((t.depth || 0) + 1) }));
+      this.placeHudIcons();
+    });
     this.layout();
     this.scale.on('resize', this.layout, this);
     this.refreshTexts();
@@ -162,9 +172,10 @@ export class UIScene extends Phaser.Scene {
     const c = this.add.container(0, 0).setDepth(500);
     const g = this.add.graphics();
     const icon = this.add.text(0, -r * 0.16, '', { fontSize: Math.round(r * 0.62) + 'px', resolution: this.res }).setOrigin(0.5);
+    const img = this.add.image(0, -r * 0.14, '__DEFAULT').setVisible(false);
     const label = this.add.text(0, r * 0.44, '', { ...this.baseStyle, fontSize: Math.round(r * 0.24) + 'px', fontStyle: 'bold', strokeThickness: 3 }).setOrigin(0.5);
     const cd = this.add.text(0, -r * 0.1, '', { ...this.baseStyle, fontSize: Math.round(r * 0.62) + 'px', fontStyle: 'bold', strokeThickness: 5 }).setOrigin(0.5);
-    c.add([g, icon, label, cd]);
+    c.add([g, img, icon, label, cd]);
     c.setSize(r * 2, r * 2).setInteractive(new Phaser.Geom.Circle(r, r, r), Phaser.Geom.Circle.Contains);
     c.input.cursor = 'pointer';                       // fareyle de basılır
     c.on('pointerover', () => { c.hover = true; });
@@ -175,7 +186,7 @@ export class UIScene extends Phaser.Scene {
       this.tweens.add({ targets: c, scale: { from: 0.86, to: 1 }, duration: 220, ease: 'Back.easeOut' });
       onPress();
     });
-    c.g = g; c.icon = icon; c.label = label; c.cd = cd; c.r = r; c.bg = g;
+    c.g = g; c.icon = icon; c.img = img; c.label = label; c.cd = cd; c.r = r; c.bg = g;
     c.setVisible(false);
     return c;
   }
@@ -216,7 +227,11 @@ export class UIScene extends Phaser.Scene {
     b.setAlpha(b.alpha + (target - b.alpha) * 0.25);
     this.drawButton(b, color, ready, cooldown > 0 ? frac : 0);
     b.label.setText(text);
-    b.icon.setText(ICONS[iconKey] || '').setAlpha(cooldown > 0 ? 0.25 : 1);
+    const ic = ICONS[iconKey], tk = 'ic_' + ic;
+    if (ic && this.textures.exists(tk)) {
+      if (b.imgKey !== tk) { b.img.setTexture(tk).setDisplaySize(b.r * 0.82, b.r * 0.82); b.imgKey = tk; }
+      b.img.setVisible(true).setAlpha(cooldown > 0 ? 0.25 : 1);
+    } else b.img.setVisible(false);
     b.cd.setText(cooldown > 0 ? String(cooldown) : '');
     b.label.setAlpha(1);
   }
@@ -315,14 +330,21 @@ export class UIScene extends Phaser.Scene {
     t.setPosition(a.x - a.r - 18 - t.r, H - 24 - t.r);
     this.toastText.setPosition(W / 2, H * 0.22);
     this.sabText.setPosition(W / 2, this.small ? 50 : 62);
+    this.placeHudIcons();
+  }
+
+  // Sağ üstteki yazılı butonların solundaki ikonlar (yazı sağa yaslı: sol kenar = x - genişlik)
+  placeHudIcons() {
+    (this.hudIcons || []).forEach(({ t, sz, img }) => { img.setPosition(t.x - t.width + 8 + sz / 2, t.y + t.height / 2).setVisible(t.visible); });
   }
 
   refreshTexts() {
     this.title.setText(i18n.t('game.title'));
     this.applyInfo();
     this.help.setText(this.isTouch ? i18n.t('ui.controlsMobile') : i18n.t('ui.controlsPc'));
-    this.lobbyBtn.setText('⚙ ' + i18n.t('ui.settings'));
-    if (this.joyResetBtn) this.joyResetBtn.setText('🎮 ' + i18n.t('ui.joyReset'));
+    this.lobbyBtn.setText(i18n.t('ui.settings'));
+    if (this.joyResetBtn) this.joyResetBtn.setText(i18n.t('ui.joyReset'));
+    this.placeHudIcons();
     const role = this.registry.get('role');
     const dead = !!this.registry.get('dead');
     if (role) {

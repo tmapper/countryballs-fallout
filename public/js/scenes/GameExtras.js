@@ -5,7 +5,7 @@
 // ============================================================
 import { i18n } from '../systems/I18n.js';
 import { canSee, KILL_COOLDOWN } from '../systems/Combat.js';
-import { EMERGENCY_BUTTON, gameSpawn, getRoomAt } from '../map/BunkerMap.js';
+import { EMERGENCY_BUTTON, gameSpawn, meetingSpawn, getRoomAt } from '../map/BunkerMap.js';
 import { SABOTAGES, SABOTAGE_TYPES, SABOTAGE_COOLDOWN, FIX_RANGE, BOT_FIX_TIME } from '../systems/Sabotage.js';
 import { MeetingScreen, SabotageMenu } from '../ui/MeetingScreen.js';
 import { MiniMap } from '../ui/MiniMap.js';
@@ -166,9 +166,10 @@ export function installExtras(GameScene) {
     sabMenu.close();
     minimap.hide();
     this.balls.forEach((b) => { b.reportT = undefined; if (b.inTunnel) { b.inTunnel = null; if (b.isMe) { b.setAlpha(1); this.clearTunnelArrows(); } } });
+    const room = body ? getRoomAt(body.x, body.y - 8) : null;   // ceset nerede bulundu (ışınlanmadan ÖNCE)
+    this.gatherInCafeteria();                                   // toplantı başlar başlamaz herkes kafeteryaya
     sfx(body ? 'body_found' : 'meeting');
     playMusic('music_meeting');
-    const room = body ? getRoomAt(body.x, body.y - 8) : null;
     m.ids = new Map(this.balls.map((b, i) => [b, String(i)]));
     if (!this.isClient) this.botLeads(body);
     meetingUI.open({
@@ -457,6 +458,21 @@ export function installExtras(GameScene) {
     }));
   };
 
+  // Herkesi kafeteryaya ışınla (hayalet olan ben de gelirim, öbür ölüler yerinde kalır)
+  P.gatherInCafeteria = function () {
+    const n = this.balls.length;
+    this.balls.forEach((b, i) => {
+      if (!b.alive && !b.isMe) return;
+      const p = meetingSpawn(i, n);
+      b.setPosition(p.x, p.y); b.setDepth(b.y);
+      b.netValid = null; b.net = null; b.botDir = null;
+      if (b.brain) b.brain.reset();
+      b.fixing = false;
+    });
+    this.cameras.main.centerOn(this.player.x, this.player.y - 40);
+    if (this.fog) this.fog.update(this.player.x, this.player.y - 16, this.visionRadius);
+  };
+
   P.endMeeting = function (ejected) {
     const m = this.meeting;
     if (!m) return;
@@ -467,18 +483,11 @@ export function installExtras(GameScene) {
     // cesetler kaldırılır, herkes masanın etrafına döner
     this.bodies.forEach((b) => b.destroy());
     this.bodies = [];
-    const n = this.balls.length;
-    this.balls.forEach((b, i) => {
-      if (!b.alive && !b.isMe) return;
-      const p = gameSpawn(i, n);
-      b.setPosition(p.x, p.y); b.setDepth(b.y);
-      b.netValid = null; b.net = null;
-      if (b.brain) b.brain.reset();
-      b.fixing = false;
+    this.gatherInCafeteria();                                   // toplantıdan sonra da herkes kafeteryadan başlar
+    this.balls.forEach((b) => {
       if (b.role === 'impostor') b.cooldown = this.cfg.killCd;
       else if (b.role === 'sheriff') b.cooldown = Math.max(b.cooldown, 5);
     });
-    this.cameras.main.centerOn(this.player.x, this.player.y - 40);
     this.meeting = null;
     ghostChat.suspend(false);
     this.sabCd = Math.max(this.sabCd, 15);

@@ -22,6 +22,31 @@ npm start          # http://localhost:3000
 - **Botlar**: odalar arasında koridorlardan gezer (`systems/BotBrain.js`)
 - Duran karakter `SabitDurma` karesiyle, yürüyen karakter yürüme klibiyle gösterilir
 
+## Sürüm 0.9.20: Yazarken kararma / boyut hatası düzeltmesi
+- Telefonda yazı kutusuna (sohbet, admin komutları, kodlar) dokununca klavye ekranı kısaltıyordu; oyun tuvali bu kısa alana göre yeniden boyutlanıyor (kararma), pencereler ufalıyor, iPhone'da sayfa kaymış kalıyordu.
+- `systems/Typing.js`: yazarken `<html class="typing">`. Bu sürede `Resolution.js` ve `FitScreen.js` kısalmayı yok sayar, dikey uyarısı çıkmaz; klavye kapanınca bir kez düzgün boyutlandırılır ve sayfa başa alınır.
+
+## Sürüm 0.9.19: Kafeterya toplantısı + yeni toplantı ekranı
+- Toplantı başlar başlamaz herkes kafeteryaya ışınlanır (`meetingSpawn` / `gatherInCafeteria`); toplantı bitince de kafeteryadan devam edilir. Ceset odası ışınlanmadan önce kaydedilir.
+- Toplantı ekranı: sığınak teması, Tartışma → Oylama → Sonuç adımları, geri sayım çubuğu (son 5 sn kırmızı), "X canlı · Y oy verdi", oy sayısı rozeti, ölüler için hayalet ikonu.
+
+## Sürüm 0.9.18: Akıcılık + her yerde ayarlar
+- FPS sınırı kaldırıldı (0.9.17'de Düşük grafikte 30'a kilitleniyordu; telefonlar Düşük'te başladığı için akıcılık düşmüştü). Düşük grafik artık sadece çözünürlüğü düşürür.
+- Botların yürümesi her karede (yol bulma 2-3 karede bir kalır): botlar artık takılarak ilerlemiyor.
+- Menü sahnesi ekranın hızında çizilir (Düşük'te 30).
+- Ayarlar paneli sığınak lobisinde ve oda listesinde de (dişli butonu); oyun dışında "Lobiye dön" gizli.
+
+## Sürüm 0.9.17: Reaktör menüsü, bot hızı düzeltmesi, ikonlar, moderatörlük, performans
+- **Ana menü**: radyoaktif reaktör sığınağı (kodla çizilen, hareketli sahne). İstersen `public/assets/menu/menu_bg_reactor.jpg` koy, o görünür (prompt: `docs/GORSEL_PROMPTLARI.md`).
+- **Bot hızı**: 6 ve altı topta botlar her karede çalışırken süre 2 kat sayılıyordu (2 kat hızlı koşuyorlardı). Düzeltildi (`GameScene.update`).
+- **İkonlar**: butonlarda emoji yok; hepsi `public/js/ui/Icons.js` içindeki SVG'ler (oyun içi butonlarda Phaser dokusu olarak). Jeton her yerde `coin.png`.
+- **Grafik ayarı**: ana menüdeki Yüksek / Orta / Düşük seçimi eskiden hiçbir şeyi değiştirmiyordu, artık değiştiriyor. Düşük: 720p + 30 FPS sınırı; Orta: 900p + sabit menü kamerası. Ayarlar'da **FPS göster** (FPS, en uzun kare, ping).
+- **Moderatörlük**:
+  - Hesap 20 kez odaya girip çıkınca (lobi ya da maç) ana menünün **sol üstünde "ŞİFRE GİR"** çıkar.
+  - Oraya **15 karakterlik moderatör kodu** girilirse hesap moderatör olur. Kod sunucuda doğrulanır; hesap başına 10 dakikada en fazla 5 yanlış deneme.
+  - Moderatör paneli: oyuncu arama, **AT** (odadan atar), **BANLA / BANI KALDIR** (çok oyunculudan men), **SİL** (hesabı tamamen siler). Ban ve sil için iki kez basmak gerekir. Adminler ve diğer moderatörler korunur.
+  - **Kodu ayarlamak**: Render'da ortam değişkeni `MOD_CODE` = 15 harf/rakam (büyük harf). Ayarlanmazsa sunucu ilk açılışta rastgele bir kod üretip hesap kaydına yazar ve konsola basar; admin sohbette `/modcode` yazınca görür. `/mods` moderatörleri listeler, `/unmod <hedef>` yetkiyi alır.
+
 ## Sürüm 0.9.16: Sağa kaydırmalı Sığınak Bileti + kaydırmasız ekranlar
 - **Sığınak Bileti** (`ui/ShelterPass.js`): 30 bar artık yatay bir yolda dizili; parmakla/fareyle sürükleyerek, fare tekerleğiyle, ‹ › butonlarıyla ya da ← → tuşlarıyla sağa doğru ilerlenir. Açılınca kaldığın (alınabilir ilk ödül ya da ulaştığın) bara ortalanır, "BURADASIN" işareti vardır. Ekran tek parçadır: BİLET / KASALAR / KOLEKSİYON sekmeleri.
 - **Kaydırmasız ekranlar** (`systems/FitScreen.js`): menü ve pencereler ekranı aşıyorsa CSS `zoom` ile en büyük sığan boyuta küçülür (ekran dönünce, içerik değişince, pencere boyu değişince kendiliğinden yeniden hesaplanır). Yeni bir pencere eklersen seçicisini `TARGETS` listesine yaz. Sohbet listeleri bilerek kayar (`ALLOW`). Çok kısa telefon ekranları için `style.css` sonundaki `@media (max-height: 440px)` bölümü pencereleri daha sıkı çizer.

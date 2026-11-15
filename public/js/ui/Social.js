@@ -7,6 +7,7 @@
 import { i18n } from '../systems/I18n.js';
 import { net } from '../systems/Net.js';
 import { titleName } from '../systems/Levels.js';
+import { icon } from './Icons.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
@@ -94,7 +95,7 @@ class Social {
       <h4>${esc(i18n.t(this.inviteMode ? 'social.onlineFriends' : 'social.friendsN', { n: friends.length }))}</h4>
       ${list.length ? list.map((f) => `<div class="so-row"><i class="so-dot${f.online ? ' on' : ''}"></i><b>${esc(f.name)}</b><span>${esc(i18n.t('menu.level', { n: f.level }))} · ${esc(f.online ? (f.inGame ? i18n.t('social.inGame') : f.room ? i18n.t('social.inRoom') : i18n.t('social.online')) : i18n.t('social.offline'))}</span>
         ${this.inviteMode ? `<button class="so-btn primary" data-a="inv" data-n="${esc(f.name)}" type="button">${esc(i18n.t('social.invite'))}</button>`
-          : `${f.room && !net.inRoom ? `<button class="so-btn primary" data-a="join" data-c="${esc(f.room)}" type="button">${esc(i18n.t('social.join'))}</button>` : ''}<button class="so-btn ghost" data-a="del" data-n="${esc(f.name)}" type="button" title="${esc(i18n.t('social.remove'))}">🗑</button>`}</div>`).join('')
+          : `${f.room && !net.inRoom ? `<button class="so-btn primary" data-a="join" data-c="${esc(f.room)}" type="button">${esc(i18n.t('social.join'))}</button>` : ''}<button class="so-btn ghost" data-a="del" data-n="${esc(f.name)}" type="button" title="${esc(i18n.t('social.remove'))}">${icon('trash')}</button>`}</div>`).join('')
         : `<p class="so-empty">${esc(i18n.t(this.inviteMode ? 'social.noOnline' : 'social.noFriends'))}</p>`}`;
     const name = body.querySelector('.so-name');
     const add = () => { const v = name.value.trim(); if (v) { net.friendAdd(v); name.value = ''; } };
@@ -124,7 +125,7 @@ class Social {
   showInvite(m) {
     const d = document.createElement('div');
     d.className = 'so-invite';
-    d.innerHTML = `<div>📨 <b>${esc(m.from)}</b> ${esc(i18n.t('social.invitedYou', { room: m.room }))}</div><div class="so-inv-btns"><button class="so-btn primary" type="button">${esc(i18n.t('social.join'))}</button><button class="so-btn" type="button">${esc(i18n.t('social.ignore'))}</button></div>`;
+    d.innerHTML = `<div>${icon('mail')} <b>${esc(m.from)}</b> ${esc(i18n.t('social.invitedYou', { room: m.room }))}</div><div class="so-inv-btns"><button class="so-btn primary" type="button">${esc(i18n.t('social.join'))}</button><button class="so-btn" type="button">${esc(i18n.t('social.ignore'))}</button></div>`;
     document.body.appendChild(d);
     const [yes, no] = d.querySelectorAll('button');
     const done = () => d.remove();

@@ -4,23 +4,38 @@
 // YENİ GÜNCELLEME NOTU: her sürümde sadece UPDATE nesnesini değiştir (id değişince herkese bir kez gösterilir).
 import { i18n } from '../systems/I18n.js';
 import { getDevice, setDevice, applyDeviceClass } from '../systems/Device.js';
+import { icon } from './Icons.js';
 
 export const UPDATE = {
-  id: '0.9.16',
+  id: '0.9.20',
   tr: {
     title: 'Yeni Güncelleme!',
     items: [
-      '🎟 Sığınak Bileti artık SAĞA KAYDIRARAK ilerliyor: barlar yatay bir yolda, parmakla / fareyle sürükle',
-      '📐 Hiçbir ekranda kaydırma yok: menüler ve pencereler mobilde ve PC\'de ekrana tam sığıyor',
-      '📦 Kasalar ve bayrak koleksiyonu Bilet ekranında sekmelere taşındı'
+      'Telefonda yazı yazarken (sohbet, komutlar) ekranın kararması ve küçülmesi düzeltildi',
+      'Toplantı başlar başlamaz herkes KAFETERYAYA ışınlanır',
+      'Yeni toplantı ekranı: adım göstergesi, geri sayım çubuğu, oy sayacı',
+      'Daha akıcı: FPS sınırı kalktı, botlar artık her karede yürüyor (takılma yok)',
+      'Ayarlar her yerde: lobide ve oda listesinde de dişli butonu',
+      'Ana menü artık radyoaktif reaktör sığınağı: parlayan çekirdek, buhar, uyarı ışıkları',
+      'Botlar artık 2 kat hızlı koşmuyor (6 ve altı oyunculu maçlardaki hata düzeltildi)',
+      'Butonlar yenilendi: emoji yerine oyunun kendi ikonları',
+      'Grafik ayarı artık gerçekten çalışıyor (Yüksek / Orta / Düşük) + FPS göstergesi',
+      'Moderatörlük geldi: deneyimli oyuncular için gizli bir kapı…'
     ]
   },
   en: {
     title: 'New Update!',
     items: [
-      '🎟 The Shelter Pass now moves sideways: bars sit on a horizontal track, drag or swipe to move on',
-      '📐 No more scrolling anywhere: menus and windows fit the screen on mobile and PC',
-      '📦 Crates and the flag collection moved into tabs on the Pass screen'
+      'Fixed the screen going black / shrinking while typing on phones (chat, commands)',
+      'As soon as a meeting starts, everyone is teleported to the CAFETERIA',
+      'New meeting screen: phase steps, countdown bar, vote counter',
+      'Smoother: no more FPS cap, bots now walk every frame (no stutter)',
+      'Settings everywhere: gear button in the lobby and the room list too',
+      'The main menu is now a radioactive reactor shelter: glowing core, steam, warning lights',
+      'Bots no longer run twice as fast (bug in matches with 6 or fewer players fixed)',
+      'Refreshed buttons: the game\'s own icons instead of emoji',
+      'The graphics setting really works now (High / Medium / Low) + FPS counter',
+      'Moderation is here: a hidden door for experienced players…'
     ]
   }
 };
@@ -39,8 +54,8 @@ function askDevice() {
     const tr = i18n.lang !== 'en';
     const d = modal(`<h2>${tr ? 'Nerede oynuyorsun?' : 'Where do you play?'}</h2>
       <p>${tr ? 'Kontroller ve ekran boyutu buna göre ayarlanır. Sonra Ayarlar\'dan değiştirebilirsin.' : 'Controls and screen layout adapt to this. You can change it later in Settings.'}</p>
-      <div class="sp-choices"><button type="button" data-d="mobile"><b>📱</b>${tr ? 'Mobil' : 'Mobile'}<small>${tr ? 'Dokunmatik joystick' : 'Touch joystick'}</small></button>
-      <button type="button" data-d="pc"><b>🖥</b>PC<small>${tr ? 'Klavye + fare' : 'Keyboard + mouse'}</small></button></div>`);
+      <div class="sp-choices"><button type="button" data-d="mobile"><b>${icon('gamepad')}</b>${tr ? 'Mobil' : 'Mobile'}<small>${tr ? 'Dokunmatik joystick' : 'Touch joystick'}</small></button>
+      <button type="button" data-d="pc"><b>${icon('expand')}</b>PC<small>${tr ? 'Klavye + fare' : 'Keyboard + mouse'}</small></button></div>`);
     d.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => { setDevice(b.dataset.d); d.remove(); done(); }));
   });
 }
@@ -50,7 +65,7 @@ function showUpdate() {
   try { seen = localStorage.getItem(SEEN_KEY) || ''; } catch (e) { /* yoksay */ }
   if (seen === UPDATE.id) return;
   const t = UPDATE[i18n.lang] || UPDATE.tr;
-  const d = modal(`<div class="sp-badge">v${UPDATE.id}</div><h2>🚀 ${t.title}</h2><ul>${t.items.map((x) => `<li>${x}</li>`).join('')}</ul>
+  const d = modal(`<div class="sp-badge">v${UPDATE.id}</div><h2>${icon('rocket')} ${t.title}</h2><ul>${t.items.map((x) => `<li>${x}</li>`).join('')}</ul>
     <button type="button" class="sp-ok">${i18n.lang === 'en' ? 'LET\'S PLAY' : 'OYNAYALIM'}</button>`);
   d.querySelector('.sp-ok').addEventListener('click', () => { try { localStorage.setItem(SEEN_KEY, UPDATE.id); } catch (e) { /* yoksay */ } d.remove(); });
 }

@@ -2,6 +2,7 @@
 import { i18n } from '../systems/I18n.js';
 import { net } from '../systems/Net.js';
 import { DAILY_POOL, WEEKLY_POOL } from '../systems/Quests.js';
+import { icon, COIN_IMG, coinHtml } from './Icons.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const byId = Object.fromEntries([...DAILY_POOL, ...WEEKLY_POOL].map((q) => [q.id, q]));
@@ -44,7 +45,7 @@ class QuestsPanel {
         return `<div class="qs-item${done ? ' done' : ''}">
           <div class="qs-name">${esc(i18n.t('quest.' + row.id) || row.id)}</div>
           <div class="qs-bar"><i style="width:${pct}%"></i></div>
-          <div class="qs-meta"><span>${prog}/${def.goal}</span><span>🪙 ${def.reward}</span>
+          <div class="qs-meta"><span>${prog}/${def.goal}</span><span>${coinHtml(def.reward)}</span>
           ${done && !row.claimed ? `<button type="button" data-claim="${esc(row.id)}" class="qs-claim">${esc(i18n.t('quest.claim') || 'AL')}</button>` : (row.claimed ? '✓' : '')}
           </div></div>`;
       }).join('') || `<div class="qs-empty">${esc(i18n.t('quest.login') || 'Giriş yap')}</div>`;

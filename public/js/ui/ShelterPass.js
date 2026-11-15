@@ -12,6 +12,7 @@ import { assetUrl } from '../systems/Assets.js';
 import { getFlagThumb, HIST_FLAGS, HIST_RARITY } from '../systems/Flags.js';
 import { PASS, CRATE_TIERS, CRATE_ICON, CRATE_ODDS, CRATE_PRICE, RARITY_COLOR, RARITY_ORDER, passReward, passStatus } from '../systems/Pass.js';
 import { market } from './Market.js';
+import { icon, COIN_IMG, coinHtml } from './Icons.js';
 
 const TABS = ['pass', 'crates', 'coll', 'market'];
 // İsteğe bağlı görseller (public/assets/menu/): yoksa emoji ve kodla çizilen arka plan kullanılır.
@@ -38,14 +39,14 @@ class ShelterPass {
   // Ödül simgesi: görsel varsa <img>, yoksa emoji
   icon(kind) {
     if (this.art[kind]) return `<img class="sp-art" alt="" src="${this.art[kind]}">`;
-    return kind === 'coin' ? '🪙' : CRATE_ICON[kind];
+    return kind === 'coin' ? COIN_IMG : icon(kind === 'rare' ? 'gift' : kind === 'grand' ? 'crown' : 'crate');
   }
 
   build() {
     const r = this.root = document.createElement('div');
     r.className = 'flagpick sp-root hidden';
     r.innerHTML = `<div class="pass-card">
-      <div class="pass-head"><span class="hp-ico">🎟</span><h2></h2><span class="sp-season"></span><span class="hp-coins"></span><span class="hp-msg"></span><button class="fp-x" type="button">✕</button></div>
+      <div class="pass-head"><span class="hp-ico">${icon('ticket')}</span><h2></h2><span class="sp-season"></span><span class="hp-coins"></span><span class="hp-msg"></span><button class="fp-x" type="button">✕</button></div>
       <div class="pass-xprow"><div class="sp-xp"><i></i><b></b></div><button class="mm-tbtn primary sp-all" type="button"></button></div>
       <div class="pass-tabs">${TABS.map((t) => `<button type="button" data-tab="${t}"></button>`).join('')}</div>
       <div class="pass-body">
@@ -84,7 +85,7 @@ class ShelterPass {
       else if (m.boughtCrate) {
         sfx('task_done');
         const b = m.boughtCrate;
-        this.msg(i18n.t('pass.boughtCrate', { tier: i18n.t('pass.tier.' + b.tier), n: b.n, cost: b.cost }) || `+${b.n} kasa (−${b.cost} 🪙)`);
+        this.msg(i18n.t('pass.boughtCrate', { tier: i18n.t('pass.tier.' + b.tier), n: b.n, cost: b.cost }) || `+${b.n} kasa (−${b.cost})`);
       }
       this.render();
     });
@@ -273,15 +274,16 @@ class ShelterPass {
     const st = passStatus(acc);
     r.querySelector('h2').textContent = i18n.t('pass.title');
     r.querySelector('.sp-season').textContent = `${i18n.t('pass.season', { n: st.season })} · ${i18n.t('pass.daysLeft', { n: st.daysLeft })}`;
-    r.querySelector('.hp-coins').textContent = `🪙 ${acc.coins ?? 0}`;
+    r.querySelector('.hp-coins').innerHTML = coinHtml(Number(acc.coins ?? 0));
     r.querySelector('.sp-xp i').style.width = Math.min(100, (st.xp / PASS.MAX_XP) * 100) + '%';
     r.querySelector('.sp-xp b').textContent = `${st.xp} / ${PASS.MAX_XP} XP · ${i18n.t('pass.bars', { a: st.reached, b: PASS.LEVELS })}`;
     r.querySelector('.pass-how').textContent = i18n.t('pass.how', { n: PASS.BAR_XP });
     const all = r.querySelector('.sp-all');
     all.textContent = st.claimable ? `${i18n.t('pass.claimAll')} (${st.claimable})` : i18n.t('pass.claimAll');
     all.disabled = !st.claimable;
-    const names = { pass: '🎟 ' + i18n.t('pass.tabPass'), crates: `📦 ${i18n.t('pass.tabCrates')}${st.crates ? ` (${st.crates})` : ''}`, coll: '🚩 ' + i18n.t('pass.tabColl'), market: '⚖ ' + (i18n.t('pass.tabMarket') || 'PAZAR') };
-    r.querySelectorAll('.pass-tabs button').forEach((b) => { b.textContent = names[b.dataset.tab]; b.classList.toggle('on', b.dataset.tab === this.tab); });
+    const tx = (k) => String(i18n.t(k) || '').replace(/</g, '&lt;');
+    const names = { pass: icon('ticket') + tx('pass.tabPass'), crates: `${icon('crate')}${tx('pass.tabCrates')}${st.crates ? ` (${st.crates})` : ''}`, coll: icon('flag') + tx('pass.tabColl'), market: icon('scales') + (i18n.t('pass.tabMarket') || 'PAZAR') };
+    r.querySelectorAll('.pass-tabs button').forEach((b) => { b.innerHTML = names[b.dataset.tab]; b.classList.toggle('on', b.dataset.tab === this.tab); });
     r.querySelectorAll('.pass-pane').forEach((p) => p.classList.toggle('on', p.dataset.pane === this.tab));
 
     // --- bar yolu (yatay, sağa doğru)
@@ -337,7 +339,7 @@ class ShelterPass {
         <small>${odds}</small>
         <div class="sp-crate-acts">
           <button class="mm-tbtn small primary sp-open" type="button">${i18n.t('pass.open')}</button>
-          <button class="mm-tbtn small sp-buy" type="button" title="${i18n.t('pass.buyCrateHint') || ''}">🪙 ${price}</button>
+          <button class="mm-tbtn small sp-buy" type="button" title="${i18n.t('pass.buyCrateHint') || ''}">${coinHtml(price)}</button>
         </div>`;
       const openBtn = d.querySelector('.sp-open');
       openBtn.disabled = !n;

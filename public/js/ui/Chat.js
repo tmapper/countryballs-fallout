@@ -8,6 +8,7 @@
 import { i18n } from '../systems/I18n.js';
 import { net } from '../systems/Net.js';
 import { getFlagThumb } from '../systems/Flags.js';
+import { icon } from './Icons.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 export const CHAT_MAX = 120;
@@ -39,7 +40,7 @@ export function wireChatInput(input, onSend, onEsc) {
 }
 
 export function msgHtml(flag, name, text, extra = '') {
-  if (!flag) return `<span class="mt-sys">⚙</span><div><b>${esc(name)}${extra}</b><span>${esc(text)}</span></div>`;   // sistem / admin mesajı
+  if (!flag) return `<span class="mt-sys">${icon('shield')}</span><div><b>${esc(name)}${extra}</b><span>${esc(text)}</span></div>`;   // sistem / admin mesajı
   return `<img alt="" src="${getFlagThumb(flag, 30, 20)}"><div><b>${esc(name)}${extra}</b><span>${esc(text)}</span></div>`;
 }
 
@@ -51,10 +52,10 @@ class LobbyChat {
     const r = this.root = document.createElement('div');
     r.className = 'lchat hidden' + (this.ch === 'ghost' ? ' ghost' : '');
     r.innerHTML = `
-      <button class="lc-toggle" type="button">💬<span class="lc-badge hidden"></span></button>
+      <button class="lc-toggle" type="button">${icon('chat')}<span class="lc-badge hidden"></span></button>
       <div class="lc-box">
         <div class="lc-list"></div>
-        <div class="lc-row"><input class="lc-input" autocomplete="off" spellcheck="false" enterkeyhint="send"><button class="lc-send" type="button">➤</button></div>
+        <div class="lc-row"><input class="lc-input" autocomplete="off" spellcheck="false" enterkeyhint="send"><button class="lc-send" type="button">${icon('send')}</button></div>
       </div>`;
     document.body.appendChild(r);
     this.list = r.querySelector('.lc-list');

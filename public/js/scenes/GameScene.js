@@ -570,18 +570,24 @@ export class GameScene extends Phaser.Scene {
     this.balls.forEach((b) => { if (b.cooldown > 0) b.cooldown = Math.max(0, b.cooldown - dt); });
 
     // Botlar: kare atlatma — düşük kalite / kalabalık odada daha seyrek
+    // HATA DÜZELTMESİ: eskiden botlar her karede çalışsa bile süre "dt x atlama" sayılıyordu
+    // (6 ve altı topta botlar 2 kat hızlı koşuyordu). Artık gerçekten geçen süre biriktirilir.
     if (!this.over) {
       this._botFrame = (this._botFrame || 0) + 1;
+      this._botAcc = (this._botAcc || 0) + dt;
       const botSkip = (getQuality() === 'low' || this.balls.length > 12) ? 3 : 2;
       const runBots = (this._botFrame % botSkip) === 0 || this.balls.length <= 6;
+      // AKICILIK: bot "düşünmesi" (yol bulma, görüş) 2-3 karede bir; YÜRÜMESİ ise her karede.
+      // Eskiden yürüme de seyrekti, botlar ekranda 20-30 FPS'de zıplıyormuş gibi görünüyordu.
       if (runBots) {
-        const botDt = dt * botSkip;
-        this.balls.forEach((b) => {
-          if (!b.brain || !b.alive) return;
-          const mv = b.move(this.botThink(b, botDt), botDt, canStand);
-          if (b.brain) b.brain.report(mv, botDt);
-        });
+        const botDt = Math.min(this._botAcc, 0.25); this._botAcc = 0;
+        this.balls.forEach((b) => { if (b.brain && b.alive) b.botDir = this.botThink(b, botDt); });
       }
+      this.balls.forEach((b) => {
+        if (!b.brain || !b.alive || !b.botDir) return;
+        const mv = b.move(b.botDir, dt, canStand);
+        if (b.brain) b.brain.report(mv, dt);
+      });
     }
 
     this.fog.update(this.player.x, this.player.y - 16, this.visionRadius);

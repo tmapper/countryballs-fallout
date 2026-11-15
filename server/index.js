@@ -266,6 +266,110 @@ async function loadAdmins() {
   });
   if (changed) saveAccounts();
 }
+// ---------------- MODERATÖRLÜK ----------------
+// Bir hesap 20 kez odaya girip çıkınca (lobi/maç) menünün sol üstünde "ŞİFRE GİR" butonu açılır.
+// Oraya 15 karakterlik MODERATÖR KODU girilirse hesap moderatör olur (u.mod = 1).
+// Moderatör: oyuncuyu odadan atar (kick), çok oyunculudan men eder (ban / unban), hesabı siler.
+// Adminler ve diğer moderatörler moderatörden korunur (moderatörü sadece admin yönetir).
+// KOD: MOD_CODE ortam değişkeni (tam 15 karakter) ya da ilk çalıştırmada üretilip hesap kaydına
+//      (accounts.modCode) yazılan rastgele kod. Sunucu açılışta konsola yazar; admin sohbette /modcode ile görür.
+const MOD_UNLOCK = 20, MOD_CODE_LEN = 15;
+const MOD_ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const ENV_MOD_CODE = String(process.env.MOD_CODE || '').trim().toUpperCase();
+function modCode() {
+  if (ENV_MOD_CODE.length === MOD_CODE_LEN) return ENV_MOD_CODE;
+  if (typeof accounts.modCode !== 'string' || accounts.modCode.length !== MOD_CODE_LEN) {
+    accounts.modCode = Array.from({ length: MOD_CODE_LEN }, () => MOD_ALPHA[crypto.randomInt(MOD_ALPHA.length)]).join('');
+    saveAccounts();
+  }
+  return accounts.modCode;
+}
+const isModUser = (u) => !!(u && (u.mod === 1 || u.mod === true));
+const isMod = (c) => isAdmin(c) || isModUser(c && c.account && accounts.users[c.account]);
+const modTries = new Map();          // hesap -> son denemeler (10 dakikada en fazla 5 yanlış)
+function modLog(c, action, target) {
+  if (!Array.isArray(accounts.modLog)) accounts.modLog = [];
+  accounts.modLog.push({ by: c.account, action, target, at: Date.now() });
+  if (accounts.modLog.length > 300) accounts.modLog = accounts.modLog.slice(-200);
+}
+function modRow(key, u, cl) {
+  const r = cl && cl.room ? rooms.get(cl.room) : null;
+  return { key: key || null, id: cl ? cl.id : null, name: u ? u.name : (cl ? cl.name || 'Misafir' : '?'), guest: !u, online: !!cl,
+    room: r ? r.code : null, inGame: !!(r && r.state === 'game'), banned: !!(u && (Number(u.danger) || 0) >= 3),
+    mod: isModUser(u), admin: !!(key && (adminSet.has(key) || (u && u.admin === 1))) };
+}
+function modListFor(c, q) {
+  const rows = [], seen = new Set();
+  clients.forEach((cl) => {
+    if (cl === c) return;
+    const key = cl.account, u = key ? accounts.users[key] : null;
+    if (key) { if (seen.has(key)) return; seen.add(key); }
+    rows.push(modRow(key, u, cl));
+  });
+  const f = fold(q);
+  if (f) {
+    Object.entries(accounts.users).forEach(([k, u]) => {
+      if (seen.has(k) || k === c.account || rows.length > 80) return;
+      if (fold(k).includes(f) || fold(u.name).includes(f)) { seen.add(k); rows.push(modRow(k, u, null)); }
+    });
+  }
+  const list = f ? rows.filter((x) => fold(x.name).includes(f) || fold(x.key || '').includes(f)) : rows;
+  list.sort((a, b) => (b.online - a.online) || String(a.name).localeCompare(String(b.name), 'tr'));
+  return list.slice(0, 60);
+}
+// Hesabın ya da tek bir misafir bağlantısının bulunduğu odadan atılması
+function modKickClients(targets) {
+  targets.forEach((cl) => {
+    const r = cl.room && rooms.get(cl.room);
+    if (!r) return;
+    (r.banned || (r.banned = new Set())).add(cl.account || cl.id);
+    send(cl, { t: 'kicked' });
+    leaveRoom(cl);
+  });
+}
+function modAction(c, m) {
+  const action = String(m.action || '');
+  const key = m.key ? String(m.key).toLocaleLowerCase('tr') : null;
+  const u = key ? accounts.users[key] : null;
+  const targets = key ? [...clients].filter((cl) => cl.account === key) : [...clients].filter((cl) => cl.id === m.id && !cl.account);
+  if (key && !u) return { err: 'noUser' };
+  if (!key && !targets.length) return { err: 'noUser' };
+  if (key && key === c.account) return { err: 'self' };
+  if (key && (adminSet.has(key) || u.admin === 1)) return { err: 'protected' };
+  if (isModUser(u) && !isAdmin(c)) return { err: 'protected' };
+  const name = u ? u.name : (targets[0].name || 'Misafir');
+  switch (action) {
+    case 'kick':
+      if (!targets.some((cl) => cl.room)) return { err: 'notInRoom' };
+      modKickClients(targets); break;
+    case 'ban':
+      if (!u) return { err: 'guest' };
+      u.danger = 3; saveAccounts();
+      modKickClients(targets);
+      targets.forEach((cl) => send(cl, { t: 'account', account: publicAcc(u), banned: true }));
+      break;
+    case 'unban':
+      if (!u) return { err: 'guest' };
+      u.danger = 0; saveAccounts(); pushAccount(key); break;
+    case 'delete': {
+      if (!u) return { err: 'guest' };
+      modKickClients(targets);
+      delete accounts.users[key];
+      Object.keys(accounts.tokens).forEach((t) => { if (accounts.tokens[t].key === key) delete accounts.tokens[t]; });
+      Object.values(accounts.users).forEach((v) => {
+        if (Array.isArray(v.friends)) v.friends = v.friends.filter((x) => x !== key);
+        if (Array.isArray(v.freq)) v.freq = v.freq.filter((x) => x !== key);
+      });
+      if (Array.isArray(accounts.market)) accounts.market = accounts.market.filter((x) => x.seller !== key);
+      boardCache.at = 0;
+      targets.forEach((cl) => { cl.account = null; cl.name = 'Misafir'; send(cl, { t: 'account', account: null, deleted: true }); });
+      saveAccounts(); break;
+    }
+    default: return { err: 'bad' };
+  }
+  modLog(c, action, key || name);
+  return { ok: true, name };
+}
 // ---------------- ARKADAŞLAR + SIRALAMA ----------------
 // u.friends: arkadaş hesap anahtarları, u.freq: gelen istekler. Haftalık XP: u.wxp + u.wk (yılın haftası).
 const weekId = (t = Date.now()) => Math.floor((t / 86400000 + 3) / 7);   // Pazartesi başlar
@@ -323,6 +427,7 @@ function publicAcc(u) {
   const danger = Math.max(0, Math.min(3, Number(u.danger) || 0));
   return { name: u.name, created: u.created, xp, level, xpInto: xp - base, xpNeed: Math.max(1, next - base), title, stats: { ...st }, coins: u.coins, hats: [...u.hats],
     flags: [...u.flags], crates: { ...u.crates }, admin: u.admin ? 1 : 0, danger,
+    mod: isModUser(u) ? 1 : 0, rooms: Math.min(MOD_UNLOCK, u.rooms || 0), modUnlock: (u.rooms || 0) >= MOD_UNLOCK || isModUser(u) || !!u.admin ? 1 : 0,
     pass: { season: si.id, daysLeft: si.daysLeft, xp: u.pass.xp, claimed: [...u.pass.claimed] },
     achievements: [...u.achievements],
     quests: { daily: q.daily.map((x) => ({ ...x })), weekly: q.weekly.map((x) => ({ ...x })), weekFlag: { code: wf, owned: !!(u.flags && u.flags.includes(wf)) } }
@@ -507,6 +612,9 @@ function leaveRoom(c) {
   const r = c.room && rooms.get(c.room);
   c.room = null;
   if (!r) return;
+  // Moderatör kilidi için sayaç: hesabın odaya girip çıkma sayısı (20'de "şifre gir" açılır)
+  const cu = c.account && accounts.users[c.account];
+  if (cu && (cu.rooms || 0) < MOD_UNLOCK) { cu.rooms = (cu.rooms || 0) + 1; saveAccounts(); if (cu.rooms === MOD_UNLOCK) setTimeout(() => pushAccount(c.account), 50); }
   if (r.state === 'game' && r.match && r.match.roster[c.id]) r.match.roster[c.id].left = true;   // maç sürerken ayrılan = yenilgi sayılır
   r.players.delete(c.id);
   if (!r.players.size) { rooms.delete(r.code); return; }
@@ -589,6 +697,7 @@ const HELP = [
   'HESAP: /coins <hedef> <±n>  /xp <hedef> <n> (bilet XP)  /crate <hedef> <common|rare|grand> [n]  /flag <hedef> <bayrak|all>  /hat <hedef> <şapka|all>',
   'UYARI: /warn <hedef> [0-3]  /unwarn <hedef>   (3 = çok oyunculu ban, sadece tek kişilik)',
   'ODA: /kick <hedef>  /say <metin>  /who  /season  /admins  /reloadadmins',
+  'MODERATÖR: /modcode (kodu gösterir)  /mods  /unmod <hedef>',
   'Hedef: ben, hesap adı, bayrak (finland, turkey, FI) ya da oyuncu adı. Admin listesi Upstash cfs:admins hash\'inden gelir.'
 ];
 function adminCommand(c, r, text) {
@@ -700,6 +809,13 @@ function adminCommand(c, r, text) {
       if (!u.hats.includes(what)) u.hats.push(what);
       saveAccounts(); pushAccount(k); say('✔ ' + u.name + ': şapka ' + what + ' verildi'); break;
     }
+    case 'modcode': case 'modkod': say('Moderatör kodu: ' + modCode() + (ENV_MOD_CODE.length === MOD_CODE_LEN ? ' (MOD_CODE ortam değişkeninden)' : '')); break;
+    case 'mods': case 'moderatorler': say('Moderatörler: ' + (Object.entries(accounts.users).filter(([, u]) => isModUser(u)).map(([, u]) => u.name).join(', ') || '(yok)')); break;
+    case 'unmod': {
+      const k = findAccount(c, r, tok.join(' '));
+      if (!k) { say('Kullanım: /unmod <hedef>'); break; }
+      accounts.users[k].mod = 0; saveAccounts(); pushAccount(k); say('✔ ' + accounts.users[k].name + ' artık moderatör değil'); break;
+    }
     case 'admins': case 'adminler': {
       say('Adminler: ' + ([...adminSet].join(', ') || '(yok)')); break;
     }
@@ -778,6 +894,7 @@ function handle(c, m) {
       break;
     }
     case 'suggests': case 'oneriler': case 'öneriler': {
+      const say = (t) => sysMsg(c, t);
       if (!isAdmin(c)) { say('Yetki yok'); break; }
       const list = accounts.suggestions || [];
       say('Öneri sayısı: ' + list.length);
@@ -1343,6 +1460,36 @@ function handle(c, m) {
       broadcast(r, { t: 'chat', from: c.id, name: pl ? pl.name : '?', flag: pl ? pl.flag : '', text, ch: m.ch === 'meet' ? 'meet' : m.ch === 'ghost' ? 'ghost' : 'lobby', dead: !!m.dead || m.ch === 'ghost' });
       break;
     }
+    // ---- MODERATÖR ----
+    case 'modCode': {
+      const u = c.account && accounts.users[c.account];
+      if (!u) { send(c, { t: 'modErr', code: 'needLogin' }); return; }
+      if (isMod(c)) { send(c, { t: 'modOk', account: publicAcc(u) }); return; }
+      if ((u.rooms || 0) < MOD_UNLOCK) { send(c, { t: 'modErr', code: 'locked' }); return; }
+      const now = Date.now(), list = (modTries.get(c.account) || []).filter((x) => now - x < 600000);
+      if (list.length >= 5 || tooMany(c)) { send(c, { t: 'modErr', code: 'tooMany' }); return; }
+      const got = String(m.code || '').trim().toUpperCase(), want = modCode();
+      const ok = got.length === MOD_CODE_LEN && crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want));
+      if (!ok) { list.push(now); modTries.set(c.account, list); send(c, { t: 'modErr', code: got.length === MOD_CODE_LEN ? 'wrong' : 'len', left: 5 - list.length }); return; }
+      modTries.delete(c.account);
+      u.mod = 1; modLog(c, 'becameMod', c.account); saveAccounts();
+      send(c, { t: 'modOk', account: publicAcc(u) });
+      break;
+    }
+    case 'modList': {
+      if (!isMod(c)) { send(c, { t: 'modErr', code: 'noPerm' }); return; }
+      send(c, { t: 'modList', list: modListFor(c, String(m.q || '').slice(0, 24)) });
+      break;
+    }
+    case 'modAct': {
+      if (!isMod(c)) { send(c, { t: 'modErr', code: 'noPerm' }); return; }
+      const now = Date.now(); if (now - (c.lastModAct || 0) < 250) { send(c, { t: 'modErr', code: 'slow' }); return; } c.lastModAct = now;
+      const res = modAction(c, m);
+      if (res.err) send(c, { t: 'modErr', code: res.err });
+      else send(c, { t: 'modDone', action: String(m.action), name: res.name });
+      send(c, { t: 'modList', list: modListFor(c, String(m.q || '').slice(0, 24)) });
+      break;
+    }
     case 'ping':
       send(c, { t: 'pong', at: m.at });
       break;
@@ -1357,6 +1504,7 @@ function onClose(c) {
 
 loadCloud().then(loadAdmins).then(() => { setInterval(loadAdmins, 60000); }).then(() => server.listen(PORT, () => {
   console.log(`Sunucu çalışıyor -> http://localhost:${PORT}  (WebSocket: /ws)`);
+  console.log('Moderatör kodu (15 karakter): ' + modCode() + (ENV_MOD_CODE.length === MOD_CODE_LEN ? '  [MOD_CODE]' : '  [kayıtta saklı; değiştirmek için MOD_CODE ortam değişkeni]'));
 }));
 
 module.exports = { server };

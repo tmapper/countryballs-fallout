@@ -39,7 +39,8 @@ const config = {
     batchSize: lowGfx ? 2048 : 4096
   },
   // Gerçek kare süresi; mobilde hedef 30 FPS (pil + akıcılık dengesi)
-  fps: { smoothStep: false, target: lowGfx ? 30 : 60 },
+  // Kare hızı SINIRLANMAZ: ekran ne kadar verirse (60/120 Hz). Düşük grafik çözünürlüğü düşürür, akıcılığı değil.
+  fps: { smoothStep: false, target: 60 },
   input: { activePointers: 3 },
   scene: [BootScene, LobbyScene, GameScene, UIScene]
 };

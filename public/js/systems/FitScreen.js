@@ -8,6 +8,8 @@
 // - Dikey yatay fark etmez: önce 1x denenir, sığmazsa 0.04 adımlarla küçülür (en az MIN_Z).
 // Seçenekler: fill = üst kapsayıcıyı tamamen doldurur (menü gibi), wide = küçülürken genişliği de açar (ızgaralar daha az satır tutar),
 // maxW = wide iken ekranda görünen en fazla genişlik (piksel; varsayılan 1200).
+import { isTyping, onTypingEnd } from './Typing.js';
+
 const TARGETS = [
   ['.mm-ui', { fill: true }],
   ['.lobby', { fill: true }],
@@ -82,6 +84,8 @@ let queued = false;
 let lastRun = 0;
 export function fitNow() {
   queued = false;
+  // Klavye açıkken pencereleri küçültme (ekran geçici olarak kısa); klavye kapanınca yeniden sığdırılır
+  if (isTyping()) return;
   lastRun = performance.now();
   document.querySelectorAll(ALL_SEL).forEach((el) => {
     const t = TARGETS.find(([s]) => el.matches(s));
@@ -98,6 +102,7 @@ export function scheduleFit() {
 export function initFit() {
   if (!supported) return;
   window.addEventListener('resize', scheduleFit);
+  onTypingEnd(scheduleFit);
   window.addEventListener('orientationchange', () => setTimeout(scheduleFit, 250));
   if (window.visualViewport) window.visualViewport.addEventListener('resize', scheduleFit);
   new MutationObserver((muts) => {

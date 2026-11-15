@@ -46,7 +46,9 @@
     "mute": "Mute (M)",
     "quality": "Graphics",
     "qHigh": "High",
+    "qMed": "Medium",
     "qLow": "Low (fast)",
+    "showFps": "Show FPS",
     "fullscreen": "Fullscreen",
     "resume": "RESUME",
     "autoLow": "Slow device: graphics set to Low automatically (change in Settings)",
@@ -290,7 +292,10 @@
     "noEject": "No one was ejected.",
     "tie": "(Tied)",
     "skipped": "Skipped",
-    "chat": "Chat"
+    "chat": "Chat",
+    "gathered": "Everyone gathered in the cafeteria",
+    "alive": "alive",
+    "votedN": "voted"
   },
   "chat": {
     "sawKill": "I saw {target} kill!",
@@ -362,7 +367,7 @@
     "offline": "Not connected",
     "connecting": "Connecting...",
     "noServer": "No server address (Settings)",
-    "version": "Version 0.9.15",
+    "version": "Version 0.9.20",
     "exit": "EXIT",
     "back": "BACK",
     "language": "Language",

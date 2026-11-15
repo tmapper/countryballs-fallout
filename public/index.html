@@ -21,8 +21,9 @@
     }
     #orient-lock span { font-size: 48px; }
     @media (max-width: 900px) and (orientation: portrait) {
-      #orient-lock { display: flex; }
-      #game, .mainmenu, .lobby, .flagpick, .market, .pass-root, .sp-root, .quests-side { visibility: hidden !important; pointer-events: none !important; }
+      /* html:not(.typing): yazı yazarken klavye ekranı kısaltır, bunu "telefon dikey" sanıp ekranı kapatma */
+      html:not(.typing) #orient-lock { display: flex; }
+      html:not(.typing) #game, html:not(.typing) .mainmenu, html:not(.typing) .lobby, html:not(.typing) .flagpick, html:not(.typing) .market, html:not(.typing) .pass-root, html:not(.typing) .sp-root, html:not(.typing) .quests-side { visibility: hidden !important; pointer-events: none !important; }
     }
   </style>
 </head>

@@ -274,6 +274,27 @@ export function gameSpawn(i, n) {
   return { x: Math.round(EMERGENCY_BUTTON.x + Math.cos(a) * 255), y: Math.round(EMERGENCY_BUTTON.y + Math.sin(a) * 255) };
 }
 
+// TOPLANTI: herkes kafeteryaya ışınlanır. Sıra (i) herkeste aynı olduğu için her istemci aynı yeri hesaplar.
+// Kafeteryanın ortasında iki halka (12 kişiye kadar tek); masaya / duvara denk gelen nokta yakında boş yer arar.
+export function meetingSpawn(i, n) {
+  const r = ROOMS.cafeteria;
+  if (!r) return gameSpawn(i, n);
+  const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+  const inner = n <= 12 ? n : 12, outer = i >= inner;
+  const k = outer ? n - inner : inner, j = outer ? i - inner : i;
+  const a = -Math.PI / 2 + (j / Math.max(1, k)) * Math.PI * 2 + (outer ? Math.PI / Math.max(1, k) : 0);
+  const f = outer ? 0.4 : 0.26;
+  const p = { x: Math.round(cx + Math.cos(a) * r.w * f), y: Math.round(cy + Math.sin(a) * r.h * f) };
+  if (canStand(p.x, p.y)) return p;
+  for (let d = 16; d <= 200; d += 16) {                       // yakında boş yer ara (spiral)
+    for (let t = 0; t < 12; t++) {
+      const q = { x: Math.round(p.x + Math.cos(t * 0.5236) * d), y: Math.round(p.y + Math.sin(t * 0.5236) * d) };
+      if (canStand(q.x, q.y) && q.x > r.x && q.x < r.x + r.w && q.y > r.y && q.y < r.y + r.h) return q;
+    }
+  }
+  return gameSpawn(i, n);
+}
+
 // ---------------- Görüş ızgarası ----------------
 // Işın atma için: her hücre 0 = boş, 1 = duvar. (Eşyalar ışığı engellemez; sadece duvarlar.)
 export function buildGrid(cell = 16, sealed = false) {
