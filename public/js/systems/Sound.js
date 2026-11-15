@@ -72,7 +72,7 @@ const live = new Set();          // çalan tüm müzik/döngü sesleri (yetim ka
 // Henüz hazır değilse (ilk saniyeler) eski yönteme düşer, ses yine çıkar.
 const SFX_NAMES = ['ui_click', 'step', 'wire_connect', 'lever', 'task_done', 'vote', 'tunnel', 'kill', 'shoot', 'valve_turn',
   'power_up', 'power_down', 'dust_wipe', 'door_seal', 'body_found', 'meeting', 'win', 'lose', 'oxygen_alert',
-  'crate_click', 'crate_spin', 'crate_rare', 'crate_epic', 'crate_legendary'];
+  'crate_click', 'crate_spin', 'crate_rare', 'crate_epic', 'crate_legendary', 'ach_unlock'];
 const AC = window.AudioContext || window.webkitAudioContext;
 let ctx = null;
 const buffers = {}, loading = {};

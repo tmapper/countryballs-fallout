@@ -15,7 +15,7 @@ function showAchToast(id) {
   d.className = 'ach-toast';
   d.innerHTML = `<span class="ach-star">★</span><div class="ach-body"><div class="ach-label">${esc(label)}</div><div class="ach-name">${esc(name)}</div></div>`;
   document.body.appendChild(d);
-  try { sfx('task_done'); } catch (e) {}
+  try { sfx('ach_unlock'); } catch (e) {}
   setTimeout(() => d.remove(), 4000);
 }
 
