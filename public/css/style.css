@@ -379,7 +379,7 @@ canvas { display: block; }
 /* ============================================================
    ANA MENÜ (sinematik)
    ============================================================ */
-.mainmenu { position: fixed; inset: 0; z-index: 30; overflow: hidden; background: #051a0c; color: #eef1f5; }
+.mainmenu { position: fixed; inset: 0; z-index: 30; overflow: hidden; background: #05070a; color: #eef1f5; }
 .mainmenu.intro .mm-scene { animation: mmScene 2.6s ease both; }
 @keyframes mmScene { from { opacity: 0; transform: scale(1.15); filter: blur(6px); } }
 .mainmenu.leaving { animation: mmLeave .45s ease forwards; }
@@ -1464,28 +1464,27 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 .ach-toast b { display: block; color: #7dff9a; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 4px; }
 .ach-toast span { font-size: 15px; font-weight: 800; color: #e8ffe8; }
 
-/* Ana menü animasyonlu radyoaktif arka plan (hafif radyoaktif yeşil) */
+/* Ana menü animasyonlu arka plan */
 .mm-anim-bg {
   position: absolute; inset: 0; overflow: hidden; pointer-events: none;
   background:
-    radial-gradient(ellipse at 20% 80%, rgba(47,191,90,.38), transparent 55%),
-    radial-gradient(ellipse at 80% 20%, rgba(125,255,154,.22), transparent 48%),
-    radial-gradient(ellipse at 50% 50%, rgba(80,220,120,.12), transparent 60%),
-    linear-gradient(160deg, #041a0a 0%, #0d2e16 40%, #062012 100%);
+    radial-gradient(ellipse at 20% 80%, rgba(47,143,74,.18), transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(125,255,154,.08), transparent 45%),
+    linear-gradient(160deg, #050a06 0%, #0b1a10 40%, #071208 100%);
 }
 .mm-anim-bg::before {
   content: ''; position: absolute; inset: -20%;
   background:
-    repeating-linear-gradient(0deg, transparent 0 38px, rgba(125,255,154,.05) 38px 39px),
-    repeating-linear-gradient(90deg, transparent 0 38px, rgba(125,255,154,.05) 38px 39px);
+    repeating-linear-gradient(0deg, transparent 0 38px, rgba(125,255,154,.025) 38px 39px),
+    repeating-linear-gradient(90deg, transparent 0 38px, rgba(125,255,154,.025) 38px 39px);
   animation: mmGridDrift 28s linear infinite;
 }
 .mm-anim-bg::after {
   content: ''; position: absolute; width: 140%; height: 140%; left: -20%; top: -20%;
   background:
-    radial-gradient(circle at 30% 40%, rgba(125,255,154,.22) 0, transparent 18%),
-    radial-gradient(circle at 70% 60%, rgba(47,191,90,.28) 0, transparent 22%),
-    radial-gradient(circle at 50% 80%, rgba(255,210,63,.08) 0, transparent 25%);
+    radial-gradient(circle at 30% 40%, rgba(125,255,154,.10) 0, transparent 18%),
+    radial-gradient(circle at 70% 60%, rgba(47,143,74,.14) 0, transparent 22%),
+    radial-gradient(circle at 50% 80%, rgba(255,210,63,.05) 0, transparent 25%);
   animation: mmGlowPulse 12s ease-in-out infinite alternate;
 }
 @keyframes mmGridDrift { from { transform: translate(0,0); } to { transform: translate(-38px, -38px); } }
