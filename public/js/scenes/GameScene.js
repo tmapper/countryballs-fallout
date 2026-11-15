@@ -790,6 +790,15 @@ export class GameScene extends Phaser.Scene {
     return best;
   }
 
+  // Düşen silaha çok yaklaşınca (E'ye basmadan) otomatik al. Uzaktan E ile almak için interact() hâlâ var.
+  tryAutoPickGun() {
+    const me = this.player;
+    if (!this.guns || !this.guns.length || this.over || this.meeting) return;
+    if (!me || !me.alive || me.inTunnel || me.role === 'impostor' || me.role === 'sheriff') return;
+    const gun = this.nearestGun(36);
+    if (gun) this.pickGun(gun);
+  }
+
   pickGun(g) {
     const me = this.player;
     if (!g || g.taken || !me || !me.alive) return;
