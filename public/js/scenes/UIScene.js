@@ -322,9 +322,12 @@ export class UIScene extends Phaser.Scene {
   layout() {
     this.cameras.main.setZoom(RES.k);
     const W = RES.cssW, H = RES.cssH;
-    this.lobbyBtn.x = W - 16;
-    if (this.fsBtn) this.fsBtn.x = W - 16;
-    if (this.joyResetBtn) this.joyResetBtn.x = W - 16;
+    // Sağ üst butonları dikey diz, üst üste binmesin
+    let topY = 12;
+    this.lobbyBtn.setPosition(W - 16, topY);
+    topY += this.lobbyBtn.height + 8;
+    if (this.fsBtn) { this.fsBtn.setPosition(W - 16, topY); topY += this.fsBtn.height + 6; }
+    if (this.joyResetBtn) { this.joyResetBtn.setPosition(W - 16, topY); }
     const a = this.actionBtn, t = this.tunnelBtn;
     a.setPosition(W - 24 - a.r, H - 24 - a.r);
     t.setPosition(a.x - a.r - 18 - t.r, H - 24 - t.r);

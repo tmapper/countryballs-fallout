@@ -458,7 +458,7 @@ export function installExtras(GameScene) {
     }));
   };
 
-  // Herkesi kafeteryaya ışınla (hayalet olan ben de gelirim, öbür ölüler yerinde kalır)
+  // Herkesi ana masanın etrafına ışınla (hayalet olan ben de gelirim, öbür ölüler yerinde kalır)
   P.gatherInCafeteria = function () {
     const n = this.balls.length;
     this.balls.forEach((b, i) => {
@@ -483,7 +483,7 @@ export function installExtras(GameScene) {
     // cesetler kaldırılır, herkes masanın etrafına döner
     this.bodies.forEach((b) => b.destroy());
     this.bodies = [];
-    this.gatherInCafeteria();                                   // toplantıdan sonra da herkes kafeteryadan başlar
+    this.gatherInCafeteria();                                   // toplantıdan sonra herkes ana masanın etrafında başlar
     this.balls.forEach((b) => {
       if (b.role === 'impostor') b.cooldown = this.cfg.killCd;
       else if (b.role === 'sheriff') b.cooldown = Math.max(b.cooldown, 5);

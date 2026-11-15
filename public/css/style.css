@@ -330,7 +330,19 @@ canvas { display: block; }
 @keyframes drift { from { transform: translateX(-40vw) rotate(0); } to { transform: translateX(40vw) rotate(540deg); } }
 .mt-eject-1 { font-size: clamp(22px, 4vw, 38px); font-weight: 900; }
 .mt-eject-2 { font-size: clamp(16px, 2.6vw, 24px); color: #ffd23f; font-weight: 800; }
-@media (max-width: 760px) { .mt-body { grid-template-columns: 1fr; } .mt-chat { max-height: 160px; min-height: 120px; } .mt-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); } }
+@media (max-width: 760px) {
+  .mt-body { grid-template-columns: 1fr; }
+  .mt-chat { max-height: 180px; min-height: 140px; }
+  .mt-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .mt-panel { max-width: 100%; width: 100%; border-radius: 12px; transform: none !important; zoom: 1 !important; }
+  .mt-player { min-height: 56px; padding: 8px 10px; }
+  .mt-ball { width: 40px; height: 40px; }
+  .mt-name { font-size: 14px; }
+  .mt-title { font-size: clamp(18px, 5vw, 28px); }
+  .mt-head { padding: 10px 12px; gap: 10px; flex-wrap: wrap; }
+  .mt-timer { min-width: 56px; }
+  .mt-time { font-size: 22px; }
+}
 
 /* ---------------- Geçiş animasyonları ---------------- */
 .meeting { animation: mtFade .3s ease; }
@@ -664,7 +676,13 @@ canvas { display: block; }
 .mainmenu.intro .mm-item { animation: termIn .25s steps(4) both; }
 .mainmenu.intro .mm-item:nth-child(1) { animation-delay: 1.5s; } .mainmenu.intro .mm-item:nth-child(2) { animation-delay: 1.6s; } .mainmenu.intro .mm-item:nth-child(3) { animation-delay: 1.7s; } .mainmenu.intro .mm-item:nth-child(4) { animation-delay: 1.8s; } .mainmenu.intro .mm-item:nth-child(5) { animation-delay: 1.9s; }
 @keyframes termIn { from { opacity: 0; clip-path: inset(0 100% 0 0); } to { opacity: 1; clip-path: inset(0 0 0 0); } }
-@media (max-width: 760px) { .mm-top { flex-direction: column; } .mm-id { width: 100%; max-width: 360px; } .mm-terminal { width: 100%; } }
+@media (max-width: 760px) {
+  .mm-top { flex-direction: column; align-items: stretch; gap: 10px; }
+  .mm-id { width: 100%; max-width: none; order: -1; } /* hesabı üste al, kolay görünsün */
+  .mm-terminal { width: 100%; }
+  .mm-brand { text-align: center; }
+  .mm-ui { padding-top: max(8px, env(safe-area-inset-top)); overflow-y: auto; }
+}
 .mainmenu .mm-status[data-s="online"]::before { background: #2fbf5b; box-shadow: 0 0 8px #2fbf5b; }
 .mainmenu .mm-status[data-s="connecting"]::before { background: #d9a400; }
 
