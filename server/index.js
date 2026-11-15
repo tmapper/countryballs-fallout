@@ -45,23 +45,77 @@ const ACC_FILE = path.join(DATA_DIR, 'accounts.json');
 let accounts = { users: {}, tokens: {} };
 try { accounts = JSON.parse(fs.readFileSync(ACC_FILE, 'utf8')); } catch (e) { /* ilk çalıştırma */ }
 // Bulut kaydı (önerilen, ücretsiz): Upstash Redis. Render ücretsiz planda disk silindiği için
-// hesaplar buraya da yazılır. Ortam değişkenleri: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN (README).
+// veriler buraya da yazılır. Ortam değişkenleri: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN (README).
+//
+// Anahtar düzeni (ayrı key'ler — hepsi accounts altında değildi):
+//   cfs:accounts     → { users, tokens }          (hesaplar + oturum token'ları)
+//   cfs:suggestions  → [ { name, account, text, at }, ... ]
+//   cfs:market       → [ { id, seller, ... }, ... ]
+//   cfs:mod          → { modCode, modLog }
+//   cfs:admins       → HASH (ayrı, loadAdmins)
+// Eski tek-blob (cfs:accounts içinde her şey) otomatik göç edilir.
 const KV_URL = (process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/+$/, '');
 const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || '';
-const KV_KEY = process.env.KV_KEY || 'cfs:accounts';
+const KV_ACCOUNTS = process.env.KV_KEY || 'cfs:accounts';
+const KV_SUGGESTIONS = process.env.KV_SUGGESTIONS || 'cfs:suggestions';
+const KV_MARKET = process.env.KV_MARKET || 'cfs:market';
+const KV_MOD = process.env.KV_MOD || 'cfs:mod';
 async function kv(cmd) {
   const res = await fetch(KV_URL, { method: 'POST', headers: { Authorization: 'Bearer ' + KV_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(cmd) });
   const j = await res.json();
   if (j.error) throw new Error(j.error);
   return j.result;
 }
+function ensureAccountsShape() {
+  if (!accounts.users) accounts.users = {};
+  if (!accounts.tokens) accounts.tokens = {};
+  if (!Array.isArray(accounts.suggestions)) accounts.suggestions = [];
+  if (!Array.isArray(accounts.market)) accounts.market = [];
+  if (!Array.isArray(accounts.modLog)) accounts.modLog = [];
+}
 async function loadCloud() {
   if (!KV_URL || !KV_TOKEN) { console.log('Hesaplar: yerel dosya (' + ACC_FILE + ')'); return; }
   for (let i = 0; i < 5; i++) {
     try {
-      const v = await kv(['GET', KV_KEY]);
-      if (v) accounts = JSON.parse(v);
-      console.log('Hesaplar: bulut (Upstash) -', Object.keys(accounts.users || {}).length, 'hesap');
+      // 1) Hesaplar (users + tokens). Eski blob da burada olabilir.
+      const rawAcc = await kv(['GET', KV_ACCOUNTS]);
+      if (rawAcc) {
+        const parsed = JSON.parse(rawAcc);
+        accounts.users = parsed.users || {};
+        accounts.tokens = parsed.tokens || {};
+        // Eski tek-blob göçü: suggestions / market / mod hâlâ accounts içindeyse al
+        if (Array.isArray(parsed.suggestions) && parsed.suggestions.length) accounts.suggestions = parsed.suggestions;
+        if (Array.isArray(parsed.market) && parsed.market.length) accounts.market = parsed.market;
+        if (parsed.modCode) accounts.modCode = parsed.modCode;
+        if (Array.isArray(parsed.modLog) && parsed.modLog.length) accounts.modLog = parsed.modLog;
+      }
+      // 2) Ayrı key'ler (varsa bunlar öncelikli)
+      try {
+        const s = await kv(['GET', KV_SUGGESTIONS]);
+        if (s) accounts.suggestions = JSON.parse(s);
+      } catch (e) { /* yoksa eski blob'dan kalan kullanılır */ }
+      try {
+        const m = await kv(['GET', KV_MARKET]);
+        if (m) accounts.market = JSON.parse(m);
+      } catch (e) { /* */ }
+      try {
+        const mod = await kv(['GET', KV_MOD]);
+        if (mod) {
+          const o = JSON.parse(mod);
+          if (o.modCode) accounts.modCode = o.modCode;
+          if (Array.isArray(o.modLog)) accounts.modLog = o.modLog;
+        }
+      } catch (e) { /* */ }
+      ensureAccountsShape();
+      console.log('Hesaplar: bulut (Upstash) -', Object.keys(accounts.users || {}).length, 'hesap,',
+        (accounts.suggestions || []).length, 'öneri,', (accounts.market || []).length, 'pazar ilanı');
+      // Eski blob'dan göç yaptıysak yeni key'lere bir kez yaz
+      if (rawAcc) {
+        const parsed = JSON.parse(rawAcc);
+        if (parsed.suggestions || parsed.market || parsed.modCode || parsed.modLog) {
+          await saveCloud(); // ayrı key'lere ayır
+        }
+      }
       return;
     } catch (e) { console.error('Bulut okunamadı, tekrar deneniyor', e.message); await new Promise((r) => setTimeout(r, 1500)); }
   }
@@ -72,8 +126,14 @@ async function saveCloud() {
   if (!KV_URL || !KV_TOKEN) return;
   if (cloudBusy) { cloudAgain = true; return; }
   cloudBusy = true;
-  try { await kv(['SET', KV_KEY, JSON.stringify(accounts)]); }
-  catch (e) { console.error('Bulut kaydı başarısız', e.message); cloudAgain = true; }
+  try {
+    ensureAccountsShape();
+    // Hesaplar: sadece users + tokens (şişkin olmasın)
+    await kv(['SET', KV_ACCOUNTS, JSON.stringify({ users: accounts.users, tokens: accounts.tokens })]);
+    await kv(['SET', KV_SUGGESTIONS, JSON.stringify(accounts.suggestions || [])]);
+    await kv(['SET', KV_MARKET, JSON.stringify(accounts.market || [])]);
+    await kv(['SET', KV_MOD, JSON.stringify({ modCode: accounts.modCode || '', modLog: accounts.modLog || [] })]);
+  } catch (e) { console.error('Bulut kaydı başarısız', e.message); cloudAgain = true; }
   cloudBusy = false;
   if (cloudAgain) { cloudAgain = false; setTimeout(saveCloud, 1000); }
 }
@@ -82,15 +142,34 @@ function saveAccounts() {
   clearTimeout(saveT);
   saveT = setTimeout(() => {
     saveT = null;
-    try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(ACC_FILE + '.tmp', JSON.stringify(accounts)); fs.renameSync(ACC_FILE + '.tmp', ACC_FILE); }
-    catch (e) { console.error('Hesaplar kaydedilemedi', e.message); }
+    try {
+      ensureAccountsShape();
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+      // Yerel dosyada hâlâ tek JSON (geliştirme kolaylığı); bulutta ayrı key
+      fs.writeFileSync(ACC_FILE + '.tmp', JSON.stringify(accounts));
+      fs.renameSync(ACC_FILE + '.tmp', ACC_FILE);
+    } catch (e) { console.error('Hesaplar kaydedilemedi', e.message); }
     saveCloud();
   }, 300);
 }
 // Sunucu kapanırken (Render yeniden başlatma) bekleyen kaydı bitir
 ['SIGTERM', 'SIGINT'].forEach((sig) => process.on(sig, async () => {
-  if (saveT) { clearTimeout(saveT); saveT = null; try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(ACC_FILE, JSON.stringify(accounts)); } catch (e) { /* yoksay */ } }
-  try { await Promise.race([kv(['SET', KV_KEY, JSON.stringify(accounts)]), new Promise((r) => setTimeout(r, 3000))]); } catch (e) { /* yoksay */ }
+  if (saveT) {
+    clearTimeout(saveT); saveT = null;
+    try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(ACC_FILE, JSON.stringify(accounts)); } catch (e) { /* yoksay */ }
+  }
+  try {
+    await Promise.race([
+      (async () => {
+        ensureAccountsShape();
+        await kv(['SET', KV_ACCOUNTS, JSON.stringify({ users: accounts.users, tokens: accounts.tokens })]);
+        await kv(['SET', KV_SUGGESTIONS, JSON.stringify(accounts.suggestions || [])]);
+        await kv(['SET', KV_MARKET, JSON.stringify(accounts.market || [])]);
+        await kv(['SET', KV_MOD, JSON.stringify({ modCode: accounts.modCode || '', modLog: accounts.modLog || [] })]);
+      })(),
+      new Promise((r) => setTimeout(r, 4000))
+    ]);
+  } catch (e) { /* yoksay */ }
   process.exit(0);
 }));
 // ---------------- JETON (oyun içi para, gerçek para DEĞİL) ----------------

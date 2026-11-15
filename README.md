@@ -182,7 +182,18 @@ Test edilenler: 2 tarayıcılı online maç (roller gizli, öldürme, bildirme, 
 1. upstash.com -> giriş yap (GitHub/Google) -> **Create Database** (Redis), bölge: Frankfurt (eu-central-1), Free plan.
 2. Veritabanı sayfasında **REST API** kısmından `UPSTASH_REDIS_REST_URL` ve `UPSTASH_REDIS_REST_TOKEN` değerlerini kopyala.
 3. Render -> servisin -> **Environment** -> bu iki değişkeni aynen ekle -> Save (sunucu yeniden başlar).
-4. Render loglarında `Hesaplar: bulut (Upstash) - N hesap` yazısını görürsen tamamdır.
+4. Render loglarında `Hesaplar: bulut (Upstash) - N hesap, M öneri, ...` yazısını görürsen tamamdır.
+
+**Redis anahtar düzeni** (Data Browser’da ayrı görünür):
+| Anahtar | İçerik |
+|---------|--------|
+| `cfs:accounts` | `{ users, tokens }` — hesaplar ve oturum token’ları |
+| `cfs:suggestions` | Öneri kutusu listesi |
+| `cfs:market` | Oyuncu pazarı ilanları |
+| `cfs:mod` | `{ modCode, modLog }` — moderasyon kodu ve log |
+| `cfs:admins` | HASH — admin hesap adları (değer `1`) |
+
+Eski tek-blob (`cfs:accounts` içinde her şey) sunucu açılışında otomatik olarak bu key’lere göç edilir.
 
 ## Aşama 6: Yeni görevler, seviye sistemi, hesap istatistikleri
 - **6 yeni görev türü, 14 yeni istasyon** (toplam 17 tür, 39 istasyon; oyuncu başına yine 5 görev): **yakıt** (çizgide KİLİTLE, 3 tur), **sıralı düğmeler** (1'den 9'a), **borular** (kareleri çevirip sol girişten sağ kenara yol aç), **atık ayrıştırma** (tehlikeli/normal), **frekans** (iki kaydırıcıyla dalgayı uydur), **biyometrik tarama** (elini basılı tut). Kod: `ui/TaskPanel.js`, istasyonlar: `systems/Tasks.js` (konumlar `BunkerMap.canStand` ile doğrulandı).
