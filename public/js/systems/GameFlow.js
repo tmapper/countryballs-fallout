@@ -234,35 +234,49 @@ export function startFromLobby() {
   if (mode === 'offline' && lobby && isRunning('LobbyScene')) { lobby.closeSheets(); startMatch(lobby.state()); }
 }
 
-// Oyun sahnesini kur. Animasyon hâlâ oynuyorsa kurulunca uyut (çizim/güncelleme yapmasın).
+// Oyun sahnesini kur. Sleep KALDIRILDI (siyah ekranın ana sebebiydi).
 function buildGame(m) {
   if (m.built || match !== m) return;
   m.built = true;
   flushSkins(m.flags);
-  game.scene.getScene('GameScene').events.once('create', (scene) => {
-    if (match === m && !m.revealDone) scene.scene.sleep();
-  });
-  game.scene.start('GameScene', { players: m.players, net: m.net, cfg: m.cfg });
+  try {
+    if (isRunning('GameScene')) game.scene.stop('GameScene');
+    if (isRunning('UIScene')) game.scene.stop('UIScene');
+    game.scene.start('GameScene', { players: m.players, net: m.net, cfg: m.cfg });
+  } catch (e) {
+    console.error('[buildGame]', e);
+    m.built = false;
+  }
 }
 
 function enterGame(m) {
   if (match !== m) return;
   m.revealDone = true;
   if (!m.built) buildGame(m);
-  game.scene.run('UIScene');
+  try { game.scene.run('UIScene'); } catch (e) { console.error('[UIScene]', e); }
   playMusic('music_game');
-  // Uyutma işlemi sıraya alınmış olabilir: birkaç kare boyunca kontrol edip uyandır.
-  // Oyun ekrana çizilmeye başlayınca rol animasyonu örtüsünü yumuşakça kaldır.
-  let tries = 0, ready = 0;
-  const wake = () => {
+
+  // Sahne + oyuncu hazır olunca bomba + rol animasyonunu kaldır
+  let tries = 0;
+  const go = () => {
     if (match !== m) return;
-    if (game.scene.isSleeping('GameScene')) game.scene.wake('GameScene');
-    if (game.scene.isActive('GameScene') && !game.scene.isSleeping('GameScene')) ready++;
-    if (ready === 2) { game.scene.getScene('GameScene').playBomb(); reveal.fadeOut(); }
-    if (++tries < 40) requestAnimationFrame(wake);
-    else if (ready < 2) reveal.fadeOut();
+    const sc = game.scene.getScene('GameScene');
+    const ready = sc && game.scene.isActive('GameScene') && sc.player && sc.cameras && sc.cameras.main;
+    if (ready) {
+      try {
+        sc.cameras.main.centerOn(sc.player.x, sc.player.y - 40);
+        if (sc.playBomb) sc.playBomb();
+      } catch (e) { console.error('[enterGame]', e); }
+      reveal.fadeOut();
+      return;
+    }
+    if (++tries < 120) requestAnimationFrame(go);
+    else {
+      try { if (sc && sc.playBomb) sc.playBomb(); } catch (e) {}
+      reveal.fadeOut();
+    }
   };
-  wake();
+  go();
 }
 
 // settings: { myFlag, botFlags, playerCount, forcedRole }
@@ -273,7 +287,8 @@ export function startMatch(settings) {
     { id: 'me', flag: settings.myFlag, role: roles[0], me: true, name: net.profile.name || '', hat: loadHat() },
     ...settings.botFlags.map((flag, i) => ({ id: 'b' + i, flag, role: roles[i + 1], me: false, hat: botHat(flag) }))
   ];
-  const cfg = settings.mapId ? { map: settings.mapId } : null;
+  const mapId = settings.mapId || 'ring';
+  const cfg = { map: mapId };
   startWith(players, 'offline', cfg);
 }
 

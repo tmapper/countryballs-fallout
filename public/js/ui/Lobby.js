@@ -85,6 +85,10 @@ export class Lobby {
         <button class="btn lh-btn hat-open hidden" type="button"><span class="ico">🎩</span><span data-t="lobby.pickHatBtn"></span></button>
         <button class="btn btn-start lh-start" type="button" data-t="lobby.start"></button>
       </div>
+      <div class="lh-maprow">
+        <span class="lh-maplabel" data-t="online.cfg_map">Harita</span>
+        <div class="seg map-seg"></div>
+      </div>
 
       <div class="sheet settings-sheet hidden" role="dialog">
         <div class="sheet-panel">
@@ -99,8 +103,6 @@ export class Lobby {
             </div>
             <p class="hint bots-hint"></p>
             <div class="chips"></div>
-            <h2 class="mt" data-t="online.cfg_map">Harita</h2>
-            <div class="seg map-seg"></div>
           </section>
           <section class="card">
             <h2 data-t="lobby.chances"></h2>
@@ -238,9 +240,9 @@ export class Lobby {
     if (this.root) this.root.querySelector('.hat-open').classList.toggle('hidden', !on);
   }
 
-  // Başlat butonu sadece oyuncu kapıdaki başlat bölgesindeyken görünür
+  // Başlat butonu: single'da her zaman görünür (bölge şartı kaldırıldı, devam etmeme sorunu giderildi)
   setStartReady(on) {
-    if (this.root) this.root.querySelector('.lh-start').classList.toggle('hidden', !on);
+    if (this.root) this.root.querySelector('.lh-start').classList.remove('hidden');
   }
 
   hide() {

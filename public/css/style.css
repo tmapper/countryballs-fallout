@@ -198,7 +198,7 @@ canvas { display: block; }
 /* ---------------- Yürünen lobi: üstteki HTML butonlar ---------------- */
 .lobbyhud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
 .lobbyhud.guard * { pointer-events: none !important; }
-.lobbyhud .btn, .lobbyhud .sheet { pointer-events: auto; }
+.lobbyhud .btn, .lobbyhud .sheet, .lobbyhud .lh-maprow { pointer-events: auto; }
 .lh-top {
   position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
   padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
@@ -217,6 +217,15 @@ canvas { display: block; }
 .lh-btn img { width: 27px; height: 18px; border-radius: 3px; }
 .lh-btn .ico { font-size: 18px; line-height: 1; }
 .lh-start { grid-column: span 2; margin-top: 0; padding: 14px; font-size: 17px; }
+.lh-maprow {
+  position: absolute; left: max(14px, env(safe-area-inset-left)); bottom: max(14px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 6px; pointer-events: auto;
+  background: rgba(10, 18, 12, 0.88); border: 1px solid #2c4a32; border-radius: 12px; padding: 10px 12px;
+  max-width: min(280px, 42vw);
+}
+.lh-maplabel { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #7dff9a; }
+.lh-maprow .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.lh-maprow .seg-btn { font-size: 12px; padding: 6px 10px; min-height: 32px; }
 
 .sheet {
   position: fixed; inset: 0; z-index: 12; background: rgba(0, 0, 0, 0.55);
@@ -1455,27 +1464,27 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 .ach-toast b { display: block; color: #7dff9a; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 4px; }
 .ach-toast span { font-size: 15px; font-weight: 800; color: #e8ffe8; }
 
-/* Ana menü animasyonlu radyoaktif arka plan */
+/* Ana menü animasyonlu arka plan */
 .mm-anim-bg {
   position: absolute; inset: 0; overflow: hidden; pointer-events: none;
   background:
-    radial-gradient(ellipse at 20% 80%, rgba(47,143,74,.25), transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(125,255,154,.12), transparent 45%),
+    radial-gradient(ellipse at 20% 80%, rgba(47,143,74,.18), transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(125,255,154,.08), transparent 45%),
     linear-gradient(160deg, #050a06 0%, #0b1a10 40%, #071208 100%);
 }
 .mm-anim-bg::before {
   content: ''; position: absolute; inset: -20%;
   background:
-    repeating-linear-gradient(0deg, transparent 0 38px, rgba(125,255,154,.03) 38px 39px),
-    repeating-linear-gradient(90deg, transparent 0 38px, rgba(125,255,154,.03) 38px 39px);
+    repeating-linear-gradient(0deg, transparent 0 38px, rgba(125,255,154,.025) 38px 39px),
+    repeating-linear-gradient(90deg, transparent 0 38px, rgba(125,255,154,.025) 38px 39px);
   animation: mmGridDrift 28s linear infinite;
 }
 .mm-anim-bg::after {
   content: ''; position: absolute; width: 140%; height: 140%; left: -20%; top: -20%;
   background:
-    radial-gradient(circle at 30% 40%, rgba(125,255,154,.15) 0, transparent 18%),
-    radial-gradient(circle at 70% 60%, rgba(47,143,74,.2) 0, transparent 22%),
-    radial-gradient(circle at 50% 80%, rgba(255,210,63,.06) 0, transparent 25%);
+    radial-gradient(circle at 30% 40%, rgba(125,255,154,.10) 0, transparent 18%),
+    radial-gradient(circle at 70% 60%, rgba(47,143,74,.14) 0, transparent 22%),
+    radial-gradient(circle at 50% 80%, rgba(255,210,63,.05) 0, transparent 25%);
   animation: mmGlowPulse 12s ease-in-out infinite alternate;
 }
 @keyframes mmGridDrift { from { transform: translate(0,0); } to { transform: translate(-38px, -38px); } }
