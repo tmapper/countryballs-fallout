@@ -65,10 +65,57 @@ function kill(a) {
 }
 const live = new Set();          // çalan tüm müzik/döngü sesleri (yetim kalan var mı diye kontrol)
 
+// ---------------- Web Audio ile gecikmesiz efektler ----------------
+// ESKİ HATA: efektler ilk çalınışta `new Audio(url)` ile O ANDA indirilip çözülüyordu (kablo takma, kaldıraç gibi
+// seyrek sesler hep "ilk kez" olduğu için ~1 sn geç çıkıyordu). Artık tüm kısa efektler açılışta indirilip
+// çözülür (AudioBuffer, toplam ~1 MB) ve çalma anında sadece bellekten başlatılır: gecikme ~0.
+// Henüz hazır değilse (ilk saniyeler) eski yönteme düşer, ses yine çıkar.
+const SFX_NAMES = ['ui_click', 'step', 'wire_connect', 'lever', 'task_done', 'vote', 'tunnel', 'kill', 'shoot', 'valve_turn',
+  'power_up', 'power_down', 'dust_wipe', 'door_seal', 'body_found', 'meeting', 'win', 'lose', 'oxygen_alert',
+  'crate_click', 'crate_spin', 'crate_rare', 'crate_epic', 'crate_legendary'];
+const AC = window.AudioContext || window.webkitAudioContext;
+let ctx = null;
+const buffers = {}, loading = {};
+function getCtx() {
+  if (!ctx && AC) { try { ctx = new AC({ latencyHint: 'interactive' }); } catch (e) { try { ctx = new AC(); } catch (e2) { ctx = null; } } }
+  return ctx;
+}
+function loadBuffer(name) {
+  if (buffers[name]) return Promise.resolve();
+  if (loading[name]) return loading[name];
+  const c = getCtx();
+  if (!c) return Promise.resolve();
+  return (loading[name] = fetch(url(name)).then((r) => r.arrayBuffer())
+    .then((ab) => new Promise((res, rej) => c.decodeAudioData(ab, res, rej)))   // callback biçimi: eski Safari'de de çalışır
+    .then((b) => { buffers[name] = b; })
+    .catch(() => { delete loading[name]; }));
+}
+// Açılışta, tek tek (ağı/CPU'yu tıkamadan) hepsini hazırla
+export function preloadSfx() {
+  const q = SFX_NAMES.filter((n) => !buffers[n]);
+  const next = () => { const n = q.shift(); if (n) loadBuffer(n).then(() => setTimeout(next, 30)); };
+  next();
+}
+function playBuffer(name, k, pitch) {
+  const c = ctx, b = buffers[name];
+  if (!c || !b) return false;
+  if (c.state === 'suspended') c.resume().catch(() => {});
+  const src = c.createBufferSource();
+  src.buffer = b;
+  try { src.playbackRate.value = Math.max(0.5, Math.min(2, pitch)); } catch (e) { /* yoksay */ }
+  const g = c.createGain();
+  g.gain.value = vol(name, SFX_VOL, k);
+  src.connect(g); g.connect(c.destination);
+  src.start(0);
+  return true;
+}
+
 // Her ses için küçük bir havuz: her çalışta yeni Audio oluşturmak (özellikle adım sesi) kasma yapıyordu
 const pools = {};
 export function sfx(name, k = 1, pitch = 1) {
   if (muted) return null;
+  if (playBuffer(name, k, pitch)) return null;      // hazırsa gecikmesiz yol
+  loadBuffer(name);                                  // değilse şimdi hazırlamaya başla, bu seferlik eski yöntemle çal
   const pool = pools[name] || (pools[name] = []);
   // pitch değişince aynı elemanı paylaşmak bozulabilir; pitch≈1 için havuz, değilse yeni
   let a = null;
@@ -145,6 +192,7 @@ export function toggleMute() {
 
 // İlk tıklama/tuş: tarayıcı sese izin verir, bekleyen müziği başlat
 const unlock = () => {
+  if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
   if (muted) return;
   if (music && music.paused) tryPlay(music);
   Object.values(loops).forEach((a) => { if (a.paused) tryPlay(a); });
@@ -176,3 +224,6 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) all.forEach((a) => a.pause());
   else if (!muted) all.forEach((a) => tryPlay(a));
 });
+
+// Efektleri açılıştan kısa süre sonra hazırla (sayfa yüklemesini geciktirmesin)
+setTimeout(preloadSfx, 400);
