@@ -322,7 +322,7 @@ export class MainMenu {
     else { photo.textContent = a ? a.name.slice(0, 1).toUpperCase() : '?'; }
     r.querySelector('.mm-id-title').innerHTML = a ? esc(titleName(a.title)) + (a.admin ? ` · <span class="mm-adm">${esc(i18n.t('profile.admin'))}</span>` : '') : '';
     this.updatePassBadge();
-    r.querySelector('.mm-id-level').innerHTML = a ? `${i18n.t('menu.level', { n: a.level })} · <img class="mm-coin ic-coin" src="${assetUrl('assets/menu/coin.png')}" alt="" width="16" height="16"> ${a.coins ?? 0}` : i18n.t('menu.guestHint');
+    r.querySelector('.mm-id-level').innerHTML = a ? `${i18n.t('menu.level', { n: a.level })} · <img class="mm-coin ic-coin" src="${assetUrl('assets/menu/coin.png?v=2')}" alt="" width="16" height="16"> ${a.coins ?? 0}` : i18n.t('menu.guestHint');
     r.querySelector('.mm-id-xp i').style.width = xpPercent(a) + '%';
     r.querySelector('.mm-id-no').textContent = a ? '#' + String(Math.abs(a.created || 0) % 100000).padStart(5, '0') : '';
     const act = r.querySelector('.mm-id-actions');
@@ -348,7 +348,7 @@ export class MainMenu {
         <div class="pf-meta">
           <div class="pf-name">${esc(a.name)}</div>
           <div class="pf-title">${esc(titleName(a.title))}${a.admin ? ' · ADMIN' : ''}</div>
-          <div class="pf-coins"><img class="mm-coin ic-coin" src="${assetUrl('assets/menu/coin.png')}" alt="" width="16" height="16"> ${a.coins ?? 0}</div>
+          <div class="pf-coins"><img class="mm-coin ic-coin" src="${assetUrl('assets/menu/coin.png?v=2')}" alt="" width="16" height="16"> ${a.coins ?? 0}</div>
         </div>
         <div class="pf-lvl"><b>${a.level}</b><span>LVL</span></div>
       </div>

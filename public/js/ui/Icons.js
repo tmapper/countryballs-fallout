@@ -79,7 +79,7 @@ export function icon(name, cls = '') {
 }
 
 // Jeton: projedeki coin.png kullanılır (emoji değil)
-export const COIN_IMG = `<img class="ic-coin" src="${assetUrl('assets/menu/coin.png')}" alt="" width="16" height="16">`;
+export const COIN_IMG = `<img class="ic-coin" src="${assetUrl('assets/menu/coin.png?v=2')}" alt="" width="16" height="16">`;
 export const coinHtml = (n) => `${COIN_IMG}${n === undefined ? '' : ' ' + n}`;
 
 // ---------------- Phaser dokuları ----------------

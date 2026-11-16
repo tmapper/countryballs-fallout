@@ -14,7 +14,7 @@ function embedded(path) {
 // Bir dosyanın kullanılabilir adresini döndürür.
 // Gömülü videoları Blob adresine çeviririz (iPhone data: adresinden video oynatmıyor).
 export function assetUrl(path) {
-  const emb = embedded(path);
+  const emb = embedded(String(path).split('?')[0]);   // ?v=2 gibi önbellek kırıcı ekler tek dosya sürümünde de çalışsın
   if (typeof emb !== 'string') return path;
   if (/^data:(video|audio)\//.test(emb)) {
     if (!blobCache[path]) {
