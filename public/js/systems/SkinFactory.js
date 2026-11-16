@@ -34,7 +34,9 @@ export function composeFrame(c, info, i, flagCode, mirrorFlag = false) {
   c.setTransform(SKIN_SCALE, 0, 0, SKIN_SCALE, 0, 0);   // tüm çizim orijinal birimlerde, tuvale yarı boyda
   c.imageSmoothingQuality = 'high';
   c.beginPath();
-  c.rect(f.x, f.y, f.w, f.h);
+  // Kare boyu tek sayıysa (duruş karesi 217 px) yarı çözünürlükte son satır yarım piksel olur; orada 'multiply' ile gelen
+  // beyaz gölge dolgusu silinmeden kalıyordu (topun altında beyaz çizgi). Kırpmayı tam piksele indiriyoruz; son 1 px boş zaten.
+  c.rect(f.x, f.y, Math.floor(f.w * SKIN_SCALE) / SKIN_SCALE, Math.floor(f.h * SKIN_SCALE) / SKIN_SCALE);
   c.clip();
   if (mirrorFlag) {
     c.save();

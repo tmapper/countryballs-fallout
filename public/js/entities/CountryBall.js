@@ -16,6 +16,21 @@ export const SPEED = 290;        // saniyede piksel
 export const BALL_WIDTH = 96;
 export const GHOST_SPEED = 1.5;   // hayaletler %50 hızlı    // dünyada topun genişliği (piksel)
 
+// Gölge dokusu: tek sefer çizilen yumuşak kenarlı siyah elips (şekil nesnesi yerine, dikiş çizgisi olmaz)
+function shadowTexture(scene) {
+  const key = 'ball_shadow';
+  if (!scene.textures.exists(key)) {
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 32;
+    const c = cv.getContext('2d');
+    c.translate(64, 16); c.scale(1, 0.25);
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, 62);
+    g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.85, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, 62, 0, Math.PI * 2); c.fill();
+    scene.textures.addCanvas(key, cv);
+  }
+  return key;
+}
+
 export class CountryBall extends Phaser.GameObjects.Container {
   // opts: { isMe, role, name }
   constructor(scene, x, y, flag = 'TR', opts = {}) {
@@ -35,7 +50,8 @@ export class CountryBall extends Phaser.GameObjects.Container {
     wantSkin(flag, this.isMe);
 
     // Gölge: konteynerin (0,0) noktası = ayak, gölge tam orada
-    this.shadow = scene.add.ellipse(0, -4, BALL_WIDTH * 0.85, 18, 0x000000, 0.3);
+    // (Phaser Ellipse şekli yarı saydam dolgusunda ortada ince açık bir çizgi bırakıyordu -> hazır doku kullan)
+    this.shadow = scene.add.image(0, -4, shadowTexture(scene)).setDisplaySize(BALL_WIDTH * 0.85, 18).setAlpha(0.3);
     this.sprite = scene.add.sprite(0, 0, skinKey('idle', flag), 0);
     this.sprite.setScale(this.scaleFactor / SKIN_SCALE);   // skin dokusu yarı çözünürlükte
 
