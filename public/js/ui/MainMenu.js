@@ -81,7 +81,7 @@ export class MainMenu {
             <div class="mm-leds"><i class="g"></i><i class="y"></i><i class="r"></i></div>
           </div>
         </section>
-        <footer class="mm-foot"><div class="mm-hazard"></div><span data-t="menu.version"></span><button class="mm-lang" type="button"></button></footer>
+        <footer class="mm-foot"><div class="mm-hazard"></div><span data-t="menu.version"></span><a class="mm-legal" href="legal/gizlilik.html" target="_blank" rel="noopener" data-t="menu.privacy"></a><a class="mm-legal" href="legal/kullanim.html" target="_blank" rel="noopener" data-t="menu.terms"></a><button class="mm-lang" type="button"></button></footer>
       </div>
       <div class="mm-modal hidden" data-m="auth"><div class="mm-card term">
         <h2 class="mm-auth-title"></h2>
@@ -89,6 +89,7 @@ export class MainMenu {
         <label class="mm-field"><span data-t="menu.password"></span><input class="mm-pass" type="password" maxlength="64" autocomplete="current-password"></label>
         <label class="mm-field mm-pass2-row"><span data-t="menu.password2"></span><input class="mm-pass2" type="password" maxlength="64" autocomplete="new-password"></label>
         <p class="mm-auth-err"></p>
+        <p class="mm-legal-note"></p>
         <button class="mm-tbtn primary mm-auth-go" type="button"></button>
         <button class="mm-link mm-auth-switch" type="button"></button>
         <button class="mm-link mm-close" type="button" data-t="menu.back"></button>
@@ -307,6 +308,10 @@ export class MainMenu {
     r.querySelector('.mm-auth-switch').textContent = i18n.t(reg ? 'menu.haveAccount' : 'menu.noAccount');
     r.querySelector('.mm-pass2-row').classList.toggle('hidden', !reg);
     r.querySelector('.mm-auth-err').textContent = reg ? i18n.t('menu.nameRules') : '';
+    // Kayıt olurken: şartlar + gizlilik bağlantıları (yeni sekmede)
+    const note = r.querySelector('.mm-legal-note');
+    note.classList.toggle('hidden', !reg);
+    note.innerHTML = i18n.t('menu.legalNote', { terms: `<a href="legal/kullanim.html" target="_blank" rel="noopener">${i18n.t('menu.terms')}</a>`, privacy: `<a href="legal/gizlilik.html" target="_blank" rel="noopener">${i18n.t('menu.privacy')}</a>` });
   }
 
   renderAccount() {

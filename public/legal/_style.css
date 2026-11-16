@@ -1,0 +1,11 @@
+:root { color-scheme: dark; }
+body { margin: 0; background: #0e1219; color: #d6dde6; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 820px; margin: 0 auto; padding: 28px 20px 60px; }
+h1 { color: #ffd23f; font-size: 26px; margin: 0 0 4px; } h2 { color: #8dff6a; font-size: 18px; margin: 28px 0 6px; }
+.meta { color: #8792a0; font-size: 13px; margin-bottom: 18px; }
+a { color: #7dc4ff; } .top { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+.top a, .top button { padding: 7px 12px; border-radius: 8px; border: 1px solid #3a4452; background: #161b23; color: #fff; text-decoration: none; font: 700 13px system-ui; cursor: pointer; }
+.top button.on { background: #d9a400; color: #111; border-color: #d9a400; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; } td, th { border: 1px solid #2c3540; padding: 6px 8px; text-align: left; vertical-align: top; }
+.fill { background: #4a3a00; color: #ffd23f; padding: 0 4px; border-radius: 4px; }
+section[lang="en"] { display: none; } body.en section[lang="tr"] { display: none; } body.en section[lang="en"] { display: block; }

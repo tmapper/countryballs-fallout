@@ -26,6 +26,22 @@
       html:not(.typing) #game, html:not(.typing) .mainmenu, html:not(.typing) .lobby, html:not(.typing) .flagpick, html:not(.typing) .market, html:not(.typing) .pass-root, html:not(.typing) .sp-root, html:not(.typing) .quests-side { visibility: hidden !important; pointer-events: none !important; }
     }
   </style>
+  <!-- Çerez bildirimi (bir kez gösterilir; reklamlar Google çerezlerini kullanır) -->
+  <script>
+    (function () {
+      try { if (localStorage.getItem('cfs.cookieOk')) return; } catch (e) { return; }
+      var en = ((function () { try { return localStorage.getItem('cfs_language'); } catch (e) { return ''; } })() || navigator.language || 'tr').slice(0, 2) === 'en';
+      function show() {
+        var d = document.createElement('div'); d.id = 'cfs-cookie';
+        d.innerHTML = en
+          ? '<span>This game shows Google ads, which use cookies. By playing you accept our <a href="legal/gizlilik.html#en" target="_blank" rel="noopener">Privacy Policy</a> and <a href="legal/kullanim.html#en" target="_blank" rel="noopener">Terms</a>.</span><button type="button">OK</button>'
+          : '<span>Bu oyun çerez kullanan Google reklamları gösterir. Oynayarak <a href="legal/gizlilik.html#tr" target="_blank" rel="noopener">Gizlilik Politikası</a> ve <a href="legal/kullanim.html#tr" target="_blank" rel="noopener">Kullanım Şartları</a>\'nı kabul edersin.</span><button type="button">TAMAM</button>';
+        d.querySelector('button').onclick = function () { try { localStorage.setItem('cfs.cookieOk', '1'); } catch (e) {} d.remove(); };
+        document.body.appendChild(d);
+      }
+      if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
+    })();
+  </script>
   <!-- Google AdSense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6190342363852246"
    crossorigin="anonymous"></script>

@@ -455,7 +455,10 @@
     "redeemOk": "Code redeemed!",
     "redeemFail": "Invalid or used code",
     "redeemEmpty": "Enter a code",
-    "redeemUsed": "Code already used"
+    "redeemUsed": "Code already used",
+    "privacy": "Privacy",
+    "terms": "Terms of Use",
+    "legalNote": "By signing up you agree to the {terms} and the {privacy}."
   },
   "online": {
     "title": "LOBBIES",

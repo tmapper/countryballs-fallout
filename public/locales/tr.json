@@ -455,7 +455,10 @@
     "redeemOk": "Kod kabul edildi!",
     "redeemFail": "Geçersiz veya kullanılmış kod",
     "redeemEmpty": "Kod gir",
-    "redeemUsed": "Bu kod zaten kullanıldı"
+    "redeemUsed": "Bu kod zaten kullanıldı",
+    "privacy": "Gizlilik",
+    "terms": "Kullanım Şartları",
+    "legalNote": "Kayıt olarak {terms} ve {privacy} metnini kabul etmiş olursun."
   },
   "online": {
     "title": "LOBİLER",
