@@ -12,6 +12,7 @@
     "bombTitle": "☢ NÜKLEER BOMBA DÜŞTÜ!",
     "bombSub": "Sığınak mühürlendi. Artık dışarı çıkış yok.",
     "emergencyUsed": "Acil toplantı hakkın bitti.",
+    "emergencyWait": "Acil düğme {s} sn sonra kullanılabilir.",
     "gunPickup": "Şerif silahını aldın!"
   },
   "ui": {
@@ -298,7 +299,15 @@
     "chat": "Sohbet",
     "gathered": "Herkes kafeteryada toplandı",
     "alive": "canlı",
-    "votedN": "oy verdi"
+    "votedN": "oy verdi",
+    "deadTag": "ÖLÜ",
+    "confirm": "OY VER",
+    "cancel": "Vazgeç",
+    "pickHint": "Şüphelendiğin kişiye dokun, sonra ✓ ile onayla",
+    "discussHint": "Konuşun! Oylama birazdan başlıyor",
+    "skipConfirm": "EMİN MİSİN? GEÇ",
+    "ejecting": "ATILIYOR",
+    "tieShort": "BERABERE"
   },
   "chat": {
     "sawKill": "{target} öldürürken gördüm!",
@@ -323,6 +332,7 @@
     "quiet": "Biraz sakin olun",
     "whereWas": "{target} neredeydi?",
     "stayTogether": "Birlikte gezelim",
+    "alibi": "{target} benimleydi, o olamaz.",
     "quickTitle": "Hazır mesaj",
     "suspectBtn": "Şüpheli…",
     "suspectOf": "{name} şüpheli",
@@ -457,6 +467,7 @@
     "err_inGame": "Bu lobide oyun sürüyor.",
     "err_full": "Sunucu dolu, sonra dene.",
     "hostLeft": "Kurucu oyundan çıktı. Lobiye dönüldü.",
+    "youAreHost": "Kurucu çıktı. Oyunu artık sen yönetiyorsun, maç devam ediyor!",
     "playerLeft": "{name} oyundan ayrıldı.",
     "disconnected": "Sunucu bağlantısı koptu.",
     "flag": "Bayrağın",
@@ -680,6 +691,8 @@
     "noMine": "Aktif ilanın yok",
     "err_needLogin": "Giriş gerekli",
     "err_badPrice": "Fiyat 50–50000 arasında olmalı",
+    "err_marketFull": "Pazar dolu, biraz sonra tekrar dene",
+    "err_tooManyListings": "En fazla 10 ilanın olabilir",
     "err_noItem": "Bu eşyaya sahip değilsin",
     "err_mysticLock": "Mistik bayrak satılamaz",
     "err_gone": "İlan artık yok",

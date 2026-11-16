@@ -15,7 +15,7 @@ import { RoleReveal } from '../ui/RoleReveal.js';
 import { KillCutscene, preloadKills } from '../ui/KillCutscene.js';
 import { ResultScreen } from '../ui/ResultScreen.js';
 import { assignRoles } from './Roles.js';
-import { initSkins, requestSkins, flushSkins } from './CharacterAtlas.js';
+import { initSkins, requestSkins, flushSkins, wantSkin } from './CharacterAtlas.js';
 import { playMusic, stopMusic, stopAllLoops, sfx } from './Sound.js';
 import { teamOf } from './Combat.js';
 import { MainMenu } from '../ui/MainMenu.js';
@@ -249,7 +249,13 @@ export function startFromLobby() {
 function buildGame(m) {
   if (m.built || match !== m) return;
   m.built = true;
-  flushSkins(m.flags);
+  // DONMA DÜZELTMESİ: eskiden burada TÜM bayrakların yürüme kareleri (bayrak başına 64 kare) senkron çiziliyordu:
+  // 8 kişide ~0,5 sn, 25 kişide ~1,5 sn (telefonda birkaç saniye) rol animasyonu ve oyun donuyordu.
+  // Artık sadece duruş karesi hemen hazırlanır; yürüme kareleri arka planda (requestSkins kuyruğu) tamamlanır,
+  // kendi topun en öne alınır. Yürüme dokusu hazır olmayan top kısa süre duruş karesiyle kayar.
+  flushSkins(m.flags, undefined, ['idle']);
+  const me = m.players.find((p) => p.me);
+  if (me) wantSkin(me.flag, true);
   game.scene.getScene('GameScene').events.once('create', (scene) => {
     if (match === m && !m.revealDone) scene.scene.sleep();
   });

@@ -112,9 +112,9 @@ export function buildProps(R) {
 
   // ---------------- YEMEKHANE 850x750 ----------------
   add('cafeteria', { type: 'longtable', shape: 'rect', x: 110, y: 170, w: 240, h: 90 });
-  add('cafeteria', { type: 'longtable', shape: 'rect', x: 520, y: 170, w: 240, h: 90 });
+  add('cafeteria', { type: 'longtable', shape: 'rect', x: 570, y: 170, w: 240, h: 90 });   // kapı ağızlarından uzak (iki haritada da)
   add('cafeteria', { type: 'longtable', shape: 'rect', x: 110, y: 560, w: 240, h: 90 });
-  add('cafeteria', { type: 'longtable', shape: 'rect', x: 520, y: 560, w: 240, h: 90 });
+  add('cafeteria', { type: 'longtable', shape: 'rect', x: 570, y: 560, w: 240, h: 90 });
   add('cafeteria', { type: 'vending', shape: 'rect', x: 20, y: 30, w: 60, h: 80 });
   add('cafeteria', { type: 'vending', shape: 'rect', x: 770, y: 30, w: 60, h: 80 });
   add('cafeteria', { type: 'counter', shape: 'rect', x: 560, y: 20, w: 180, h: 60 });
@@ -128,12 +128,12 @@ export function buildProps(R) {
   decor('medbay', { type: 'cross', x: 425, y: 330, r: 70 });
 
   // ---------------- LABORATUVAR 700x800 ----------------
-  add('lab', { type: 'desk', shape: 'rect', x: 60, y: 160, w: 300, h: 64 });
-  add('lab', { type: 'desk', shape: 'rect', x: 60, y: 520, w: 300, h: 64 });
+  add('lab', { type: 'desk', shape: 'rect', x: 20, y: 160, w: 220, h: 64 });   // üst kapı ağzını kapatmasın (iki harita)
+  add('lab', { type: 'desk', shape: 'rect', x: 20, y: 520, w: 220, h: 64 });
   add('lab', { type: 'vat', shape: 'circle', x: 560, y: 220, r: 58 });
   add('lab', { type: 'vat', shape: 'circle', x: 560, y: 400, r: 58 });
   add('lab', { type: 'scanner', shape: 'rect', x: 500, y: 560, w: 130, h: 150 });
-  add('lab', { type: 'cabinet', shape: 'rect', x: 40, y: 720, w: 200, h: 50 });
+  add('lab', { type: 'cabinet', shape: 'rect', x: 20, y: 720, w: 160, h: 50 });
   decor('lab', { type: 'stripes', x: 440, y: 120, w: 240, h: 18 });
   decor('lab', { type: 'vent', x: 220, y: 330, w: 120, h: 80 });
 

@@ -1652,3 +1652,113 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 .ach-toast .ach-name { font-size: 16px; font-weight: 900; color: #fff; margin-top: 2px; }
 @keyframes achIn { to { transform: translateX(-50%) translateY(0); } }
 @keyframes achOut { to { transform: translateX(-50%) translateY(140%); opacity: 0; } }
+
+/* ============================================================
+   Oylama ekranı v2: kart düzeni, iki adımlı oy (seç → ✓ onayla),
+   halka sayaç, oy ilerleme çubuğu, sonuç damgası (ATILIYOR / BERABERE)
+   ============================================================ */
+.mt-head { padding: 12px 16px; }
+.mt-head > div:nth-child(2) { min-width: 0; flex: 1; }
+.mt-title, .mt-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Halka sayaç */
+.mt-timer { position: relative; width: 58px; height: 58px; min-width: 58px; flex: none; display: grid; place-items: center; margin-left: 10px; text-align: center; }
+.mt-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.mt-ring circle { fill: none; stroke-width: 4; }
+.mt-ring-bg { stroke: #17251d; }
+.mt-ring-fg { stroke: #7dff9a; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 0; transition: stroke-dashoffset .3s linear, stroke .3s; filter: drop-shadow(0 0 4px rgba(125,255,154,.5)); }
+.meeting[data-phase="vote"] .mt-ring-fg { stroke: #ffd23f; filter: drop-shadow(0 0 4px rgba(255,210,63,.5)); }
+.meeting.urgent .mt-ring-fg { stroke: #ff5a4f; filter: drop-shadow(0 0 5px rgba(255,90,79,.7)); }
+.meeting[data-phase="results"] .mt-ring { opacity: .35; }
+.mt-time { position: relative; font-size: 15px; line-height: 1; white-space: nowrap; }
+.mt-phase { display: none; }
+
+/* Oyuncu kartları */
+.mt-grid { grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 10px; }
+.mt-player { display: flex; align-items: center; gap: 10px; min-height: 66px; padding: 9px 12px; overflow: hidden; outline: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+.mt-player:focus-visible { box-shadow: 0 0 0 2px #ffd23f; }
+.mt-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.mt-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mt-tags { display: flex; gap: 4px; flex-wrap: wrap; min-height: 16px; }
+.mt-tag { font: 900 9.5px system-ui; letter-spacing: .08em; padding: 2px 6px; border-radius: 5px; line-height: 12px; }
+.mt-tag.you { background: #ffd23f; color: #241b00; }
+.mt-tag.rip { background: #2a3530; color: #8a9a90; }
+.mt-voted { position: static; display: none; font: 900 9.5px system-ui; letter-spacing: .06em; padding: 2px 6px; border-radius: 5px; line-height: 12px; }
+.mt-player.has-voted .mt-voted { display: inline-flex; }
+.mt-player.me { box-shadow: inset 3px 0 0 #ffd23f, 0 3px 0 rgba(0,0,0,.35); }
+.mt-player.dead { min-height: 50px; padding: 6px 10px; opacity: .55; }
+.mt-player.dead .mt-ball { width: 34px; height: 34px; }
+.mt-num { left: 42px; top: 3px; }
+
+/* Oy verilebilirken: kartlar hafifçe "nefes alır", fare/dokunuşla öne çıkar */
+.meeting.can-vote .mt-player:not(.dead) { cursor: pointer; }
+.meeting.can-vote .mt-player:not(.dead):not(.pending) { animation: mtBreath 2.4s ease-in-out infinite; animation-delay: calc(var(--i) * 90ms); }
+@keyframes mtBreath { 50% { border-color: #3d6b4c; } }
+.meeting.can-vote .mt-player:not(.dead):hover { transform: translateY(-2px); }
+
+/* Seçili (onay bekleyen) kart: isim altında [✓ OY VER] [✕] */
+.mt-confirm { display: none; gap: 5px; align-items: center; }
+.mt-confirm i { height: 26px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; font: 900 11px system-ui; font-style: normal; letter-spacing: .06em; box-shadow: 0 2px 0 rgba(0,0,0,.4); white-space: nowrap; }
+.mt-confirm i .ic { width: 14px; height: 14px; }
+.mt-yes { padding: 0 10px; background: #2fbf5b; color: #031008; border: 1px solid #7dff9a; }
+.mt-no { width: 28px; background: #3a1416; color: #ffb3b0; border: 1px solid #a23a3e; }
+.mt-yes:active, .mt-no:active { transform: translateY(1px) scale(.95); }
+.mt-player.pending { border-color: #ffd23f !important; background: linear-gradient(180deg, #2f3a1c, #222a14) !important; box-shadow: 0 0 0 2px rgba(255,210,63,.35), 0 0 24px rgba(255,210,63,.3) !important; }
+.mt-player.pending .mt-confirm { display: flex; animation: tpPop .2s cubic-bezier(.2,1.5,.4,1); }
+.mt-player.pending .mt-tags { display: none; }
+.mt-player.pending .mt-num { display: none; }
+.mt-player.chosen::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(circle at 90% 50%, rgba(125,255,154,.18), transparent 60%); pointer-events: none; }
+.meeting.can-vote .mt-grid:has(.pending) .mt-player:not(.pending):not(.dead) { opacity: .6; }
+.mt-tags { overflow: hidden; }
+.mt-tag, .mt-voted { white-space: nowrap; }
+
+/* GEÇ düğmesi */
+.mt-skip { position: relative; transition: border-color .15s, box-shadow .15s, background .15s; }
+.mt-skip.pending { border-color: #ffd23f !important; background: #2f3a1c !important; color: #ffd23f; box-shadow: 0 0 16px rgba(255,210,63,.35) !important; animation: mtPulseSkip .8s ease-in-out infinite alternate; }
+@keyframes mtPulseSkip { to { box-shadow: 0 0 4px rgba(255,210,63,.15); } }
+.mt-skipn:not(:empty) { font-style: normal; margin-left: 4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: #8d97a4; color: #0b0f0b; font: 900 12px system-ui; display: inline-flex; align-items: center; justify-content: center; }
+
+/* Oy ilerlemesi */
+.mt-progress { display: flex; flex-direction: column; gap: 4px; min-width: 130px; }
+.mt-count b { color: #e8ffe9; }
+.mt-pbar { height: 5px; border-radius: 3px; background: #17251d; overflow: hidden; }
+.mt-pbar i { display: block; height: 100%; background: linear-gradient(90deg, #2fbf5b, #7dff9a); transform-origin: left; transform: scaleX(0); transition: transform .35s cubic-bezier(.2,1.2,.4,1); }
+.meeting.spectator .mt-pbar i { background: #6f8296; }
+.mt-note { font-size: 13px; text-align: right; }
+.meeting[data-phase="discuss"] .mt-note { color: #8fd3a2; }
+
+/* Sonuçlar */
+.mt-votes { position: static; display: flex; flex-wrap: wrap; gap: 3px; }
+.mt-votes:empty { display: none; }
+.meeting[data-phase="results"] .mt-tags { display: none; }
+.meeting[data-phase="results"] .mt-player.novotes:not(.dead) { opacity: .6; }
+.mt-stamp { position: absolute; right: 8px; top: 4px; font: 900 10px Impact, "Arial Black", system-ui; letter-spacing: .12em; padding: 2px 7px; border-radius: 4px; transform: rotate(-4deg); display: none; }
+.mt-stamp:not(:empty) { display: block; animation: stamp .45s cubic-bezier(.2,1.6,.4,1) .3s both; }
+.mt-player.out { border-color: #ff5a4f !important; background: linear-gradient(180deg, #3a1a18, #261210) !important; box-shadow: 0 0 0 2px rgba(255,90,79,.3), 0 0 26px rgba(255,90,79,.35) !important; }
+.mt-player.out .mt-stamp { background: #ff5a4f; color: #1a0503; }
+.mt-player.tie { border-color: #ffb347 !important; }
+.mt-player.tie .mt-stamp { background: #ffb347; color: #241400; }
+.mt-player.top .mt-voted, .meeting[data-phase="results"] .mt-voted { display: none !important; }
+
+/* Telefon / kısa ekran */
+@media (max-width: 900px), (max-height: 520px) {
+  .mt-grid { grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)) !important; gap: 6px; }
+  .mt-player { min-height: 52px; padding: 6px 8px; gap: 8px; }
+  .mt-ball { width: 38px; height: 38px; }
+  .mt-name { font-size: 13.5px; }
+  .mt-num { left: 32px; }
+  .mt-player.dead { min-height: 40px; }
+  .mt-player.dead .mt-ball { width: 28px; height: 28px; }
+  .mt-yes { padding: 0 8px; font-size: 10px; }
+  .mt-no { display: none !important; }
+  .mt-timer { width: 48px; height: 48px; min-width: 48px; }
+  .mt-time { font-size: 13px; }
+  .mt-head { padding: 8px 12px; gap: 10px; flex-wrap: nowrap; }
+  .mt-reporter { width: 42px; height: 42px; }
+  .mt-foot { padding: 8px 12px; gap: 10px; flex-wrap: nowrap; }
+  .mt-skip { padding: 8px 12px; font-size: 13px; white-space: nowrap; }
+  .mt-note { font-size: 12px; }
+  .mt-progress { min-width: 96px; }
+  .mt-votes img { width: 18px; height: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .meeting.can-vote .mt-player, .mt-skip.pending { animation: none !important; } }

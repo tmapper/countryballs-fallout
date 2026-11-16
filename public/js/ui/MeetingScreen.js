@@ -24,7 +24,7 @@ export class MeetingScreen {
           <img class="mt-reporter" alt="">
           <div><h1 class="mt-title"></h1><div class="mt-sub"></div></div>
           <div class="mt-steps"><i data-s="discuss"></i><i data-s="vote"></i><i data-s="results"></i></div>
-          <div class="mt-timer"><span class="mt-phase"></span><b class="mt-time"></b></div>
+          <div class="mt-timer"><svg class="mt-ring" viewBox="0 0 44 44"><circle class="mt-ring-bg" cx="22" cy="22" r="19"/><circle class="mt-ring-fg" cx="22" cy="22" r="19" pathLength="100"/></svg><b class="mt-time"></b><span class="mt-phase"></span></div>
         </div>
         <div class="mt-bar"><i></i></div>
         <div class="mt-where">${icon('users')}<span></span></div>
@@ -41,16 +41,24 @@ export class MeetingScreen {
           <div class="mt-chat-row"><input class="mt-chat-input" autocomplete="off" spellcheck="false" enterkeyhint="send"><button class="mt-chat-send" type="button">${icon('send')}</button></div></div>
         </div>
         <div class="mt-foot">
-          <button class="btn mt-skip" type="button">${icon('close')}<span></span></button>
+          <button class="btn mt-skip" type="button">${icon('close')}<span></span><em class="mt-skipn"></em></button>
           <div class="mt-skipvotes"></div>
-          <div class="mt-count"></div>
+          <div class="mt-progress"><div class="mt-count"></div><div class="mt-pbar"><i></i></div></div>
           <div class="mt-note"></div>
         </div>
       </div>
       <div class="mt-eject hidden"><img alt=""><div class="mt-eject-1"></div><div class="mt-eject-2"></div></div>
       <div class="mt-splash hidden"><img alt=""><div class="mt-splash-text"></div></div>`;
     document.body.appendChild(r);
-    r.querySelector('.mt-skip').addEventListener('click', () => this.vote('skip'));
+    r.querySelector('.mt-skip').addEventListener('click', (e) => { e.stopPropagation(); this.pick('skip'); });
+    // Kartlar: 1. dokunuş seçer (onay balonu açılır), ✓ oyu verir, ✕ / boş yere dokunmak vazgeçer
+    r.querySelector('.mt-grid').addEventListener('click', (e) => {
+      const card = e.target.closest('.mt-player');
+      if (e.target.closest('.mt-yes')) { e.stopPropagation(); if (this.pending) this.vote(this.pending); return; }
+      if (e.target.closest('.mt-no')) { e.stopPropagation(); this.setPending(null); return; }
+      if (card && !card.classList.contains('dead')) { e.stopPropagation(); this.pick(card.dataset.id); }
+    });
+    r.querySelector('.mt-panel').addEventListener('click', () => this.setPending(null));
     r.addEventListener('pointerdown', (e) => e.stopPropagation());
     const inp = this.chatInput = r.querySelector('.mt-chat-input');
     const send = (v) => { const now = performance.now(); if (now - (this.lastSend || 0) < 600) return; this.lastSend = now; if (this.opts && this.opts.onChat) this.opts.onChat(v); };
@@ -63,6 +71,7 @@ export class MeetingScreen {
     if (!this.root) this.build();
     this.opts = opts;
     this.myVote = null;
+    this.pending = null;
     const r = this.root;
     r.classList.remove('hidden', 'closing');
     r.querySelector('.mt-eject').classList.add('hidden');
@@ -87,23 +96,34 @@ export class MeetingScreen {
     r.querySelector('.mt-chat').classList.toggle('ghost', !!opts.ghost);
     releaseGameKeys();
     r.querySelector('.mt-skip span').textContent = i18n.t('meeting.skip');
-    r.querySelector('.mt-skip').classList.remove('chosen');
+    r.querySelector('.mt-skip').classList.remove('chosen', 'pending');
+    r.querySelector('.mt-skipn').textContent = '';
     r.querySelector('.mt-where span').textContent = i18n.t('meeting.gathered');
     r.querySelectorAll('.mt-steps i').forEach((x) => { x.textContent = i18n.t(x.dataset.s === 'vote' ? 'meeting.vote' : x.dataset.s === 'results' ? 'meeting.results' : 'meeting.discuss'); });
     this.lastPhase = null; this.votedN = 0;
     this.aliveN = opts.players.filter((p) => p.alive).length;
     r.querySelector('.mt-skipvotes').innerHTML = '';
     r.querySelector('.mt-note').textContent = opts.canVote ? '' : i18n.t('meeting.ghostNoVote');
+    r.classList.toggle('spectator', !opts.canVote);
     const grid = r.querySelector('.mt-grid');
-    grid.innerHTML = opts.players.map((p, i) => `
-      <button style="--i:${i}" class="mt-player${p.alive ? '' : ' dead'}${p.me ? ' me' : ''}" type="button" data-id="${p.id}" ${p.alive ? '' : 'disabled'}>
+    // Canlılar önce, ölüler sona (soluk ve küçük); sıra içinde orijinal düzen korunur
+    const list = [...opts.players.filter((p) => p.alive), ...opts.players.filter((p) => !p.alive)];
+    grid.innerHTML = list.map((p, i) => `
+      <div role="button" tabindex="${p.alive ? 0 : -1}" style="--i:${i}" class="mt-player${p.alive ? '' : ' dead'}${p.me ? ' me' : ''}" data-id="${p.id}" aria-disabled="${!p.alive}">
         <span class="mt-ball" style="background-image:url(${getFlagThumb(p.flag, 60, 40)})">${p.alive ? '' : `<b class="mt-dead">${icon('ghost')}</b>`}</span>
-        <span class="mt-name">${esc(p.name)}${p.me ? ` <i>(${esc(i18n.t('ui.you'))})</i>` : ''}</span>
-        <span class="mt-voted">${icon('check')}${esc(i18n.t('meeting.voted'))}</span>
+        <span class="mt-info">
+          <span class="mt-name">${esc(p.name)}</span>
+          <span class="mt-tags">${p.me ? `<span class="mt-tag you">${esc(i18n.t('ui.you'))}</span>` : ''}${p.alive ? '' : `<span class="mt-tag rip">${esc(i18n.t('meeting.deadTag'))}</span>`}<span class="mt-voted">${icon('check')}${esc(i18n.t('meeting.voted'))}</span></span>
+          <span class="mt-votes"></span>
+          <span class="mt-confirm"><i class="mt-yes" role="button">${icon('check')}${esc(i18n.t('meeting.confirm'))}</i><i class="mt-no" role="button" aria-label="${esc(i18n.t('meeting.cancel'))}">${icon('close')}</i></span>
+        </span>
         <span class="mt-num"></span>
-        <span class="mt-votes"></span>
-      </button>`).join('');
-    grid.querySelectorAll('.mt-player').forEach((b) => b.addEventListener('click', () => this.vote(b.dataset.id)));
+        <span class="mt-stamp"></span>
+      </div>`).join('');
+    grid.querySelectorAll('.mt-player').forEach((b) => b.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (this.pending === b.dataset.id) this.vote(b.dataset.id); else this.pick(b.dataset.id); }
+      else if (e.key === 'Escape') this.setPending(null);
+    }));
     this.setPhase('discuss', 0);
     this.renderCount();
   }
@@ -111,7 +131,9 @@ export class MeetingScreen {
   // "5 canlı · 2 oy verdi"
   renderCount() {
     const el = this.root && this.root.querySelector('.mt-count');
-    if (el) el.innerHTML = `${icon('user')} ${this.aliveN || 0} ${esc(i18n.t('meeting.alive'))} · ${icon('check')} ${this.votedN || 0} ${esc(i18n.t('meeting.votedN'))}`;
+    if (el) el.innerHTML = `${icon('check')} <b>${this.votedN || 0}</b>/${this.aliveN || 0} ${esc(i18n.t('meeting.votedN'))}`;
+    const bar = this.root && this.root.querySelector('.mt-pbar i');
+    if (bar) bar.style.transform = `scaleX(${this.aliveN ? Math.min(1, (this.votedN || 0) / this.aliveN) : 0})`;
   }
 
   setPhase(phase, secs) {
@@ -126,11 +148,34 @@ export class MeetingScreen {
     else this.total = Math.max(this.total || 1, secs || 0);   // evre 0 sn ile açıldıysa ilk gerçek süre tam çubuk olur
     const frac = phase === 'results' ? 0 : Math.max(0, Math.min(1, (secs || 0) / this.total));
     r.querySelector('.mt-bar i').style.transform = `scaleX(${frac})`;
+    r.querySelector('.mt-ring-fg').style.strokeDashoffset = String(100 - frac * 100);
     r.classList.toggle('urgent', secs > 0 && secs <= 5 && phase !== 'results');
     const order = ['discuss', 'vote', 'results'], at = order.indexOf(phase);
     r.querySelectorAll('.mt-steps i').forEach((x) => { const k = order.indexOf(x.dataset.s); x.classList.toggle('on', k === at); x.classList.toggle('done', k < at); });
     const canVote = this.opts && this.opts.canVote && phase === 'vote' && !this.myVote;
     r.classList.toggle('can-vote', !!canVote);
+    if (!canVote && this.pending) this.setPending(null);
+    // Ne yapmalıyım? (oy veremeyen hayaletin notu ve verilmiş oy notu korunur)
+    if (this.opts && this.opts.canVote && !this.myVote) {
+      r.querySelector('.mt-note').textContent = phase === 'vote' ? i18n.t('meeting.pickHint') : phase === 'discuss' ? i18n.t('meeting.discussHint') : '';
+    }
+  }
+
+  // Seçim (onay bekliyor): yanlış dokunuşla oy gitmesin diye iki adımlı
+  pick(id) {
+    if (!this.opts || !this.opts.canVote || this.phase !== 'vote' || this.myVote) return;
+    if (this.pending === id) { this.vote(id); return; }   // aynı karta / GEÇ'e ikinci dokunuş = onay
+    this.setPending(id);
+  }
+
+  setPending(id) {
+    if (!this.root) return;
+    this.pending = id;
+    this.root.querySelectorAll('.mt-player.pending').forEach((b) => b.classList.remove('pending'));
+    const skip = this.root.querySelector('.mt-skip');
+    skip.classList.toggle('pending', id === 'skip');
+    skip.querySelector('span').textContent = i18n.t(id === 'skip' ? 'meeting.skipConfirm' : 'meeting.skip');
+    if (id && id !== 'skip') { const b = this.root.querySelector(`.mt-player[data-id="${id}"]`); if (b) b.classList.add('pending'); }
   }
 
   openQuick(mode) {
@@ -165,6 +210,7 @@ export class MeetingScreen {
 
   vote(id) {
     if (!this.opts || !this.opts.canVote || this.phase !== 'vote' || this.myVote) return;
+    this.setPending(null);
     this.myVote = id;
     this.root.classList.remove('can-vote');
     this.root.querySelector('.mt-note').textContent = i18n.t('meeting.youVoted');
@@ -191,15 +237,28 @@ export class MeetingScreen {
   showResults(votes, skips) {
     const r = this.root;
     this.setPhase('results', 0);
+    const counts = Object.values(votes).map((x) => x.length);
+    const max = counts.length ? Math.max(...counts) : 0;
+    const leaders = counts.filter((n) => n === max).length;
+    // Atılma kuralı GameExtras.finishVoting ile aynı: tek başına en çok oy + GEÇ'ten fazla
+    const out = max > 0 && leaders === 1 && max > skips.length;
+    const tie = max > 0 && !out;
     r.querySelectorAll('.mt-player').forEach((b) => {
       const v = votes[b.dataset.id] || [];
       b.querySelector('.mt-votes').innerHTML = v.map((f, k) => `<img style="--k:${k}" alt="" src="${getFlagThumb(f, 24, 16)}">`).join('');
       b.querySelector('.mt-num').textContent = v.length ? String(v.length) : '';
-      b.classList.toggle('top', v.length > 0 && v.length === Math.max(...Object.values(votes).map((x) => x.length)));
+      const top = v.length > 0 && v.length === max;
+      b.classList.toggle('top', top);
+      b.classList.toggle('out', top && out);
+      b.classList.toggle('tie', top && tie);
+      b.classList.toggle('novotes', !v.length);
+      b.querySelector('.mt-stamp').textContent = top ? i18n.t(out ? 'meeting.ejecting' : 'meeting.tieShort') : '';
     });
+    r.querySelector('.mt-skipn').textContent = skips.length ? String(skips.length) : '';
     r.querySelector('.mt-skipvotes').innerHTML = skips.length
       ? `<span>${esc(i18n.t('meeting.skipped'))}:</span>` + skips.map((f, k) => `<img style="--k:${k}" alt="" src="${getFlagThumb(f, 24, 16)}">`).join('')
       : '';
+    r.querySelector('.mt-note').textContent = '';
   }
 
   showEject(line1, line2, flag) {

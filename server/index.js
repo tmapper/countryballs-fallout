@@ -31,8 +31,11 @@ const impCount = (n) => (n >= 20 ? 4 : n >= 13 ? 3 : n >= 8 ? 2 : 1);     // ist
 const sheriffCount = (n) => (n >= 18 ? 3 : n >= 10 ? 2 : 1);              // istemcideki Roles.sheriffCount ile aynı
 const MIN_MATCH_SECS = Number(process.env.MIN_MATCH_SECS) || 40;     // bundan kısa maçlar istatistiğe yazılmaz (hile/test engeli)
 const MAX_TASKS_PER_MATCH = 5; // Tasks.js -> TASKS_PER_PLAYER ile aynı olmalı (oyuncu başına görev sayısı)
-const MIN_HUMANS = 1;          // botlarla oynanan maçlar da istatistik/XP versin (en az 1 hesaplı oyuncu)
-const ADMIN_KEY = process.env.ADMIN_KEY || '';   // /api/backup?key=... ile hesapları indirmek için (boşsa kapalı)
+const MIN_HUMANS = 2;          // en az 2 farklı hesaplı oyuncu: tek başına botlu odada sahte sonuçla jeton/XP kasılamasın
+const ADMIN_KEY = process.env.ADMIN_KEY || '';
+// Tek kullanımlık jeton kodları: REDEEM_CODES="kod1:1000,kod2:500" (küçük harf). Kaynak kodda durursa herkes görür.
+const REDEEM_CODES = Object.fromEntries(String(process.env.REDEEM_CODES || '').split(',').map((x) => x.trim().toLowerCase().split(':'))
+  .filter(([k, v]) => k && Number(v) > 0).map(([k, v]) => [k.replace(/\s+/g, ''), Math.min(100000, Math.floor(Number(v)))]));   // /api/backup?key=... ile hesapları indirmek için (boşsa kapalı)
 
 // ---------------- HESAPLAR ----------------
 // Basit hesap sistemi: isim + şifre. Şifreler scrypt ile tuzlanıp saklanır (düz metin asla yok).
@@ -189,7 +192,7 @@ const SEASON_DAYS = 30, PASS_LEVELS = 30, PASS_BAR_XP = 20, DAY_MS = 86400000;
 const SEASON_EPOCH = Date.UTC(2026, 10, 11);                   // 1. sezonun başlangıcı (UTC); sonrası otomatik yeni sezon
 const PASS_XP = { played: 8, win: 6, task: 1, kill: 2, daily: 10 };   // bilet XP'si: maç + kazanma + görev + öldürme + günün ilk maçı
 const HFLAGS = { OTT: 'mystic', BRE: 'legendary', ROM: 'legendary', MAM: 'legendary', AND: 'legendary', GOK: 'legendary', HRE: 'epic', BYZ: 'epic', SOV: 'epic', JPE: 'epic', FRK: 'epic', RUE: 'epic', VEN: 'epic', PRU: 'epic', AQY: 'epic', QRN: 'epic', BGK: 'rare', ESE: 'rare', GEN: 'rare', HAZ: 'rare', MON: 'epic', PER: 'epic', ABB: 'legendary', SEL: 'legendary' };
-const DUPE_COINS = { rare: 150, epic: 400, legendary: 1000, mystic: 2500 };      // aynı bayrak tekrar çıkarsa jetona çevrilir
+const DUPE_COINS = { rare: 120, epic: 400, legendary: 1000, mystic: 2500 };   // rare 150'ken Sığınak Kasası (250) çift çıkınca ortalama 255 jeton geri veriyordu: sonsuz jeton      // aynı bayrak tekrar çıkarsa jetona çevrilir
 const CRATE_ODDS = { common: { rare: 70, epic: 25, legendary: 5 }, rare: { rare: 45, epic: 42, legendary: 13 }, grand: { epic: 70, legendary: 30 } };
 const CRATE_TIERS = Object.keys(CRATE_ODDS);
 const CRATE_PRICE = { common: 250, rare: 500, grand: 1000 };  // jetonla kasa satın alma
@@ -758,7 +761,14 @@ function leaveRoom(c) {
   if (!r.players.size) { rooms.delete(r.code); return; }
   if (r.hostId === c.id) {
     r.hostId = r.players.keys().next().value;               // en eski oyuncu host olur
-    if (r.state === 'game') { r.state = 'lobby'; broadcast(r, { t: 'hostLeft' }); }
+    if (r.state === 'game') {
+      // MAÇ DEVAM EDER: yeni host oyunu yönetmeyi devralır (roller, botlar, toplantı). Eskiden herkes lobiye atılıyordu.
+      broadcast(r, { t: 'playerLeft', id: c.id });
+      roomUpdate(r);                                        // önce yeni hostId herkese gitsin
+      const nh = r.players.get(r.hostId);
+      if (nh) send(nh.client, { t: 'hostMigrate', roles: r.roles || {}, left: c.id });
+      return;
+    }
   } else if (r.state === 'game') {
     broadcast(r, { t: 'playerLeft', id: c.id });
   }
@@ -1065,19 +1075,25 @@ function handle(c, m) {
       const item = String(m.item || '');
       const price = Math.floor(Number(m.price) || 0);
       if (price < 50 || price > 50000) { send(c, { t: 'shopError', code: 'badPrice' }); return; }
+      if (!accounts.market) accounts.market = [];
+      // Pazar doluysa yeni ilan alınmaz (eskiden en eski ilanlar silinip satıcının eşyası kayboluyordu)
+      if (accounts.market.length >= 200) { send(c, { t: 'shopError', code: 'marketFull' }); return; }
+      if (accounts.market.filter((x) => x.seller === c.account).length >= 10) { send(c, { t: 'shopError', code: 'tooManyListings' }); return; }
       if (type === 'flag') {
         if (!HFLAGS[item] || !u.flags.includes(item)) { send(c, { t: 'shopError', code: 'noItem' }); return; }
         // mystic satılamaz
         if (HFLAGS[item] === 'mystic') { send(c, { t: 'shopError', code: 'mysticLock' }); return; }
         u.flags = u.flags.filter((f) => f !== item);
+        // Satılan bayrak takılıysa çıkar (artık sahibi değil)
+        clients.forEach((cl) => { if (cl.account === c.account && (cl.flag === item || cl.wantFlag === item)) { cl.wantFlag = ''; cl.flag = ''; applyFlag(cl); const rr = rooms.get(cl.room); if (rr && rr.players.get(cl.id)) { rr.players.get(cl.id).flag = cl.flag; roomUpdate(rr); } } });
       } else {
         if (!u.hats.includes(item) || (HAT_PRICE[item] === 0)) { send(c, { t: 'shopError', code: 'noItem' }); return; }
         u.hats = u.hats.filter((h) => h !== item);
+        clients.forEach((cl) => { if (cl.account === c.account && cl.hat === item) { cl.hat = 'none'; const rr = rooms.get(cl.room); if (rr) roomUpdate(rr); } });
       }
       if (!accounts.market) accounts.market = [];
       const id = crypto.randomBytes(6).toString('hex');
       accounts.market.push({ id, seller: c.account, sellerName: u.name, type, item, price, at: Date.now() });
-      if (accounts.market.length > 200) accounts.market = accounts.market.slice(-150);
       saveAccounts();
       const am = unlockAch(u, 'market_sell');
       send(c, { t: 'account', account: publicAcc(u), marketOk: 'listed' });
@@ -1137,7 +1153,7 @@ function handle(c, m) {
         if (!u.redeems || typeof u.redeems !== 'object') u.redeems = {};
         const code = String(m.code || '').trim().toLowerCase().replace(/\s+/g, '');
         // Tek kullanımlık jeton kodları (tatil / test)
-        const CODES = { test1000: 1000, tatil: 1000, tatil2026: 1000, holiday: 1000 };
+        const CODES = REDEEM_CODES;   // kodlar artık kaynak kodda değil: REDEEM_CODES ortam değişkeni
         if (CODES[code]) {
           if (u.redeems[code]) { send(c, { t: 'redeem', ok: false, err: 'used' }); break; }
           u.redeems[code] = Date.now();
@@ -1455,6 +1471,8 @@ function handle(c, m) {
       remain.forEach((x) => { x.p.role = 'crewmate'; });
       applyForcedRoles(r, all);
       r.state = 'game';
+      r.roles = Object.fromEntries(all.map((p) => [p.id, p.role]));   // kurucu çıkarsa yeni kurucuya verilir
+      r.dead = new Set();          // ölüler (host'un olaylarından): ölülerin sohbeti sadece ölülere gider
       // Maç kaydı: kim hangi rolde ve hangi hesap. Sonuç gelince istatistik buna göre yazılır.
       r.match = { startAt: Date.now(), done: false, roster: {} };
       all.forEach((sp) => {
@@ -1530,7 +1548,6 @@ function handle(c, m) {
         if (kills) bumpQuest(u, 'kills', kills);
         const unlocked = [];
         const pushA = (id) => { const a = unlockAch(u, id); if (a) unlocked.push(a); };
-        if (st.played === 1) pushA('first_win'); // only if also won? 
         if (won && st.wins === 1) pushA('first_win');
         if (kills >= 1 && st.kills - kills === 0) pushA('first_kill');
         if (tasks >= 1 && st.tasks - tasks === 0) pushA('first_task');
@@ -1563,6 +1580,14 @@ function handle(c, m) {
       // HİLE KORUMASI: oyun olaylarını (ev) ve bot konumlarını (bp) sadece host yollayabilir
       const k = m.d && m.d.k;
       if ((k === 'ev' || k === 'bp') && r.hostId !== c.id) return;
+      if (k === 'pp') return;                                  // toplu konum mesajını sadece sunucu yollar (sahte konum engeli)
+      // Ölüleri takip et (ölü sohbetini yaşayanlara göndermemek için)
+      if (k === 'ev' && r.state === 'game' && Array.isArray(m.d.a)) {
+        const a = m.d.a, dead = r.dead || (r.dead = new Set());
+        if (m.d.n === 'kill') dead.add(a[1]);
+        else if (m.d.n === 'shoot') dead.add(a[2] ? a[1] : a[0]);
+        else if (m.d.n === 'endMeeting' && a[0] != null) dead.add(a[0]);
+      }
       // SUNUCU TASARRUFU: oyuncu konumları (p: oyunda, lp: lobide) tek tek herkese gitmez; odada biriktirilip
       // saniyede 10 kez TEK toplu mesajla gönderilir (25 kişide mesaj sayısı ~24 kat azalır).
       if ((k === 'p' || k === 'lp') && !m.to) {
@@ -1595,7 +1620,13 @@ function handle(c, m) {
         return;
       }
       const pl = r.players.get(c.id);
-      broadcast(r, { t: 'chat', from: c.id, name: pl ? pl.name : '?', flag: pl ? pl.flag : '', text, ch: m.ch === 'meet' ? 'meet' : m.ch === 'ghost' ? 'ghost' : 'lobby', dead: !!m.dead || m.ch === 'ghost' });
+      const meDead = r.state === 'game' && !!(r.dead && r.dead.has(c.id));
+      const ch = m.ch === 'meet' ? 'meet' : m.ch === 'ghost' ? 'ghost' : 'lobby';
+      const out = { t: 'chat', from: c.id, name: pl ? pl.name : '?', flag: pl ? pl.flag : '', text, ch, dead: meDead || !!m.dead || ch === 'ghost' };
+      if (r.state === 'game' && out.dead) {
+        // Ölü / hayalet mesajı: SADECE ölülere (eskiden herkese gidiyor, yaşayan hileci okuyabiliyordu)
+        r.players.forEach((p) => { if (r.dead && r.dead.has(p.id)) send(p.client, out); });
+      } else broadcast(r, out);
       break;
     }
     // ---- MODERATÖR ----

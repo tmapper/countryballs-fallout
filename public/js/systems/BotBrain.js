@@ -63,12 +63,28 @@ const CELL = 30;
 let GW = 0, GH = 0;
 let nav = null, navKey = null;
 let gScore = null, came = null, mark = null, stamp = 0;
+// Komşu hücreler arası geçiş gerçekten yürünebilir mi? (iki hücre merkezi yürünebilir olsa da aradaki ince
+// duvar/eşya köşesi geçişi kapatabiliyordu: botlar böyle bir "geçide" yol çizip sonsuza kadar takılıyordu)
+// 0 = bilinmiyor, 1 = açık, 2 = kapalı. Tembel hesaplanır (ilk kullanıldığında).
+let edges = null;
+const DIRS = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
+function edgeOk(cx, cy, k) {
+  const i = (cy * GW + cx) * 8 + k;
+  if (edges[i]) return edges[i] === 1;
+  const [dx, dy] = DIRS[k];
+  const ax = cx * CELL + CELL / 2, ay = cy * CELL + CELL / 2;
+  let ok = true;
+  for (const t of [0.25, 0.5, 0.75]) if (!canStand(ax + dx * CELL * t, ay + dy * CELL * t)) { ok = false; break; }
+  edges[i] = ok ? 1 : 2;
+  return ok;
+}
 function navGrid() {
   const key = MAP.id + ':' + world.sealed;               // harita ya da kapı durumu değişince yeniden kur
   if (nav && navKey === key) return nav;
   GW = Math.ceil(WORLD.w / CELL); GH = Math.ceil(WORLD.h / CELL);
   nav = new Uint8Array(GW * GH);
   for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) nav[gy * GW + gx] = canStand(gx * CELL + CELL / 2, gy * CELL + CELL / 2) ? 1 : 0;
+  edges = new Uint8Array(GW * GH * 8);
   if (!gScore || gScore.length !== GW * GH) {
     gScore = new Float32Array(GW * GH); came = new Int32Array(GW * GH); mark = new Uint32Array(GW * GH); stamp = 0;
   }
@@ -76,7 +92,17 @@ function navGrid() {
   return nav;
 }
 // Maç başında bir kez çağır: ızgara ilk bot hareketinde değil, yükleme sırasında kurulsun
-export function warmNav() { navGrid(); }
+export function warmNav() {
+  const g = navGrid();
+  // Geçiş kontrollerini de şimdi (yükleme sırasında) hesapla: maç içinde ilk yol aramaları 10-20 ms sürüp kare atlatmasın
+  for (let cy = 0; cy < GH; cy++) for (let cx = 0; cx < GW; cx++) {
+    if (!g[cy * GW + cx]) continue;
+    for (let k = 0; k < 8; k++) {
+      const nx = cx + DIRS[k][0], ny = cy + DIRS[k][1];
+      if (nx >= 0 && ny >= 0 && nx < GW && ny < GH && g[ny * GW + nx]) edgeOk(cx, cy, k);
+    }
+  }
+}
 
 const cellOf = (x, y) => [clamp(Math.floor(x / CELL), 0, GW - 1), clamp(Math.floor(y / CELL), 0, GH - 1)];
 const center = (gx, gy) => ({ x: gx * CELL + CELL / 2, y: gy * CELL + CELL / 2 });
@@ -146,13 +172,14 @@ export function navPath(from, to) {
     closed[cur] = closedStamp;
     if (cur === E) { found = true; break; }
     const cx = cur % GW, cy = (cur / GW) | 0, base = gScore[cur];
-    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-      if (!dx && !dy) continue;
+    for (let k = 0; k < 8; k++) {
+      const dx = DIRS[k][0], dy = DIRS[k][1];
       const nx = cx + dx, ny = cy + dy;
       if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
       const ni = ny * GW + nx;
       if (!g[ni] || closed[ni] === closedStamp) continue;
       if (dx && dy && (!g[cy * GW + nx] || !g[ny * GW + cx])) continue;    // köşe kesme yok
+      if (!edgeOk(cx, cy, k)) continue;                                      // aradaki geçiş kapalı
       const ng = base + (dx && dy ? 1.414 : 1);
       if (mark[ni] !== stamp || ng < gScore[ni]) { mark[ni] = stamp; gScore[ni] = ng; came[ni] = cur; heapPush(ni, ng + h(ni)); }
     }
@@ -246,7 +273,15 @@ export class BotBrain {
   // Her karede çağrılır; yön vektörü döndürür.
   // chase: görünen bir hedef verilirse (Katil avı / Şerif şüpheliyi kovalar) doğrudan ona yürür.
   update(dt, chase = null) {
-    this.dir.x = 0; this.dir.y = 0;
+    this.dir.x = 0; this.dir.y = 0; this.dir.t = null;
+    // Düz çizgide kovalarken bir eşyaya takıldıysa: bir süre yol bularak (A*) hedefin olduğu yere git
+    if (this.noChase > 0) { this.noChase -= dt; chase = null; }
+    if (chase && this.chaseStuck > 0.5) {
+      this.chaseStuck = 0; this.noChase = 1.5; this.doing = null;
+      this.goTo(chase.x, chase.y);
+      chase = null;
+    }
+    this.chasing = !!chase;
     if (chase) {
       this.path = []; this.wait = 0;
       const dx = chase.x - this.ball.x, dy = chase.y - this.ball.y;
@@ -273,26 +308,46 @@ export class BotBrain {
         if (this.doing) { this.finishing = this.doing; this.doing = null; this.wait = 3 + Math.random() * 4; }  // görevi "yapıyor"
         return this.dir;
       }
-      if (!this.path.length) this.wait = 1 + Math.random() * 3;
+      if (!this.path.length) { this.wait = 1 + Math.random() * 3; this.fails = 0; }
       return this.dir;
     }
     const speed = 0.75;
     this.dir.x = (dx / d) * speed; this.dir.y = (dy / d) * speed;
+    this.dir.t = t;          // GameScene her karede bu ara noktayı geçmemek için adımı kırpar (düşük FPS'de ileri-geri sallanma olmasın)
     return this.dir;
   }
 
   // GameScene hareket sonucunu bildirir; takılırsa yeni plan yapar
   report(moved, dt) {
+    this.chaseStuck = this.chasing && !moved ? (this.chaseStuck || 0) + dt : 0;
+    // İlerleme ölçümü: "kıpırdıyor ama 2 sn'de 25 px bile ilerlemiyor" da takılmadır (köşede titreme)
+    const b = this.ball;
+    if (!this.prog || this.wait > 0 || !this.path.length) this.prog = { x: b.x, y: b.y, t: 0 };
+    else {
+      this.prog.t += dt;
+      if (Math.hypot(b.x - this.prog.x, b.y - this.prog.y) > 25) this.prog = { x: b.x, y: b.y, t: 0 };
+      else if (this.prog.t > 2) { this.prog = { x: b.x, y: b.y, t: 0 }; moved = false; this.stuck = 1; }
+    }
     if (this.wait > 0 || moved) { this.stuck = 0; return; }
     this.stuck += dt;
     if (this.stuck > 0.6) {
       this.stuck = 0; this.wait = 0.15;
+      // Aynı yere 3 kez takıldıysa vazgeç (hedefli ya da rastgele yürüyüş fark etmez; eskiden rastgele yürüyüşte
+      // sayaç hiç artmıyordu ve bot aynı köşeye sonsuza kadar yol çiziyordu) ve yakındaki açık bir noktaya kaç
+      if (++this.fails >= 3) {
+        this.goal = null; this.doing = null; this.fails = 0;
+        this.path = [];
+        for (let i = 0; i < 16; i++) {
+          const a = Math.random() * Math.PI * 2, r = 40 + Math.random() * 110;
+          const p = { x: b.x + Math.cos(a) * r, y: b.y + Math.sin(a) * r };
+          if (canStand(p.x, p.y) && clearLine(b, p)) { this.path = [p]; break; }
+        }
+        return;
+      }
       // Başka bir topa ya da köşeye takıldı: yolu baştan hesapla (hedef aynı kalır)
       const last = this.path[this.path.length - 1];
-      const np = last ? tryNavPath({ x: this.ball.x, y: this.ball.y }, last) : [];
+      const np = last ? tryNavPath({ x: b.x, y: b.y }, last) : [];
       if (np) this.path = np;                       // bütçe yoksa eski yol kalır, bir sonraki takılmada tekrar denenir
-      // Aynı hedefe 3 kez takıldıysa vazgeç (sonsuz döngü olmasın)
-      if (this.goal && ++this.fails >= 3) { this.goal = null; this.doing = null; this.fails = 0; }
     }
   }
 }

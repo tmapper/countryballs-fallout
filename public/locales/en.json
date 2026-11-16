@@ -12,6 +12,7 @@
     "bombTitle": "☢ THE NUKE HAS FALLEN!",
     "bombSub": "The bunker is sealed. There is no way back outside.",
     "emergencyUsed": "You have no emergency meetings left.",
+    "emergencyWait": "Emergency button ready in {s}s.",
     "gunPickup": "You picked up the Sheriff gun!"
   },
   "ui": {
@@ -298,7 +299,15 @@
     "chat": "Chat",
     "gathered": "Everyone gathered in the cafeteria",
     "alive": "alive",
-    "votedN": "voted"
+    "votedN": "voted",
+    "deadTag": "DEAD",
+    "confirm": "VOTE",
+    "cancel": "Cancel",
+    "pickHint": "Tap a suspect, then confirm with ✓",
+    "discussHint": "Discuss! Voting starts soon",
+    "skipConfirm": "SURE? SKIP",
+    "ejecting": "EJECTED",
+    "tieShort": "TIE"
   },
   "chat": {
     "sawKill": "I saw {target} kill!",
@@ -323,6 +332,7 @@
     "quiet": "Calm down a bit",
     "whereWas": "Where was {target}?",
     "stayTogether": "Let's stick together",
+    "alibi": "{target} was with me, it can't be them.",
     "quickTitle": "Quick chat",
     "suspectBtn": "Suspect…",
     "suspectOf": "{name} is suspicious",
@@ -457,6 +467,7 @@
     "err_inGame": "A game is running in this lobby.",
     "err_full": "Server is full, try later.",
     "hostLeft": "The host left. Back to the lobby.",
+    "youAreHost": "The host left. You now run the match, it continues!",
     "playerLeft": "{name} left the game.",
     "disconnected": "Lost connection to the server.",
     "flag": "Your flag",
@@ -680,6 +691,8 @@
     "noMine": "No active listings",
     "err_needLogin": "Login required",
     "err_badPrice": "Price must be 50–50000",
+    "err_marketFull": "Market is full, try again later",
+    "err_tooManyListings": "You can have at most 10 listings",
     "err_noItem": "You do not own this item",
     "err_mysticLock": "Mystic flags cannot be sold",
     "err_gone": "Listing is gone",

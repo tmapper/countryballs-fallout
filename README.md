@@ -72,7 +72,7 @@ npm start          # http://localhost:3000
 - 30 günlük sezon, 30 bar, bar başına 20 XP (en fazla 600 XP). Sezon tarihi sunucuda `SEASON_EPOCH`'tan hesaplanır; 30 gün dolunca yeni sezon otomatik başlar, bilet XP'si ve alınmamış ödüller sıfırlanır (kasa, bayrak ve jeton kalır).
 - Bilet XP'si maç sonunda yazılır: oynanan maç +8, kazanma +6, görev +1, öldürme +2, günün ilk maçı +10 (`PASS_XP`). Sayıları değiştirmek için `PASS_XP`'e bak.
 - Ödüller: her 3. bar kasa (9, 18, 24: Ender Kasa; 15, 30: Büyük Kasa; diğerleri Sığınak Kasası), diğer barlar jeton (50 ile başlar, 140'a kadar çıkar). Ödül alma ve kasa açma tamamen SUNUCUDA doğrulanır (`passClaim`, `passClaimAll`, `crateOpen`).
-- Kasalardan 12 tarihi bayrak çıkar: Efsanevi: Osmanlı, Britanya İmparatorluğu, Roma. Destansı: Kutsal Roma, Bizans, SSCB, Japon İmparatorluğu, Fransa Krallığı, Rus İmparatorluğu. Ender: Bulgar Krallığı, İspanya İmparatorluğu, Ceneviz. Mevcut 25 bayrak "Sıradan"dır. Çift çıkan bayrak jetona dönüşür (Ender 150, Destansı 400, Efsanevi 1000).
+- Kasalardan 12 tarihi bayrak çıkar: Efsanevi: Osmanlı, Britanya İmparatorluğu, Roma. Destansı: Kutsal Roma, Bizans, SSCB, Japon İmparatorluğu, Fransa Krallığı, Rus İmparatorluğu. Ender: Bulgar Krallığı, İspanya İmparatorluğu, Ceneviz. Mevcut 25 bayrak "Sıradan"dır. Çift çıkan bayrak jetona dönüşür (Ender 120, Destansı 400, Efsanevi 1000).
 - Tarihi bayrağı sadece sahibi seçebilir (sunucu `setFlag` ve `profile`'da kontrol eder); bayrak seçicide kilitli olanlar nadirlik rengiyle görünür.
 - Nadirlik/şans/ödül tablosu hem `server/index.js` (HFLAGS, CRATE_ODDS, passReward) hem `Flags.js` (HIST_RARITY) hem `Pass.js` içinde durur; değiştirirsen üçünü birlikte güncelle.
 

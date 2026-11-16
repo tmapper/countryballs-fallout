@@ -17,7 +17,8 @@ import { ghostChat } from '../ui/Chat.js';
 
 export const REPORT_RANGE = 170;        // oyuncu cesede bu kadar yakınsa BİLDİR çıkar
 export const BOT_REPORT_RANGE = 420;    // bot cesedi bu mesafeden görürse bildirir
-export const EMERGENCY_RANGE = 230;     // acil toplantı düğmesine yakınlık
+export const EMERGENCY_RANGE = 230;
+export const EMERGENCY_COOLDOWN = 15;    // acil düğme bekleme süresi (sn): maç başı + her toplantı sonrası     // acil toplantı düğmesine yakınlık
 const DISCUSS_TIME = 12;
 const VOTE_TIME = 25;
 const RESULT_TIME = 3.5;
@@ -81,6 +82,7 @@ export function installExtras(GameScene) {
     this.sabotage = null;
     this.sabCd = 20;
     this.emergencyLeft = 1;
+    this.emergencyCd = EMERGENCY_COOLDOWN;   // acil düğme maç başında ve her toplantıdan sonra 15 sn kilitli
     this.reportScan = 0;
     this.alarmEl = null;
     minimap.show();
@@ -209,7 +211,7 @@ export function installExtras(GameScene) {
     const t = norm(text);
     if (/\b(skip|gec|gecelim|kanit yok|bilmiyorum)\b/.test(t)) return;
     // Olumsuzlama: "X degil", "not X", "X innocent/masum", "X katil degil"
-    const NEG = /(degil|değil|not |yok|masum|innocent|temiz|crew|suspect degil|şüpheli degil|supheli degil|katil degil)/i;
+    const NEG = /(degil|değil|not |yok|masum|innocent|temiz|crew|suspect degil|şüpheli degil|supheli degil|katil degil|benimle|with me|birlikteydi|yanimdaydi|yanımdaydı)/i;
     const POS = /(supheli|şüpheli|suspect|katil|impostor|imposter|goruyorum|gördüm|gordum|vent|tunel|tünel|kill|oldur|öldür)/i;
     const d = i18n.data || {};
     let best = null, bestLen = 0;
@@ -251,21 +253,42 @@ export function installExtras(GameScene) {
     if (!dead && b && !this.isClient) this.readChat(b, m.text);
   };
 
-  // Ceset yakınında, ölümden kısa süre önce gördüğü kişi = ipucu (kesin değil)
+  // Ceset yakınında, ölümden kısa süre önce gördüğü kişi = ipucu (kesin değil).
+  // MAZERET: ölüm anında (±3 sn) bot birini cesetten uzakta kendi gözüyle gördüyse o kişi temizdir.
   P.botLeads = function (body) {
     this.balls.forEach((b) => {
       if (!b.brain) return;
-      b.brain.lead = null;
-      if (!body || !b.brain.seen || b.role === 'impostor') return;
+      const br = b.brain;
+      br.lead = null; br.alibi = new Set();
+      if (!body || b.role === 'impostor') return;
       const t0 = body.t || this.time.now;
-      let best = null, bestT = -1;
-      b.brain.seen.forEach((e, o) => {
-        if (o === b || o === body.ball || !o.alive) return;
-        if (e.t < t0 - 10000 || e.t > t0 + 1500) return;
-        if (Math.hypot(e.x - body.x, e.y - body.y) > 420) return;
-        if (e.t > bestT) { bestT = e.t; best = o; }
+      (br.hist || []).forEach((h) => {
+        if (Math.abs(h.t - t0) > 3000) return;
+        h.ps.forEach(([o, x, y]) => { if (o !== body.ball && Math.hypot(x - body.x, y - body.y) > 550) br.alibi.add(o); });
       });
-      b.brain.lead = best;
+      if (!br.seen) return;
+      let best = null, bestScore = -Infinity;
+      br.seen.forEach((e, o) => {
+        if (o === b || o === body.ball || !o.alive || br.alibi.has(o)) return;
+        if (e.t < t0 - 10000 || e.t > t0 + 1500) return;
+        const d = Math.hypot(e.x - body.x, e.y - body.y);
+        if (d > 420) return;
+        // daha yakın ve ölüme daha yakın zamanda görülen daha şüpheli
+        const sc = -d / 420 - (t0 - e.t) / 10000;
+        if (sc > bestScore) { bestScore = sc; best = o; }
+      });
+      // Cesedin yanında kimse görülmediyse: kurbanı son 20 sn içinde biriyle BAŞ BAŞA gördü mü? ("X ile elektriğe gidiyordu")
+      if (!best) {
+        let bt = -1;
+        (br.hist || []).forEach((h) => {
+          if (h.t < t0 - 20000 || h.t > t0) return;
+          const v = h.ps.find(([o]) => o === body.ball);
+          if (!v) return;
+          const near = h.ps.filter(([o, x, y]) => o !== body.ball && o !== b && o.alive && !br.alibi.has(o) && Math.hypot(x - v[1], y - v[2]) < 320);
+          if (near.length === 1 && h.t > bt) { bt = h.t; best = near[0][0]; }
+        });
+      }
+      br.lead = best;
     });
   };
 
@@ -282,7 +305,24 @@ export function installExtras(GameScene) {
     let popular = null, popN = 0;
     tallies.forEach((n, t) => { if (n > popN) { popN = n; popular = t; } });
 
-    if (s && s.alive && b.role !== 'impostor') {
+    // Mazeret: suçlanan biri bu botla birlikteyse onu savunur (bir kez)
+    const alibiFor = b.role !== 'impostor' && b.brain && b.brain.alibi
+      ? [...m.accuse.values()].find((t) => t && t.alive && t !== b && b.brain.alibi.has(t) && !(m.alibiSaid && m.alibiSaid.has(b.id + '>' + t.id)))
+      : null;
+    // Katil ortağı suçlanıyorsa katil bot bazen sahte mazeret uydurur
+    const allyAccused = b.role === 'impostor'
+      ? [...m.accuse.values()].find((t) => t && t.alive && t !== b && t.role === 'impostor')
+      : null;
+    if (alibiFor) {
+      key = 'chat.alibi'; target = alibiFor;
+      (m.alibiSaid || (m.alibiSaid = new Set())).add(b.id + '>' + alibiFor.id);
+      if (!m.clear) m.clear = new Map();
+      m.clear.set(alibiFor, (m.clear.get(alibiFor) || 0) + 2);
+    } else if (allyAccused && Math.random() < 0.5) {
+      key = 'chat.alibi'; target = allyAccused;
+      if (!m.clear) m.clear = new Map();
+      m.clear.set(allyAccused, (m.clear.get(allyAccused) || 0) + 1);
+    } else if (s && s.alive && b.role !== 'impostor') {
       // Gerçek tanık: katili gördü
       key = b.brain.sawVent ? 'chat.sawVent' : (Math.random() < 0.5 ? 'chat.sawKill' : 'chat.suspect');
       target = s;
@@ -362,7 +402,10 @@ export function installExtras(GameScene) {
         this.setMeetingPhase('vote');
         this.emitEv('phase', ['vote']);
         this.balls.filter((b) => b.alive && !b.isMe && (b.brain || !this.online)).forEach((b) => {
-          m.timers.push(this.time.delayedCall((1 + Math.random() * 12) * 1000, () => this.castVote(b, this.botVoteFor(b))));
+          // Oylama süresine göre: sürenin %10-%60'ı içinde (kısa oylamada da süre bitmeden oy verir)
+          const span = Math.max(2, (this.cfg.vote || VOTE_TIME) - 2);
+          const at = Math.min(span, 1 + span * (0.1 + Math.random() * 0.5));
+          m.timers.push(this.time.delayedCall(at * 1000, () => this.castVote(b, this.botVoteFor(b))));
         });
       }
     } else if (m.phase === 'vote') {
@@ -376,32 +419,50 @@ export function installExtras(GameScene) {
     const m = this.meeting;
     const idOf = (o) => m.ids.get(o);
     const br = b.brain || {};
-    // Şerif masum vurup öldüyse → kanıt karışık, skip eğilimi
-    if (m.sheriffMisfire) {
+    const alibi = br.alibi || new Set();
+    // KRİZ: katiller bir öldürme uzaklıktaysa (atlamak = kaybetmek) masumlar boş geçmez
+    const alive = this.balls.filter((o) => o.alive);
+    const imps = alive.filter((o) => o.role === 'impostor').length;
+    const crisis = imps > 0 && imps + 1 >= alive.length - imps;
+    // Şerif masum vurup öldüyse → kanıt karışık, skip eğilimi (kriz hariç)
+    if (m.sheriffMisfire && !crisis) {
       if (b.role !== 'impostor' && Math.random() < 0.75) return 'skip';
     }
-    if (b.role !== 'impostor' && br.suspect && br.suspect.alive) return idOf(br.suspect);
+    if (b.role !== 'impostor' && br.suspect && br.suspect.alive) return idOf(br.suspect);   // kendi gözüyle gördü
     const score = new Map();
     m.accuse.forEach((t, who) => {
       if (!t || !t.alive || t === b || who === b || !who.alive) return;
       let w = (m.weight && m.weight.get(who)) || 1;
       // Temize çıkarıldıysa skor düşür
       if (m.clear && m.clear.get(t)) w = Math.max(0, w - m.clear.get(t));
+      // Suçlayanın kendisi bu botun gözünde şüpheliyse (cesedin yanında gördüğü) suçlamasına güvenme
+      if (b.role !== 'impostor' && who === br.lead) w = Math.max(0, w - 2);
       if (w > 0) score.set(t, (score.get(t) || 0) + w);
     });
     const ranked = [...score.entries()].sort((x, y) => y[1] - x[1]);
     if (b.role === 'impostor') {
+      // Ortağına asla oy vermez; masumlardan en çok suçlanana yüklenir. Krizde eşik düşer (kazanmak için bir atış yeter).
       const crewTop = ranked.find(([t]) => t.role !== 'impostor');
-      if (crewTop && crewTop[1] >= 3 && Math.random() < 0.7) return idOf(crewTop[0]);
+      const need = crisis ? 1 : 3;
+      if (crewTop && crewTop[1] >= need && Math.random() < (crisis ? 0.95 : 0.7)) return idOf(crewTop[0]);
+      const allyTop = ranked[0] && ranked[0][0].role === 'impostor';
+      if (allyTop && crewTop && Math.random() < 0.6) return idOf(crewTop[0]);    // ortağı kurtarmak için oyu böl
       return 'skip';
     }
-    const top = ranked[0];
-    const lead = br.lead && br.lead.alive ? br.lead : null;
+    // Masum: mazereti olanı ele (kendi gözüyle birlikte olduğu kişi)
+    const clean = ranked.filter(([t]) => !alibi.has(t));
+    const top = clean[0];
+    const lead = br.lead && br.lead.alive && !alibi.has(br.lead) ? br.lead : null;
     if (top && top[1] >= 5) return idOf(top[0]);
     if (lead && top && top[0] === lead && top[1] >= 2) return idOf(lead);
     if (top && top[1] >= 4 && Math.random() < 0.7) return idOf(top[0]);
     if (lead && Math.random() < 0.45) return idOf(lead);
     if (top && top[1] >= 3 && Math.random() < 0.35) return idOf(top[0]);
+    if (crisis) {
+      // Geçmek kaybettirir: en güçlü ipucuna oy ver
+      if (lead) return idOf(lead);
+      if (top) return idOf(top[0]);
+    }
     return 'skip';
   };
 
@@ -478,6 +539,29 @@ export function installExtras(GameScene) {
     if (!m) return;
     this.emitEv('endMeeting', [ejected ? ejected.id : null]);
     m.timers.forEach((t) => t.remove(false));
+    // Botlar toplantıdan bir "güvenmediğim kişi" çıkarır: atılmayan en çok suçlanan ya da cesedin yanında gördüğü
+    if (!this.isClient) {
+      const tally = new Map();
+      m.accuse.forEach((t, who) => { if (t && t.alive && t !== ejected) tally.set(t, (tally.get(t) || 0) + ((m.weight && m.weight.get(who)) || 1) - ((m.clear && m.clear.get(t)) || 0)); });
+      let topT = null, topN = 2;
+      tally.forEach((n, t) => { if (n > topN) { topN = n; topT = t; } });
+      this.balls.forEach((b) => {
+        if (!b.brain || !b.alive || b.role === 'impostor') return;
+        const br = b.brain, al = br.alibi || new Set();
+        const cand = br.lead && br.lead.alive && br.lead !== ejected ? br.lead : topT;
+        br.distrust = cand && cand !== b && !al.has(cand) ? cand : null;
+        br.btnGo = false;
+        // Şerif: herkesin üstünde birleştiği (atılamamış) kişiyi şüpheli sayar ve gördüğünde vurur — risk alır
+        if (b.role === 'sheriff' && topT && topT !== b && !al.has(topT) && topN >= 4 && Math.random() < 0.6) br.suspect = topT;
+        // Toplantıdan sonra masumların yarısı bir arkadaşla birlikte gezer (yalnız kalan kolay av olur)
+        br.buddy = null;
+        if (Math.random() < 0.5) {
+          let bb = null, bd = Infinity;
+          this.balls.forEach((o) => { if (o === b || !o.alive || o === br.distrust) return; const d = Math.hypot(o.x - b.x, o.y - b.y); if (d < bd) { bd = d; bb = o; } });
+          if (bb) { br.buddy = bb; br.buddyUntil = this.time.now + 20000 + Math.random() * 15000; }
+        }
+      });
+    }
     meetingUI.close();
     if (ejected) this.die(ejected, { noBody: true });
     // cesetler kaldırılır, herkes masanın etrafına döner
@@ -490,7 +574,8 @@ export function installExtras(GameScene) {
     });
     this.meeting = null;
     ghostChat.suspend(false);
-    this.sabCd = Math.max(this.sabCd, 15);
+    this.sabCd = 0;                              // toplantıdan sonra sabotaj beklemesi sıfırlanır: katil hemen sabotaj yapabilir
+    this.emergencyCd = EMERGENCY_COOLDOWN;
     minimap.show();
     playMusic('music_game');
     this.checkEnd();
@@ -561,6 +646,7 @@ export function installExtras(GameScene) {
 
   P.updateSabotage = function (dt) {
     if (this.sabCd > 0) this.sabCd -= dt;
+    if (this.emergencyCd > 0) this.emergencyCd -= dt;
     const s = this.sabotage;
     if (s) {
       if (s.def.time) {
@@ -603,7 +689,9 @@ export function installExtras(GameScene) {
   };
 
   P.pressEmergency = function () {
+    if (this.sabotage) return;                                    // sabotaj sürerken düğme kapalı
     if (this.emergencyLeft <= 0) { this.toast(i18n.t('game.emergencyUsed'), '#ffb347'); return; }
+    if (this.emergencyCd > 0) { this.toast(i18n.t('game.emergencyWait', { s: Math.ceil(this.emergencyCd) }), '#ffb347'); return; }
     this.emergencyLeft--;
     if (this.isClient) this.req('emergency'); else this.callMeeting(this.player, null);
   };

@@ -187,10 +187,32 @@ export function useMap(id) {
   TUNNELS.length = 0; m.tunnels.forEach((t) => TUNNELS.push({ ...t, links: [...t.links] }));
   Object.assign(EMERGENCY_BUTTON, m.button); Object.assign(START_POINT, m.start); Object.assign(LOBBY_CENTER, m.lobby);
   WALKABLE.length = 0; WALKABLE.push(...Object.values(ROOMS), ...CORRIDORS);
-  PROPS.length = 0; PROPS.push(...buildProps(ROOMS));
+  PROPS.length = 0; PROPS.push(...dropClashes(buildProps(ROOMS).filter(insideOwnRoomOnly)));
   SOLIDS.length = 0; SOLIDS.push(...PROPS.filter((p) => p.solid));
   indexSolids();
   hooks.forEach((fn) => fn(mid));
+}
+
+// Eşyalar odaya göre göreli konumlu; bazı haritalarda odalar iç içe geçer (Kavşak'ta depo-reaktör, iletişim-O2...).
+// Merkezi BAŞKA bir odanın içine düşen eşya o haritada çizilmez ve çarpışmaz (forklift reaktörün ortasında durmasın).
+function insideOwnRoomOnly(p) {
+  if (p.pts) return true;
+  const circ = p.shape === 'circle' || (p.r && !p.w);
+  const cx = circ ? p.x : p.x + (p.w || 0) / 2, cy = circ ? p.y : p.y + (p.h || 0) / 2;
+  return !Object.entries(ROOMS).some(([id, r]) => id !== p.room && cx > r.x && cx < r.x + r.w && cy > r.y && cy < r.y + r.h);
+}
+
+// İki farklı odanın katı eşyaları üst üste biniyorsa (odalar birleşik haritada) küçük olanı çizme
+function dropClashes(list) {
+  const box = (p) => { const c = p.shape === 'circle' || (p.r && !p.w); return c ? [p.x - p.r, p.y - p.r, p.x + p.r, p.y + p.r] : [p.x, p.y, p.x + (p.w || 0), p.y + (p.h || 0)]; };
+  const area = (b) => (b[2] - b[0]) * (b[3] - b[1]);
+  const drop = new Set();
+  list.forEach((a, i) => list.forEach((b, j) => {
+    if (j <= i || !a.solid || !b.solid || a.room === b.room || a.pts || b.pts) return;
+    const A = box(a), B = box(b);
+    if (A[0] < B[2] && A[2] > B[0] && A[1] < B[3] && A[3] > B[1]) drop.add(area(A) < area(B) ? a : b);
+  }));
+  return list.filter((p) => !drop.has(p));
 }
 
 // Bomba düştükten sonra (maç başladığında) dışarısı KAPANIR: giriş alanına bir daha girilmez.

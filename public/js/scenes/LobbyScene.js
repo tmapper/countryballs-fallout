@@ -31,6 +31,7 @@ const START = { x: 1100, y: 420, r: 190 };                   // BAŞLAT bölgesi
 const POLE = { x: 470, y: 640, r: 170 };                     // BM direği (bayrak seç)
 const WARD = { x: 1730, y: 640, r: 170 };                    // şapka dolabı (askı)
 const FOOT_W = 26, FOOT_D = 22;
+const TREE_SCALE = 1.2;                                       // ağaç görselinin büyüklüğü (çarpışma aynı)
 const SOLIDS = [                                             // çarpışma: ağaçlar, kayalar, kum torbaları, direk
   { x: POLE.x, y: POLE.y, r: 26 },
   { x: WARD.x, y: WARD.y, r: 40 },
@@ -175,8 +176,8 @@ export class LobbyScene extends Phaser.Scene {
       const ring = [];
       for (let x = 60; x < LOBBY.w; x += 150) { ring.push([x, FIELD.y - 40]); ring.push([x + 70, FIELD.y + FIELD.h + 150]); }
       for (let y = FIELD.y + 60; y < FIELD.y + FIELD.h + 100; y += 150) { ring.push([FIELD.x - 70, y]); ring.push([FIELD.x + FIELD.w + 80, y]); }
-      ring.forEach(([x, y], i) => { if (Math.abs(x - DOOR.x) < 330 && y < FIELD.y) return; const sc = 0.30 + ((i * 37) % 10) / 60; s.add.image(x, y, 'lobbytree').setOrigin(0.5, 1).setScale(sc).setDepth(y); });
-      SOLIDS.filter((o) => o.tree).forEach((o) => s.add.image(o.x, o.y + 20, 'lobbytree').setOrigin(0.5, 1).setScale(0.34).setDepth(o.y));
+      ring.forEach(([x, y], i) => { if (Math.abs(x - DOOR.x) < 330 && y < FIELD.y) return; const sc = (0.30 + ((i * 37) % 10) / 60) * TREE_SCALE; s.add.image(x, y, 'lobbytree').setOrigin(0.5, 1).setScale(sc).setDepth(y); });
+      SOLIDS.filter((o) => o.tree).forEach((o) => s.add.image(o.x, o.y + 20, 'lobbytree').setOrigin(0.5, 1).setScale(0.34 * TREE_SCALE).setDepth(o.y));
     }
     if (PROP_IMG.kaya) { if (!s.textures.exists('lobbyrock')) s.textures.addImage('lobbyrock', PROP_IMG.kaya); SOLIDS.filter((o) => o.rock).forEach((o) => s.add.image(o.x, o.y + 18, 'lobbyrock').setOrigin(0.5, 1).setScale(0.18).setDepth(o.y)); }
     if (PROP_IMG.kum) { if (!s.textures.exists('lobbysand')) s.textures.addImage('lobbysand', PROP_IMG.kum); SAND.forEach((r) => s.add.image(r.x + r.w / 2, r.y + r.h + 8, 'lobbysand').setOrigin(0.5, 1).setScale(r.w * 1.1 / 512).setDepth(r.y + r.h)); }

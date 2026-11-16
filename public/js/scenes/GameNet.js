@@ -20,6 +20,9 @@ import { STATIONS, UPLOAD_STATION, TASKS_PER_PLAYER } from '../systems/Tasks.js'
 import { canStand, TUNNELS, EMERGENCY_BUTTON } from '../map/BunkerMap.js';
 import { nearestTunnel } from '../systems/Combat.js';
 import { SPEED } from '../entities/CountryBall.js';
+import { BotBrain, warmNav } from '../systems/BotBrain.js';
+import { pickTasks } from '../systems/Tasks.js';
+import { i18n } from '../systems/I18n.js';
 
 const TASK_MIN_GAP = 1500;      // iki görev arası en az (ms): en kısa mini oyun bile bundan uzun
 const TASK_RANGE = 230;
@@ -42,10 +45,12 @@ export function installNet(GameScene) {
     const onRelay = (m) => this.onRelay(m.from, m.d || {});
     const onLeft = (m) => this.onPlayerLeft(m.id);
     const onChat = (m) => this.onChatMsg(m);
+    const onMigrate = (m) => this.becomeHost(m.roles || {});
     net.on('relay', onRelay);
     net.on('playerLeft', onLeft);
     net.on('chat', onChat);
-    this.events.once('shutdown', () => { net.off('relay', onRelay); net.off('playerLeft', onLeft); net.off('chat', onChat); });
+    net.on('hostMigrate', onMigrate);
+    this.events.once('shutdown', () => { net.off('relay', onRelay); net.off('playerLeft', onLeft); net.off('chat', onChat); net.off('hostMigrate', onMigrate); });
   };
 
   // Host: olayı herkese yayınla (uygulanırken tekrar yayınlama)
@@ -94,6 +99,7 @@ export function installNet(GameScene) {
   P.onRelay = function (from, d) {
     const fromHost = net.room && from === net.room.hostId;
     if (d.k === 'pp') {                               // sunucunun toplu konum mesajı
+      if (from !== '*') return;                       // başka oyuncudan gelen sahte toplu konum
       (d.a || []).forEach(([id, x, y, f, m, lobby]) => { if (!lobby && id !== net.id) this.onRelay(id, { k: 'p', x, y, f, m }); });
       return;
     }
@@ -151,7 +157,7 @@ export function installNet(GameScene) {
         break;
       }
       case 'emergency':
-        if (who.alive && !this.sabotage && near(who, EMERGENCY_BUTTON, 260) && (who.emergencyLeft === undefined ? 1 : who.emergencyLeft) > 0) { who.emergencyLeft = 0; this.callMeeting(who, null); }
+        if (who.alive && !this.sabotage && !(this.emergencyCd > 0) && near(who, EMERGENCY_BUTTON, 260) && (who.emergencyLeft === undefined ? 1 : who.emergencyLeft) > 0) { who.emergencyLeft = 0; this.callMeeting(who, null); }
         break;
       case 'vote': {
         // sadece 'skip' ya da yaşayan bir oyuncunun numarası
@@ -208,11 +214,45 @@ export function installNet(GameScene) {
     }
   };
 
+  // Kurucu maçtan çıktı, sunucu yönetimi BANA verdi: rolleri öğren, botları devral, oyunu yönetmeye devam et
+  P.becomeHost = function (roles) {
+    if (!this.isClient || this.over) return;
+    this.netMode = 'host'; this.isHost = true; this.isClient = false;
+    this.balls.forEach((b) => {
+      if (roles[b.id]) b.role = roles[b.id];
+      if (!b.isBot || b.isMe || !b.alive || b.left) return;
+      // Bot artık bende düşünür (ağdan konum beklemez)
+      b.net = null; b.netValid = null;
+      b.brain = new BotBrain(b);
+      b.botTasks = pickTasks(TASKS_PER_PLAYER, { flat: true });
+      if (b.role !== 'impostor') b.tasksLeft = TASKS_PER_PLAYER;
+      b.onBotTask = (t) => {
+        t.done = true;
+        if (b.role === 'impostor' || !b.alive || this.over || !b.tasksLeft) return;
+        b.tasksLeft--;
+        this.addTaskDone(1);
+      };
+    });
+    if (this.balls.some((b) => b.brain)) warmNav();
+    this.registry.set('role', this.player.role);
+    this.toast(i18n.t('online.youAreHost'), '#ffd23f');
+    // Toplantının oy bilgisi eski kurucudaydı: kimse atılmadan kapat, maç sürsün
+    if (this.meeting) this.endMeeting(null);
+    this.emitEv('tasks', [this.taskDone, this.taskTotal]);
+    this.checkEnd();
+  };
+
   // Bir oyuncu bağlantıyı kesti: oyundan düşer (ceset bırakmaz)
   P.onPlayerLeft = function (id) {
     const b = this.ball(id);
     if (!b || b.isMe) return;
     b.left = true;
+    // Çıkan masumun yapılmamış görevleri toplamdan düşer (yoksa görevle kazanmak imkânsızlaşıyordu)
+    if (this.isHost && b.role !== 'impostor' && !b.tasksLeftRemoved) {
+      b.tasksLeftRemoved = true;
+      const left = Math.max(0, TASKS_PER_PLAYER - ((b.taskIds && b.taskIds.size) || 0));
+      if (left) { this.taskTotal -= left; this.publishTasks(); this.emitEv('tasks', [this.taskDone, this.taskTotal]); }
+    }
     if (b.alive) this.die(b, { noBody: true });
     b.setVisible(false);
     this.toast(this.nameOf(b) + ' ✕', '#ffb347');

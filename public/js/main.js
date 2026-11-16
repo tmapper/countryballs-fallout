@@ -109,9 +109,12 @@ if (/[?&]debug=1/.test(location.search)) {
     document.body.appendChild(d);
   };
   const trap = new Function('debugger');
+  // Yanlış alarm olmasın: telefonda anlık takılma (çöp toplama, arka plandan dönüş) tek ölçümde 80 ms'yi aşıp
+  // oyunu "geliştirici araçları" kilidiyle DONDURABİLİYORDU. Artık art arda 3 ölçüm de uzun olmalı.
+  let hits = 0;
   setInterval(() => {
     const t = performance.now();
     trap();
-    if (performance.now() - t > 80) lock();
+    if (performance.now() - t > 80) { if (++hits >= 3) lock(); } else hits = 0;
   }, 700);
 }
