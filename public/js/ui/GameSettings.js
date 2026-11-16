@@ -11,6 +11,8 @@ import { releaseGameKeys } from './Chat.js';
 import { setDevice, isMobile } from '../systems/Device.js';
 import { perfHud } from '../systems/PerfHud.js';
 import { getPerf, setPerf } from '../systems/Perf.js';
+import { keyBindPanel, buttonEditor } from './Controls.js';
+import { net } from '../systems/Net.js';
 
 class GameSettings {
   constructor() { this.root = null; this.isOpen = false; this.creditsRoot = null; }
@@ -29,6 +31,9 @@ class GameSettings {
       <div class="gs-row gs-perfnote"><small data-t="ui.perfNote"></small></div>
       <div class="gs-row"><span data-t="ui.showFps"></span><button class="gs-tog gs-fps" type="button"></button></div>
       <div class="gs-row"><span data-t="ui.device"></span><div class="gs-seg gs-dev"><button type="button" data-v="mobile">Mobil</button><button type="button" data-v="pc">PC</button></div></div>
+      <div class="gs-row"><span data-t="controls.title"></span><div class="gs-seg gs-ctl"><button type="button" class="gs-keys" data-t="controls.keysBtn"></button><button type="button" class="gs-layout" data-t="controls.layoutBtn"></button></div></div>
+      <div class="gs-row gs-redeemrow"><span data-t="menu.redeem"></span><div class="gs-redeem"><input class="gs-code" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done"><button type="button" class="gs-tog gs-code-go" data-t="menu.redeemGo"></button></div></div>
+      <div class="gs-row gs-codemsg hidden"><small></small></div>
       <div class="gs-row gs-fsrow"><span data-t="ui.fullscreen"></span><button class="gs-tog gs-fs" type="button"></button></div>
       <div class="gs-row"><span data-t="ui.specialThanks"></span><button class="gs-tog gs-thanks" type="button">★</button></div>
       <div class="gs-foot"><button class="gs-btn gs-resume" type="button" data-t="ui.resume"></button><button class="gs-btn danger gs-leave" type="button" data-t="ui.backToLobby"></button><button class="gs-btn danger gs-exit" type="button" data-t="ui.exit"></button></div>
@@ -56,6 +61,29 @@ class GameSettings {
       setTimeout(() => this.render(), 300);
     });
     q('.gs-thanks').addEventListener('click', () => this.openCredits());
+    q('.gs-keys').addEventListener('click', () => keyBindPanel.open());
+    q('.gs-layout').addEventListener('click', () => { this.close(); buttonEditor.open(); });
+    // Jeton kodu (eskiden sadece ana menünün ayrı ayarlar penceresindeydi; artık her yerde aynı pencere)
+    const msg = (t) => { const m = q('.gs-codemsg'); m.classList.toggle('hidden', !t); m.querySelector('small').textContent = t || ''; };
+    const redeem = () => {
+      const code = q('.gs-code').value.trim();
+      if (!code) { msg(i18n.t('menu.redeemEmpty') || 'Kod gir'); return; }
+      if (!net.account) { msg(i18n.t('shop.needLogin') || 'Giriş yapmalısın'); return; }
+      msg('...');
+      if (net.status !== 'online') {
+        net.connect();
+        const once = () => { if (net.status === 'online') { net.off('status', once); net.redeem(code); } };
+        net.on('status', once); setTimeout(() => net.off('status', once), 8000); return;
+      }
+      net.redeem(code);
+    };
+    q('.gs-code-go').addEventListener('click', redeem);
+    q('.gs-code').addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); redeem(); } });
+    net.on('redeem', (m) => {
+      if (!this.isOpen) return;
+      if (m.ok) { msg((i18n.t('menu.redeemOk') || 'Kod kabul edildi!') + ' +' + (Number(m.coins) || 0)); q('.gs-code').value = ''; }
+      else msg(m.err === 'used' ? i18n.t('menu.redeemUsed') : m.err === 'login' ? i18n.t('shop.needLogin') : i18n.t('menu.redeemFail'));
+    });
     window.addEventListener('keydown', (e) => { if (this.isOpen && e.key === 'Escape') { e.stopPropagation(); this.close(); } }, true);
     i18n.onChange(() => this.isOpen && this.render());
   }

@@ -6,6 +6,7 @@
 // terminal komutu gibi; ok tuşları + Enter ile de seçilir. Sağ üstte KİMLİK KARTI (hesap).
 //   menu.show({ onOnline, onCreate, onSolo })   menu.hide()
 // İsteğe bağlı görseller (yoksa kodla çizilir): assets/menu/menu_bg_reactor.jpg, assets/menu/logo.png
+import { gameSettings } from './GameSettings.js';
 import { social } from './Social.js';
 import { exitGame } from '../systems/ExitGame.js';
 import { shelterPass } from './ShelterPass.js';
@@ -248,7 +249,7 @@ export class MainMenu {
   }
 
   act(a) {
-    if (a === 'settings') { this.openModal('settings'); this.root.querySelector('.mm-graphics').value = getQuality(); this.root.querySelector('.mm-fps').checked = perfHud.enabled; return; }
+    if (a === 'settings') { gameSettings.open({}); return; }   // her yerde AYNI ayarlar penceresi (ui/GameSettings.js)
     if (a === 'howto') { this.openModal('howto'); return; }
     if (a === 'exit') { exitGame(); return; }
     if (a === 'pass') {

@@ -22,6 +22,7 @@ import { loadHat, botHat, ensureHatTexture } from '../systems/Looks.js';
 import { hatPicker } from '../ui/HatPicker.js';
 import { net } from '../systems/Net.js';
 import { flagPicker } from '../ui/FlagPicker.js';
+import { onAction } from '../systems/Keys.js';
 
 // ---------------- Lobi alanı (kendi küçük dünyası) ----------------
 export const LOBBY = { w: 2200, h: 1400 };
@@ -92,9 +93,9 @@ export class LobbyScene extends Phaser.Scene {
     this.inZone = false;
     this.inFlag = false;
     this.inHat = false;
-    this.input.keyboard.on('keydown-E', () => { if (this.inFlag) openLobbyFlagPicker(); else if (this.inHat) openLobbyHatPicker(); else if (this.inZone) startFromLobby(); });
-    this.input.keyboard.on('keydown-ENTER', () => { if (this.inZone) startFromLobby(); });
-    this.events.once('shutdown', () => { flagPicker.close(); hatPicker.close(); });
+    // KULLAN tuşu (varsayılan E / Enter; Ayarlar > Tuş atama)
+    const offUse = onAction('use', () => { if (!this.sys.isActive()) return; if (this.inFlag) openLobbyFlagPicker(); else if (this.inHat) openLobbyHatPicker(); else if (this.inZone) startFromLobby(); });
+    this.events.once('shutdown', () => { offUse(); flagPicker.close(); hatPicker.close(); });
 
     // Dünya kamerası
     const cam = this.cameras.main;

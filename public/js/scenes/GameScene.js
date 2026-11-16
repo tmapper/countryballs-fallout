@@ -17,6 +17,7 @@ import { BotBrain, navFrameStart, warmNav } from '../systems/BotBrain.js';
 import { ROLE_COLORS, impCount } from '../systems/Roles.js';
 import { RES, getQuality, setQuality } from '../systems/Resolution.js';
 import { perf, getPerf, setPerf } from '../systems/Perf.js';
+import { onAction } from '../systems/Keys.js';
 import { backToLobby, playKillCutscene, gameOver } from '../systems/GameFlow.js';
 import {
   KILL_RANGE, SHOOT_RANGE, KILL_COOLDOWN, FIRST_KILL_COOLDOWN, SHOOT_COOLDOWN, FIRST_SHOOT_COOLDOWN,
@@ -160,9 +161,14 @@ export class GameScene extends Phaser.Scene {
     // F2 sis aç/kapa: sadece test modunda (?debug=1) ve çevrimdışı (yoksa duvar hilesi olurdu)
     if (/[?&]debug=1/.test(location.search)) kb.on('keydown-F2', () => { if (!this.online) this.fog.setEnabled(!this.fog.enabled); });
     kb.on('keydown-ESC', () => { if (this.taskPanel.isOpen) this.taskPanel.close(); else if (!gameSettings.isOpen) gameSettings.open({ onLeave: () => backToLobby() }); });
-    kb.on('keydown-Q', () => this.doAction());
-    kb.on('keydown-SPACE', () => this.doAction());
-    kb.on('keydown-E', () => this.interact());
+    // Eylem tuşları Ayarlar > Tuş atama'dan değişir (systems/Keys.js)
+    const offKeys = [
+      onAction('action', () => { if (this.sys.isActive()) this.doAction(); }),
+      onAction('use', () => { if (this.sys.isActive()) this.interact(); }),
+      onAction('report', () => { if (this.sys.isActive()) this.reportNearest(); }),
+      onAction('sabotage', () => { if (this.sys.isActive()) this.openSabotage(); })
+    ];
+    this.events.once('shutdown', () => offKeys.forEach((f) => f()));
     this.setupExtras();   // ceset bildirme, toplantı, sabotaj, mini harita (GameExtras.js)
     this.setupFx();       // ışık, toz, kan, duman (GameFx.js)
     this.setupCull();

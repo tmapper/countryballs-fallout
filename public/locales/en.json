@@ -388,7 +388,7 @@
     "offline": "Not connected",
     "connecting": "Connecting...",
     "noServer": "No server address (Settings)",
-    "version": "Version 0.9.20",
+    "version": "Version 0.9.21",
     "exit": "EXIT",
     "back": "BACK",
     "language": "Language",
@@ -820,5 +820,42 @@
   "easter": {
     "fiexSub": "A secret camp for ghosts",
     "fiexHello": "Fiex's army salutes you! 🫡"
+  },
+  "loader": {
+    "chars": "PREPARING CHARACTERS",
+    "cinematics": "LOADING ANIMATIONS",
+    "roles": "ASSIGNING ROLES",
+    "kills": "SEALING THE BUNKER",
+    "ready": "READY"
+  },
+  "controls": {
+    "title": "Controls",
+    "keysBtn": "Key bindings",
+    "layoutBtn": "Button layout",
+    "keysTitle": "KEY BINDINGS",
+    "keysHint": "Click a key box, then press the new key. Esc: cancel · Backspace: clear. Each action can have 2 keys.",
+    "a_up": "Up",
+    "a_down": "Down",
+    "a_left": "Left",
+    "a_right": "Right",
+    "a_action": "Kill / Shoot",
+    "a_use": "Use / Task / Vent",
+    "a_report": "Report body",
+    "a_sabotage": "Sabotage",
+    "a_map": "Map",
+    "pressKey": "Press a key…",
+    "reset": "Reset to default",
+    "done": "Done",
+    "cancel": "Cancel",
+    "save": "Save",
+    "layoutTitle": "BUTTON LAYOUT",
+    "layoutHint": "Drag the buttons where you want them, then Save.",
+    "joyZone": "Joystick: left half of the screen",
+    "size": "Size",
+    "b_action": "Kill / Shoot",
+    "b_tunnel": "Vent",
+    "b_use": "Use",
+    "b_report": "Report",
+    "b_sabotage": "Sabotage"
   }
 }

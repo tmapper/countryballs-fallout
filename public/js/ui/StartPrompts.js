@@ -7,35 +7,35 @@ import { getDevice, setDevice, applyDeviceClass } from '../systems/Device.js';
 import { icon } from './Icons.js';
 
 export const UPDATE = {
-  id: '0.9.20',
+  id: '0.9.21',
   tr: {
     title: 'Yeni Güncelleme!',
     items: [
-      'Telefonda yazı yazarken (sohbet, komutlar) ekranın kararması ve küçülmesi düzeltildi',
-      'Toplantı başlar başlamaz herkes KAFETERYAYA ışınlanır',
-      'Yeni toplantı ekranı: adım göstergesi, geri sayım çubuğu, oy sayacı',
-      'Daha akıcı: FPS sınırı kalktı, botlar artık her karede yürüyor (takılma yok)',
-      'Ayarlar her yerde: lobide ve oda listesinde de dişli butonu',
-      'Ana menü artık radyoaktif reaktör sığınağı: parlayan çekirdek, buhar, uyarı ışıkları',
-      'Botlar artık 2 kat hızlı koşmuyor (6 ve altı oyunculu maçlardaki hata düzeltildi)',
-      'Butonlar yenilendi: emoji yerine oyunun kendi ikonları',
-      'Grafik ayarı artık gerçekten çalışıyor (Yüksek / Orta / Düşük) + FPS göstergesi',
-      'Moderatörlük geldi: deneyimli oyuncular için gizli bir kapı…'
+      'Yeni oylama ekranı: karta dokun, ✓ OY VER ile onayla (yanlış oy yok), ATILIYOR / BERABERE damgası',
+      'Daha akıllı botlar: kaçan katil, mazeret hatırlayan masumlar, şüpheliyi arayan şerif',
+      'Ölen botlar hayalet olarak görevlerine devam eder',
+      'Şerif ölünce silahı yere düşer: alan masum yeni şerif olur',
+      'Kurucu oyundan çıkınca maç bitmez, başka oyuncu kurucu olur',
+      'Acil düğme 15 sn bekler, sabotaj sırasında basılamaz; toplantıdan sonra sabotaj hemen hazır',
+      'Tek kişilik: harita seçimi ve bot sayısı (MAÇ AYARLARI)',
+      'Ayarlar: Tuş atama (PC), Buton yerleri (mobil), Performans modu; her yerde aynı ayarlar penceresi',
+      'Görevler artık ilgili eşyaların yanında, haritalardaki yanlış yerdeki eşyalar düzeltildi',
+      'Donma ve kasma düzeltmeleri, yeni yükleme ekranı, yeni jeton… ve hayaletler için gizli bir sürpriz 👻'
     ]
   },
   en: {
     title: 'New Update!',
     items: [
-      'Fixed the screen going black / shrinking while typing on phones (chat, commands)',
-      'As soon as a meeting starts, everyone is teleported to the CAFETERIA',
-      'New meeting screen: phase steps, countdown bar, vote counter',
-      'Smoother: no more FPS cap, bots now walk every frame (no stutter)',
-      'Settings everywhere: gear button in the lobby and the room list too',
-      'The main menu is now a radioactive reactor shelter: glowing core, steam, warning lights',
-      'Bots no longer run twice as fast (bug in matches with 6 or fewer players fixed)',
-      'Refreshed buttons: the game\'s own icons instead of emoji',
-      'The graphics setting really works now (High / Medium / Low) + FPS counter',
-      'Moderation is here: a hidden door for experienced players…'
+      'New voting screen: tap a card, confirm with ✓ VOTE (no misclicks), EJECTED / TIE stamps',
+      'Smarter bots: impostors flee, crewmates remember alibis, sheriffs hunt suspects',
+      'Dead bots keep doing their tasks as ghosts',
+      'When the sheriff dies the gun drops: a crewmate who picks it up becomes the new sheriff',
+      'If the host leaves, the match goes on with a new host',
+      'Emergency button waits 15s and is disabled during sabotage; sabotage is ready right after a meeting',
+      'Solo: map selection and bot count (MATCH SETTINGS)',
+      'Settings: Key bindings (PC), Button layout (mobile), Performance mode; the same settings window everywhere',
+      'Tasks now sit next to related objects, misplaced map objects fixed',
+      'Freeze and stutter fixes, new loading screen, new coin… and a secret surprise for ghosts 👻'
     ]
   }
 };
@@ -74,6 +74,8 @@ export async function runStartPrompts() {
   applyDeviceClass();
   // Dil dosyaları yüklenene kadar bekle (yoksa İngilizce tarayıcıda Türkçe çıkıyordu)
   for (let i = 0; i < 100 && !Object.keys(i18n.data || {}).length; i++) await new Promise((r) => setTimeout(r, 100));
+  // Yükleme ekranı kapanmadan pencere açılmasın (üst üste binmesin)
+  for (let i = 0; i < 300 && document.getElementById('cfs-loader'); i++) await new Promise((r) => setTimeout(r, 100));
   if (!getDevice()) await askDevice();
   showUpdate();
 }

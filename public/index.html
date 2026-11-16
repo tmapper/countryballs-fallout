@@ -32,6 +32,60 @@
   <!-- Phaser oyunu bu div'in içine canvas olarak çizilir. Lobi ve rol animasyonu
        (HTML) JS tarafından body'ye eklenir. -->
   <div id="game"></div>
+  <!-- ÖZEL YÜKLEME EKRANI: sayfa açılır açılmaz görünür (JS beklemeden). BootScene ilerlemeyi yazar, bitince solar. -->
+  <div id="cfs-loader">
+    <div class="ld-grain"></div>
+    <img class="ld-logo" src="assets/menu/logo.png" alt="" onerror="this.style.display='none'">
+    <div class="ld-ring"><img src="assets/menu/coin.png?v=2" alt="" onerror="this.style.display='none'"></div>
+    <div class="ld-bar"><i></i></div>
+    <div class="ld-row"><span class="ld-status">SIĞINAK SİSTEMLERİ BAŞLATILIYOR</span><b class="ld-pct">0%</b></div>
+    <div class="ld-tip"></div>
+    <div class="ld-ver">BUNKER-07 · v0.9.21</div>
+  </div>
+  <style>
+    #cfs-loader { position: fixed; inset: 0; z-index: 100000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px;
+      background: radial-gradient(ellipse at 50% 40%, #12301c 0%, #07120b 60%, #020504 100%); color: #7dff9a; font-family: "Courier New", monospace; transition: opacity .5s ease; overflow: hidden; }
+    #cfs-loader.done { opacity: 0; pointer-events: none; }
+    #cfs-loader::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 10px; background: repeating-linear-gradient(-45deg, #e0b000 0 18px, #141414 18px 36px); }
+    #cfs-loader::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: repeating-linear-gradient(-45deg, #e0b000 0 18px, #141414 18px 36px); }
+    #cfs-loader .ld-grain { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(125,255,154,.035) 0 2px, transparent 2px 4px); }
+    #cfs-loader .ld-logo { width: min(520px, 70vw); max-height: 28vh; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0,0,0,.6)); }
+    #cfs-loader .ld-ring { width: 92px; height: 92px; animation: ldSpin 2.4s linear infinite; filter: drop-shadow(0 0 18px rgba(255,210,63,.45)); }
+    #cfs-loader .ld-ring img { width: 100%; height: 100%; }
+    #cfs-loader .ld-bar { width: min(460px, 80vw); height: 16px; border: 2px solid #2f5a3d; border-radius: 8px; background: #050c08; overflow: hidden; box-shadow: 0 0 18px rgba(125,255,154,.12) inset; }
+    #cfs-loader .ld-bar i { display: block; height: 100%; width: 0%; background: repeating-linear-gradient(-45deg, #7dff9a 0 12px, #4fd673 12px 24px); box-shadow: 0 0 12px rgba(125,255,154,.6); transition: width .35s ease; animation: ldStripe 1s linear infinite; background-size: 34px 100%; }
+    #cfs-loader .ld-row { width: min(460px, 80vw); display: flex; justify-content: space-between; font-size: 13px; letter-spacing: .12em; }
+    #cfs-loader .ld-status::after { content: "_"; animation: ldBlink 1s steps(1) infinite; }
+    #cfs-loader .ld-pct { color: #ffd23f; }
+    #cfs-loader .ld-tip { max-width: min(560px, 86vw); min-height: 2.6em; text-align: center; font: 600 14px/1.35 system-ui, sans-serif; color: #a9c9b3; opacity: .9; transition: opacity .3s; }
+    #cfs-loader .ld-ver { position: absolute; bottom: 18px; right: 18px; font-size: 11px; letter-spacing: .14em; color: #3f6b4d; }
+    @keyframes ldSpin { to { transform: rotate(360deg); } }
+    @keyframes ldStripe { to { background-position: 34px 0; } }
+    @keyframes ldBlink { 50% { opacity: 0; } }
+    @media (max-height: 420px) { #cfs-loader { gap: 8px; } #cfs-loader .ld-logo { max-height: 22vh; } #cfs-loader .ld-ring { width: 60px; height: 60px; } }
+  </style>
+  <script>
+    // Yükleme ekranı: BootScene window.cfsLoader.set(yüzde, durum) ile ilerletir, .done() ile kapatır
+    (function () {
+      var el = document.getElementById('cfs-loader');
+      var tr = (navigator.language || 'tr').slice(0, 2) !== 'en';
+      try { var l = localStorage.getItem('cfs_language'); if (l) tr = l !== 'en'; } catch (e) {}
+      var tips = tr ? ['İpucu: Katil tünele girerken görülürse herkes onu tanır.', 'İpucu: Işıklar kesilince yalnız kalma, birlikte gezin.', 'İpucu: Hayaletler görevlerini bitirebilir; ölmek oyunun sonu değil.', 'İpucu: Şerif masumu vurursa kendisi ölür. Emin ol!', 'İpucu: Acil düğme toplantıdan sonra 15 sn kilitli.', 'İpucu: Tuşlarını Ayarlar > Tuş atama\'dan değiştirebilirsin.']
+                    : ['Tip: If someone sees the impostor using a vent, everyone knows.', 'Tip: When the lights go out, stick together.', 'Tip: Ghosts can still finish their tasks.', 'Tip: A sheriff who shoots a crewmate dies. Be sure!', 'Tip: The emergency button is locked for 15s after a meeting.', 'Tip: Rebind your keys in Settings > Key bindings.'];
+      var tip = el.querySelector('.ld-tip'), i = Math.floor(Math.random() * tips.length);
+      var showTip = function () { tip.style.opacity = 0; setTimeout(function () { tip.textContent = tips[i++ % tips.length]; tip.style.opacity = .9; }, 300); };
+      showTip(); var tipT = setInterval(showTip, 3500);
+      var shown = 0, target = 3;
+      var bar = el.querySelector('.ld-bar i'), pct = el.querySelector('.ld-pct'), st = el.querySelector('.ld-status');
+      // Yumuşak ilerleme: hedefe doğru akar, beklerken de yavaşça kıpırdar (donmuş görünmesin)
+      var tick = setInterval(function () { shown += Math.max(0.15, (target - shown) * 0.12); if (shown > target) shown = target; if (shown > 99) shown = 99; bar.style.width = shown.toFixed(1) + '%'; pct.textContent = Math.floor(shown) + '%'; target = Math.min(target + 0.08, 97); }, 60);
+      window.cfsLoader = {
+        set: function (p, text) { target = Math.max(target, p); if (text) st.textContent = text; },
+        done: function () { target = 100; shown = 100; bar.style.width = '100%'; pct.textContent = '100%'; clearInterval(tick); clearInterval(tipT); setTimeout(function () { el.classList.add('done'); setTimeout(function () { el.remove(); }, 600); }, 250); },
+        error: function (text) { st.textContent = text; st.style.color = '#ff6b6b'; clearInterval(tick); }
+      };
+    })();
+  </script>
 
   <!-- Phaser kütüphanesi (yerel kopya, internetsiz de çalışır). Global "Phaser" nesnesini oluşturur. -->
   <script src="lib/phaser.min.js"></script>

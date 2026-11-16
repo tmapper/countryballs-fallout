@@ -13,6 +13,7 @@ import { RES } from '../systems/Resolution.js';
 import { ROLE_COLORS } from '../systems/Roles.js';
 import { backToLobby } from '../systems/GameFlow.js';
 import { iconTextures } from '../ui/Icons.js';
+import { getButtonPos, getButtonScale } from '../systems/ButtonLayout.js';
 
 // Buton ikonları: emoji değil, ui/Icons.js'teki kendi çizimlerimiz ('ic_<ad>' dokuları)
 const ICONS = { kill: 'knife', shoot: 'crosshair', tunnel: 'hatch', report: 'megaphone', sabotage: 'radiation', use: 'hand', fix: 'wrench', meeting: 'siren' };
@@ -81,7 +82,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     // Sağ alt: aksiyon butonları (Öldür / Vur) ve Tünel
-    const R = (small ? 46 : 54) * (isMobile() ? 1.2 : 1);   // mobilde büyük butonlar (parmak)
+    const R = (small ? 46 : 54) * (isMobile() ? 1.2 : 1) * getButtonScale();   // mobilde büyük butonlar; Ayarlar > Buton yerleri'nden boyut
     this.actionBtn = this.makeRoundButton(R, () => this.gameScene().doAction());
     this.tunnelBtn = this.makeRoundButton(R * 0.78, () => this.gameScene().useTunnel());
     this.useBtn = this.makeRoundButton(R * 0.78, () => this.gameScene().interact());
@@ -166,6 +167,15 @@ export class UIScene extends Phaser.Scene {
       this.tweens.add({ targets: this.info, alpha: 0, x: -40, duration: 200, ease: 'Cubic.easeIn', onComplete: () => this.info.setVisible(false) });
     }
     if (this.infoBtn) this.infoBtn.setText(`${this.infoOpen ? '▲' : '▼'} ${i18n.t('ui.info')} (H)`);
+  }
+
+  // Oyuncunun Ayarlar > Buton yerleri'nden koyduğu konumlar (ekran oranı) varsayılanı ezer
+  applyCustomButtons() {
+    const W = RES.cssW, H = RES.cssH;
+    [['action', this.actionBtn], ['tunnel', this.tunnelBtn], ['use', this.useBtn], ['report', this.reportBtn], ['sabotage', this.sabBtn]].forEach(([id, b]) => {
+      const p = getButtonPos(id);
+      if (p && b) b.setPosition(Math.max(b.r, Math.min(W - b.r, p.x * W)), Math.max(b.r, Math.min(H - b.r, p.y * H)));
+    });
   }
 
   makeRoundButton(r, onPress) {
@@ -268,6 +278,7 @@ export class UIScene extends Phaser.Scene {
     this.drawArrow();
     this.sabBtn.setPosition(this.tunnelBtn.x, this.tunnelBtn.y - this.tunnelBtn.r - 16 - this.sabBtn.r);
     if (h.report && h.sabotage) this.reportBtn.setPosition(this.sabBtn.x - this.sabBtn.r - 16 - this.reportBtn.r, this.sabBtn.y);
+    this.applyCustomButtons();
     const sb = this.registry.get('sabBanner');
     const bt = sb ? sb.text : '';
     if (bt !== this.lastBanner) { this.lastBanner = bt; this.sabText.setText(bt); }

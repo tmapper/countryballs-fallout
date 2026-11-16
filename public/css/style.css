@@ -1764,3 +1764,34 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 @media (prefers-reduced-motion: reduce) { .meeting.can-vote .mt-player, .mt-skip.pending { animation: none !important; } }
 .gs-perfnote { padding-top: 0 !important; margin-top: -4px; }
 .gs-perfnote small { font: 600 11px system-ui; opacity: .65; line-height: 1.3; }
+
+/* ---------------- Kontroller: tuş atama + mobil buton yerleri ---------------- */
+.gs-ctl button { white-space: nowrap; }
+.gs-redeem { display: flex; gap: 6px; flex: 1; justify-content: flex-end; }
+.gs-code { width: min(180px, 40vw); background: #070a0e; border: 1px solid #3a4452; border-radius: 8px; color: #e6edf3; font: 700 14px system-ui; padding: 7px 9px; text-transform: uppercase; }
+.gs-codemsg small { color: #ffd23f; font: 700 12px system-ui; }
+.ctl-panel { position: fixed; inset: 0; z-index: 85; display: flex; align-items: center; justify-content: center; padding: 14px; background: rgba(0,0,0,.65); }
+.ctl-panel.hidden, .btned.hidden { display: none; }
+.ctl-card { width: 100%; max-width: 520px; max-height: 92vh; overflow: auto; background: linear-gradient(180deg, #13201a, #0b130f); border: 2px solid #2f5a3d; border-radius: 16px; color: #e8ffe9; font-family: system-ui; padding: 14px 18px; box-shadow: 0 20px 60px rgba(0,0,0,.7); }
+.ctl-head { display: flex; align-items: center; justify-content: space-between; }
+.ctl-head h2 { margin: 0; font-size: 18px; letter-spacing: .12em; color: #7dff9a; }
+.ctl-x { background: none; border: 0; color: #7dff9a; font-size: 22px; cursor: pointer; }
+.ctl-hint { font-size: 12px; opacity: .7; margin: 6px 0 10px; }
+.ctl-row { display: grid; grid-template-columns: 1fr 96px 96px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid #1c3324; font-weight: 700; font-size: 14px; }
+.ctl-key { height: 34px; border-radius: 8px; border: 1px solid #3b5a44; background: #0a140e; color: #fff; font: 800 13px "Courier New", monospace; cursor: pointer; }
+.ctl-key.alt { color: #a9c9b3; }
+.ctl-key:hover { border-color: #7dff9a; }
+.ctl-key.wait { border-color: #ffd23f; color: #ffd23f; animation: mtPulse .5s ease-in-out infinite alternate; }
+.ctl-foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+.ctl-btn { padding: 9px 14px; border-radius: 10px; border: 1px solid #3b5a44; background: #1a241e; color: #e8ffe9; font: 800 13px system-ui; cursor: pointer; }
+.ctl-btn.primary { background: #2fbf5b; border-color: #7dff9a; color: #031008; }
+.btned { position: fixed; inset: 0; z-index: 85; background: rgba(4,8,6,.55); touch-action: none; user-select: none; font-family: system-ui; }
+.btned-bar { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 8px 12px; background: #0b130f; border: 2px solid #2f5a3d; border-radius: 12px; color: #e8ffe9; z-index: 2; max-width: 96vw; }
+.btned-bar b { color: #7dff9a; letter-spacing: .1em; font-size: 13px; }
+.btned-bar label { display: flex; align-items: center; gap: 6px; font: 700 12px system-ui; }
+.btned-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #cfe8d6; font: 700 15px system-ui; text-align: center; max-width: 60vw; opacity: .8; pointer-events: none; }
+.btned-joy { position: absolute; left: 0; top: 0; bottom: 0; width: 50%; border-right: 2px dashed rgba(125,255,154,.35); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 18px; color: rgba(125,255,154,.6); font: 800 12px system-ui; letter-spacing: .08em; pointer-events: none; }
+.btned-b { position: absolute; border-radius: 50%; background: rgba(20,30,24,.88); border: 3px solid #7dff9a; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: grab; box-shadow: 0 6px 18px rgba(0,0,0,.5); touch-action: none; }
+.btned-b i { font-style: normal; font-size: 26px; line-height: 1; }
+.btned-b span { font: 800 10px system-ui; margin-top: 2px; text-align: center; }
+.btned-b.drag { cursor: grabbing; border-color: #ffd23f; transform: scale(1.08); z-index: 3; }

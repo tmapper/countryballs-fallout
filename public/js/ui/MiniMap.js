@@ -7,6 +7,7 @@
 import { WORLD, ROOMS, CORRIDORS } from '../map/BunkerMap.js';
 import { i18n } from '../systems/I18n.js';
 import { icon } from './Icons.js';
+import { actionOf } from '../systems/Keys.js';
 
 const ROOM_COLOR = {
   entrance: '#2f5a2a', hall: '#4b5260', reactor: '#5a3a33', security: '#2f3b52', control: '#2b3444', o2: '#2c5157',
@@ -38,7 +39,7 @@ export class MiniMap {
     window.addEventListener('keydown', (e) => {
       if (!this.active || e.repeat) return;
       const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
-      if (e.code === 'Tab' || e.code === 'KeyQ') { e.preventDefault(); this.toggle(); }
+      if (actionOf(e.code).includes('map')) { e.preventDefault(); this.toggle(); }   // Ayarlar > Tuş atama (varsayılan Tab / M)
       else if (e.code === 'Escape' && this.open) { e.stopPropagation(); this.close(); }
     }, true);
     i18n.onChange(() => { if (this.btn) this.btn.querySelector('span').textContent = i18n.t('ui.map'); });

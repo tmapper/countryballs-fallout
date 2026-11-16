@@ -87,8 +87,6 @@ export function installExtras(GameScene) {
     this.alarmEl = null;
     minimap.show();
     const kb = this.input.keyboard;
-    kb.on('keydown-R', () => this.reportNearest());
-    kb.on('keydown-F', () => this.openSabotage());
     kb.on('keydown', (e) => { if (sabMenu.isOpen && /^[1-3]$/.test(e.key)) sabMenu.pickIndex(Number(e.key) - 1); });
     this.events.once('shutdown', () => {
       meetingUI.close(); sabMenu.close(); minimap.hide(); this.clearAlarm();

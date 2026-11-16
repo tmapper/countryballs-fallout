@@ -15,20 +15,20 @@ export class BootScene extends Phaser.Scene {
   constructor() { super('BootScene'); }
 
   create() {
-    const { width, height } = this.scale;
-    const msg = this.add.text(width / 2, height / 2, 'Yükleniyor... / Loading...', {
-      fontFamily: 'Arial', fontSize: Math.round(24 * RES.k) + 'px', color: '#ffffff', align: 'center'
-    }).setOrigin(0.5);
-
+    // Özel yükleme ekranı index.html'de (#cfs-loader): burada sadece ilerlemesi yazılır
+    const L = window.cfsLoader || { set() {}, done() {}, error() {} };
+    const step = (p, key) => L.set(p, i18n.t(key));
+    const track = (pr, p, key) => pr.then((v) => { step(p, key); return v; });
     Promise.all([loadJSON('locales/tr.json'), loadJSON('locales/en.json')])
       .then(([tr, en]) => {
         i18n.init({ tr, en });
-        msg.setText(i18n.t('ui.loading'));
+        step(20, 'loader.chars');
         // Kritik olanları bekle; prop/flag arka planda (menü hemen açılsın)
-        return Promise.all([loadCharacters(), loadRoleMeta(), loadKillMeta()]);
+        return Promise.all([track(loadCharacters(), 70, 'loader.cinematics'), track(loadRoleMeta(), 80, 'loader.roles'), track(loadKillMeta(), 90, 'loader.kills')]);
       })
       .then(() => {
-        msg.setVisible(false);
+        step(100, 'loader.ready');
+        L.done();
         showMainMenu();
         // Arka plan yükleme — menü açıldıktan sonra
         loadPropImages().catch(() => {});
@@ -36,7 +36,7 @@ export class BootScene extends Phaser.Scene {
       })
       .catch((err) => {
         console.error(err);
-        msg.setText((i18n.t('ui.loadError') || 'Error') + '\n' + err.message).setColor('#ff6666');
+        L.error((i18n.t('ui.loadError') || 'Error') + ': ' + err.message);
       });
   }
 }

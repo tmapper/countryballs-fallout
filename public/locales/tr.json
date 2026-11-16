@@ -388,7 +388,7 @@
     "offline": "Sunucuya bağlı değil",
     "connecting": "Bağlanıyor...",
     "noServer": "Sunucu adresi yok (Ayarlar)",
-    "version": "Sürüm 0.9.20",
+    "version": "Sürüm 0.9.21",
     "exit": "ÇIKIŞ",
     "back": "GERİ",
     "language": "Dil",
@@ -820,5 +820,42 @@
   "easter": {
     "fiexSub": "Hayaletler için gizli kamp",
     "fiexHello": "Fiex'in ordusu seni selamlıyor! 🫡"
+  },
+  "loader": {
+    "chars": "KARAKTERLER HAZIRLANIYOR",
+    "cinematics": "ANİMASYONLAR YÜKLENİYOR",
+    "roles": "ROLLER DAĞITILIYOR",
+    "kills": "SIĞINAK MÜHÜRLENİYOR",
+    "ready": "HAZIR"
+  },
+  "controls": {
+    "title": "Kontroller",
+    "keysBtn": "Tuş atama",
+    "layoutBtn": "Buton yerleri",
+    "keysTitle": "TUŞ ATAMA",
+    "keysHint": "Değiştirmek için bir tuş kutusuna tıkla, sonra yeni tuşa bas. Esc: vazgeç · Backspace: sil. Her eylemin 2 tuşu olabilir.",
+    "a_up": "Yukarı",
+    "a_down": "Aşağı",
+    "a_left": "Sol",
+    "a_right": "Sağ",
+    "a_action": "Öldür / Vur",
+    "a_use": "Kullan / Görev / Tünel",
+    "a_report": "Ceset bildir",
+    "a_sabotage": "Sabotaj",
+    "a_map": "Harita",
+    "pressKey": "Tuşa bas…",
+    "reset": "Varsayılana dön",
+    "done": "Tamam",
+    "cancel": "Vazgeç",
+    "save": "Kaydet",
+    "layoutTitle": "BUTON YERLERİ",
+    "layoutHint": "Butonları parmağınla sürükleyip istediğin yere koy, sonra Kaydet.",
+    "joyZone": "Joystick: ekranın sol yarısı",
+    "size": "Boyut",
+    "b_action": "Öldür / Vur",
+    "b_tunnel": "Tünel",
+    "b_use": "Kullan",
+    "b_report": "Bildir",
+    "b_sabotage": "Sabotaj"
   }
 }
