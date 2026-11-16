@@ -493,7 +493,138 @@ function scan(body, done, onCleanup) {
   onCleanup(() => cancelAnimationFrame(raf));
 }
 
-const GAMES = { wires, levers, valve, geiger, filter, keypad, simon, swipe, align, fuel, order, pipes, waste, freq, scan, download: data('download'), upload: data('upload') };
+
+// ================= YENİ GÖREVLER (v0.9.22) =================
+
+// ---------------- Kahve: DOLDUR'a basılı tut, çizgiler arasında bırak (taşarsa döküp baştan) ----------------
+function coffee(body, done, onCleanup) {
+  const wrap = H('div', 'tp-cof', body);
+  const cup = H('div', 'tp-cof-cup', wrap); const liq = H('div', 'tp-cof-liq', cup); const zone = H('div', 'tp-cof-zone', cup);
+  const LO = 0.78, HI = 0.9; zone.style.bottom = (LO * 100) + '%'; zone.style.height = ((HI - LO) * 100) + '%';
+  const btn = H('button', 'tp-dt-btn tp-cof-btn', wrap); btn.type = 'button'; btn.textContent = i18n.t('tasks.coffeeBtn');
+  const msg = H('div', 'tp-count', wrap);
+  let lvl = 0, held = false, last = performance.now(), raf = 0, fin = false;
+  const down = (ev) => { ev.preventDefault(); if (fin) return; held = true; btn.classList.add('on'); try { btn.setPointerCapture(ev.pointerId); } catch (e) {} };
+  const up = () => {
+    if (!held || fin) return; held = false; btn.classList.remove('on');
+    if (lvl >= LO && lvl <= HI) { fin = true; sfx('task_done', 0.4); done(); }
+    else if (lvl > 0.05) { msg.textContent = i18n.t(lvl < LO ? 'tasks.coffeeLow' : 'tasks.coffeeHigh'); }
+  };
+  btn.addEventListener('pointerdown', down); btn.addEventListener('pointerup', up); btn.addEventListener('pointercancel', up);
+  const loop = (now) => {
+    const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+    if (held) lvl += dt * 0.32;
+    if (lvl > 1) { lvl = 0; held = false; btn.classList.remove('on'); msg.textContent = i18n.t('tasks.coffeeSpill'); cup.classList.add('shake'); setTimeout(() => cup.classList.remove('shake'), 400); }
+    liq.style.height = (lvl * 100) + '%';
+    if (!fin) raf = requestAnimationFrame(loop);
+  };
+  raf = requestAnimationFrame(loop);
+  onCleanup(() => cancelAnimationFrame(raf));
+}
+
+// ---------------- İlaç: hapa dokun, sonra aynı renkteki şişeye ----------------
+function medicine(body, done) {
+  const wrap = H('div', 'tp-med', body);
+  const tray = H('div', 'tp-med-tray', wrap); const shelf = H('div', 'tp-med-shelf', wrap);
+  const cols = ['red', 'blue', 'yellow'];
+  const pills = [...cols, ...cols].sort(() => Math.random() - 0.5);
+  let sel = null, left = pills.length;
+  pills.forEach((c) => {
+    const p = H('button', 'tp-med-pill', tray); p.type = 'button'; p.style.background = COLORS[c]; p.dataset.c = c;
+    p.style.transform = `rotate(${Math.round(rnd(-40, 40))}deg)`;
+    p.addEventListener('click', () => { tray.querySelectorAll('.sel').forEach((x) => x.classList.remove('sel')); sel = p; p.classList.add('sel'); sfx('ui_click', 0.4); });
+  });
+  cols.forEach((c) => {
+    const b = H('button', 'tp-med-bottle', shelf); b.type = 'button'; b.dataset.c = c;
+    H('i', '', b).style.background = COLORS[c]; H('span', '', b).textContent = '0';
+    b.addEventListener('click', () => {
+      if (!sel) return;
+      if (sel.dataset.c !== c) { b.classList.add('shake'); setTimeout(() => b.classList.remove('shake'), 350); return; }
+      sel.remove(); sel = null; left--; const n = b.querySelector('span'); n.textContent = String(Number(n.textContent) + 1);
+      sfx('wire_connect', 0.5);
+      if (!left) done();
+    });
+  });
+}
+
+// ---------------- Krank: kolu tutup daire çizerek 3 tur çevir (saat yönü) ----------------
+function crank(body, done) {
+  const wrap = H('div', 'tp-crk', body);
+  const wheel = H('div', 'tp-crk-wheel', wrap); const arm = H('div', 'tp-crk-arm', wheel); H('div', 'tp-crk-knob', arm);
+  const bar = H('div', 'tp-bar', wrap); const fill = H('div', 'tp-bar-fill', bar);
+  const txt = H('div', 'tp-count', wrap); txt.textContent = i18n.t('tasks.crankHint');
+  const NEED = Math.PI * 2 * 3;
+  let total = 0, lastA = null, ang = -Math.PI / 2, fin = false;
+  const center = () => { const r = wheel.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+  wheel.addEventListener('pointerdown', (ev) => { ev.preventDefault(); wheel.setPointerCapture(ev.pointerId); const c = center(); lastA = Math.atan2(ev.clientY - c.y, ev.clientX - c.x); });
+  wheel.addEventListener('pointermove', (ev) => {
+    if (lastA === null || fin) return;
+    const c = center(); const a = Math.atan2(ev.clientY - c.y, ev.clientX - c.x);
+    let d = a - lastA; if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2;
+    lastA = a; ang = a;
+    if (d > 0) total += d; else total = Math.max(0, total + d * 0.5);         // ters çevirmek geri sarar
+    arm.style.transform = `rotate(${ang + Math.PI / 2}rad)`;
+    fill.style.width = Math.min(100, total / NEED * 100) + '%';
+    txt.textContent = `${Math.min(3, Math.floor(total / (Math.PI * 2)))} / 3`;
+    if (total >= NEED && !fin) { fin = true; done(); }
+  });
+  const up = () => { lastA = null; };
+  wheel.addEventListener('pointerup', up); wheel.addEventListener('pointercancel', up);
+}
+
+// ---------------- Bitki: saksıya basılı tutarak sula, yeşil bölgede bırak (fazlası çürütür) ----------------
+function plants(body, done, onCleanup) {
+  const wrap = H('div', 'tp-pla', body);
+  const pots = [0, 1, 2].map(() => {
+    const p = H('button', 'tp-pla-pot', wrap); p.type = 'button';
+    H('div', 'tp-pla-leaf', p).textContent = '🌱';
+    const g = H('div', 'tp-pla-gauge', p); const f = H('div', 'tp-pla-fill', g); H('div', 'tp-pla-zone', g);
+    const o = { el: p, f, v: rnd(0.05, 0.3), held: false, ok: false };
+    p.addEventListener('pointerdown', (ev) => { ev.preventDefault(); try { p.setPointerCapture(ev.pointerId); } catch (e) {} o.held = true; p.classList.add('on'); });
+    const up = () => { o.held = false; p.classList.remove('on'); };
+    p.addEventListener('pointerup', up); p.addEventListener('pointercancel', up);
+    return o;
+  });
+  const txt = H('div', 'tp-count', wrap);
+  let last = performance.now(), raf = 0, fin = false;
+  const loop = (now) => {
+    const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+    pots.forEach((o) => {
+      if (o.held) o.v += dt * 0.45;
+      if (o.v > 1) { o.v = 0.35; o.held = false; o.el.classList.remove('on'); txt.textContent = i18n.t('tasks.plantsOver'); }
+      o.ok = o.v >= 0.6 && o.v <= 0.9;
+      o.f.style.height = (o.v * 100) + '%';
+      o.el.classList.toggle('good', o.ok && !o.held);
+    });
+    if (!fin && pots.every((o) => o.ok && !o.held)) { fin = true; done(); return; }
+    raf = requestAnimationFrame(loop);
+  };
+  raf = requestAnimationFrame(loop);
+  onCleanup(() => cancelAnimationFrame(raf));
+}
+
+// ---------------- Yatak: battaniyeyi soldan sağa sürükleyerek düzelt (4 yatak) ----------------
+function beds(body, done) {
+  const wrap = H('div', 'tp-bed', body);
+  let left = 4;
+  for (let i = 0; i < 4; i++) {
+    const bed = H('div', 'tp-bed-row', wrap); H('div', 'tp-bed-pillow', bed);
+    const blanket = H('div', 'tp-bed-blanket', bed); blanket.style.width = Math.round(rnd(22, 42)) + '%';
+    let sx = null, w0 = 0, fin = false;
+    bed.addEventListener('pointerdown', (ev) => { if (fin) return; ev.preventDefault(); bed.setPointerCapture(ev.pointerId); sx = ev.clientX; w0 = blanket.getBoundingClientRect().width; });
+    bed.addEventListener('pointermove', (ev) => {
+      if (sx === null || fin) return;
+      const full = bed.getBoundingClientRect().width * 0.82;
+      const w = Math.max(w0, Math.min(full, w0 + ev.clientX - sx));
+      blanket.style.width = (w / bed.getBoundingClientRect().width * 100) + '%';
+      if (w >= full - 2) { fin = true; sx = null; bed.classList.add('done'); sfx('wire_connect', 0.5); if (--left === 0) done(); }
+    });
+    const up = () => { sx = null; };
+    bed.addEventListener('pointerup', up); bed.addEventListener('pointercancel', up);
+  }
+}
+
+const GAMES = { wires, levers, valve, geiger, filter, keypad, simon, swipe, align, fuel, order, pipes, waste, freq, scan, coffee, medicine, crank, plants, beds, download: data('download'), upload: data('upload') };
 
 export class TaskPanel {
   constructor() { this.root = null; this.cleanups = []; this.isOpen = false; this.handlers = null; }

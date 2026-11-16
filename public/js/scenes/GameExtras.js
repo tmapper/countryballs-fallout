@@ -164,6 +164,8 @@ export function installExtras(GameScene) {
     if (this.taskPanel) this.taskPanel.close(true);
     this.taskOpen = false;
     sabMenu.close();
+    if (this.closeEmoteMenu) this.closeEmoteMenu();
+    this.balls.forEach((b) => b.clearEmote && b.clearEmote());
     minimap.hide();
     this.balls.forEach((b) => { b.reportT = undefined; if (b.inTunnel) { b.inTunnel = null; if (b.isMe) { b.setAlpha(1); this.clearTunnelArrows(); } } });
     const room = body ? getRoomAt(body.x, body.y - 8) : null;   // ceset nerede bulundu (ışınlanmadan ÖNCE)
@@ -603,7 +605,7 @@ export function installExtras(GameScene) {
   // ---------- SABOTAJ ----------
   P.openSabotage = function () {
     const me = this.player;
-    if (this.over || this.meeting || me.role !== 'impostor' || !me.alive || me.inTunnel || this.sabotage || this.sabCd > 0) return;
+    if (this.over || this.meeting || me.role !== 'impostor' || me.inTunnel || this.sabotage || this.sabCd > 0) return;   // ölü katil de sabotaj yapabilir
     if (this.taskPanel && this.taskPanel.isOpen) return;
     sabMenu.open(SABOTAGE_TYPES, (t) => (this.isClient ? this.req('sab', { type: t }) : this.startSabotage(t)));
   };

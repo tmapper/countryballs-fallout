@@ -55,6 +55,10 @@ export class UIScene extends Phaser.Scene {
     this.lobbyBtn = this.add.text(0, 12, '', btn).setOrigin(1, 0).setInteractive({ useHandCursor: true });
     this.lobbyBtn.on('pointerdown', (pointer, lx, ly, event) => event.stopPropagation()); // joystick almasın
     this.lobbyBtn.on('pointerup', () => gameSettings.open({ onLeave: () => backToLobby() }));
+    // Emoji / hızlı sohbet menüsü (PC'de G tuşu)
+    this.emoBtn = this.add.text(0, 12, '😀', { ...btn, fontSize: '20px', padding: { left: 10, right: 10, top: 6, bottom: 6 } }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+    this.emoBtn.on('pointerdown', (pointer, lx, ly, event) => event.stopPropagation());
+    this.emoBtn.on('pointerup', () => { const g = this.gameScene(); if (g && g.toggleEmoteMenu) g.toggleEmoteMenu(); });
 
     // Joystick sadece dokunmatik cihazda (veya adres sonuna ?joystick=1 yazılırsa)
     const touch = isMobile() || /[?&]joystick=1/.test(location.search);   // oyuncunun seçtiği cihaz
@@ -336,6 +340,7 @@ export class UIScene extends Phaser.Scene {
     // Sağ üst butonları dikey diz, üst üste binmesin
     let topY = 12;
     this.lobbyBtn.setPosition(W - 16, topY);
+    this.emoBtn.setPosition(W - 16 - this.lobbyBtn.width - 8, topY);
     topY += this.lobbyBtn.height + 8;
     if (this.fsBtn) { this.fsBtn.setPosition(W - 16, topY); topY += this.fsBtn.height + 6; }
     if (this.joyResetBtn) { this.joyResetBtn.setPosition(W - 16, topY); }
@@ -357,6 +362,7 @@ export class UIScene extends Phaser.Scene {
     this.applyInfo();
     this.help.setText(this.isTouch ? i18n.t('ui.controlsMobile') : i18n.t('ui.controlsPc'));
     this.lobbyBtn.setText(i18n.t('ui.settings'));
+    if (this.emoBtn) this.emoBtn.setPosition(this.lobbyBtn.x - this.lobbyBtn.width - 8, this.lobbyBtn.y);
     if (this.joyResetBtn) this.joyResetBtn.setText(i18n.t('ui.joyReset'));
     this.placeHudIcons();
     const role = this.registry.get('role');

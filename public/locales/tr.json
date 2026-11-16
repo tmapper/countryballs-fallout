@@ -62,7 +62,7 @@
     "device": "Cihaz (sonraki maçta)",
     "tunnelHint": "Tünelde: yön tuşları / joystick ile başka tünele geç, ÇIK ile dışarı çık",
     "specialThanks": "Özel Teşekkürler",
-    "credits": "Yapımcı- doors4131 ve Turk Mapper\nYayıncı- Turk Mapper\nÖzel Teşekkürler- Fiex, Turan123, Alexander",
+    "credits": "Yapımcı- doors4131 ve Turk Mapper\nYayıncı- Turk Mapper\nÖzel Teşekkürler- Fiex, Turan123, Alexander, Teknonistan\nÇizer- Deniz Memmedova",
     "achCompleted": "Başarım Tamamlandı"
   },
   "lobby": {
@@ -251,7 +251,12 @@
       "pipes": "Karelere dokunup çevir. Soldaki mavi girişten sağ kenara kesintisiz bir boru yolu kur.",
       "waste": "Tehlikeli atıkları sarı-siyah, diğerlerini mavi kutuya at. Yanlış yapma, 2 puan kaybedersin.",
       "freq": "İki kaydırıcıyla yeşil dalgayı sarı kesikli dalgaya uydur ve bir süre tut.",
-      "scan": "Elini tarayıcıya bas ve tarama bitene kadar bırakma."
+      "scan": "Elini tarayıcıya bas ve tarama bitene kadar bırakma.",
+      "coffee": "DOLDUR'a basılı tut, fincan çizgiler arasına gelince bırak.",
+      "medicine": "Bir hapa dokun, sonra aynı renkteki şişeye.",
+      "crank": "Kolu tut ve saat yönünde 3 tur çevir.",
+      "plants": "Saksılara basılı tutarak sula; yeşil bölgede bırak, fazlası çürütür.",
+      "beds": "Battaniyeleri sağa doğru sürükleyip düzelt."
     },
     "stepDone": "Veri indirildi! Şimdi İletişim odasına yükle.",
     "fakeTitle": "Sahte görevler (yapamazsın)",
@@ -283,7 +288,18 @@
     "freqAmp": "Yükseklik",
     "freqRate": "Sıklık",
     "scanIdle": "ELİNİ TARAYICIYA BAS VE TUT",
-    "scanBusy": "TARANIYOR"
+    "scanBusy": "TARANIYOR",
+    "coffee": "Kahve doldur",
+    "medicine": "İlaçları ayır",
+    "crank": "Jeneratörü kurla",
+    "plants": "Bitkileri sula",
+    "beds": "Yatakları düzelt",
+    "coffeeBtn": "DOLDUR",
+    "coffeeLow": "Az kaldı, biraz daha!",
+    "coffeeHigh": "Fazla! Fincanı boşalt…",
+    "coffeeSpill": "Taştı! Baştan.",
+    "crankHint": "Saat yönünde çevir",
+    "plantsOver": "Çok su! Toprak çamur oldu."
   },
   "meeting": {
     "bodyTitle": "CESET BULUNDU!",
@@ -388,7 +404,7 @@
     "offline": "Sunucuya bağlı değil",
     "connecting": "Bağlanıyor...",
     "noServer": "Sunucu adresi yok (Ayarlar)",
-    "version": "Sürüm 0.9.21",
+    "version": "Sürüm 0.9.22",
     "exit": "ÇIKIŞ",
     "back": "GERİ",
     "language": "Dil",
@@ -860,6 +876,20 @@
     "b_sabotage": "Sabotaj",
     "reserved": "{k} tuşu ayrılmış (Esc ve 0-3 atanamaz).",
     "layoutRoleNote": "Not: Katil düzeni gösteriliyor. Taşımadığın Kullan butonu masumken Öldür'ün yerinde durur; taşırsan her rolde senin koyduğun yerde.",
-    "a_chat": "Sohbet"
+    "a_chat": "Sohbet",
+    "a_emote": "Emoji / hızlı sohbet"
+  },
+  "emote": {
+    "title": "Emoji",
+    "p": {
+      "follow": "Beni takip et",
+      "come": "Buraya gel!",
+      "tasks": "Görev yapıyorum",
+      "sus": "Bu şüpheli!",
+      "help": "Yardım!",
+      "thanks": "Teşekkürler",
+      "where": "Neredesin?",
+      "safe": "Burası güvenli"
+    }
   }
 }

@@ -148,6 +148,30 @@ export class CountryBall extends Phaser.GameObjects.Container {
     this.tag.setText(text || '').setColor(color || '#ffffff').setVisible(!!text);
   }
 
+  // Başının üstünde kısa emoji / hızlı sohbet balonu (topla birlikte hareket eder, sisle birlikte gizlenir)
+  showEmote(text, big) {
+    const sc = this.scene; if (!sc || !sc.sys) return;
+    if (this._emo) { sc.tweens.killTweensOf(this._emo); this._emo.destroy(); this._emo = null; }
+    if (this._emoTimer) { this._emoTimer.remove(); this._emoTimer = null; }
+    const y = this.tag.y - (this.tag.visible ? 28 : 4);
+    const t = sc.add.text(0, y, text, big
+      ? { fontFamily: 'Arial', fontSize: '48px', resolution: Math.min(4, RES.k * 1.5) }
+      : { fontFamily: 'Arial', fontSize: '22px', fontStyle: 'bold', color: '#ffffff', backgroundColor: 'rgba(18,26,18,0.9)',
+          padding: { left: 10, right: 10, top: 5, bottom: 5 }, resolution: Math.min(4, RES.k * 1.5) }).setOrigin(0.5, 1);
+    this.add(t); this._emo = t;
+    t.setScale(0.3);
+    sc.tweens.add({ targets: t, scale: 1, duration: 200, ease: 'Back.Out' });
+    this._emoTimer = sc.time.delayedCall(2500, () => {
+      this._emoTimer = null;
+      sc.tweens.add({ targets: t, alpha: 0, y: y - 14, duration: 300, onComplete: () => { t.destroy(); if (this._emo === t) this._emo = null; } });
+    });
+  }
+
+  clearEmote() {
+    if (this._emoTimer) { this._emoTimer.remove(); this._emoTimer = null; }
+    if (this._emo) { this.scene.tweens.killTweensOf(this._emo); this._emo.destroy(); this._emo = null; }
+  }
+
   // Doğru doku + pivot + animasyonu uygular
   refreshVisual(force = false) {
     let skin = this.isMoving ? (this.facing === 'left' ? 'walk_l' : 'walk_r') : 'idle';
@@ -177,37 +201,67 @@ export class CountryBall extends Phaser.GameObjects.Container {
   // sıraya alınır ve top NET_DELAY kadar geriden, iki konum arasında düz çizgide sabit hızla oynatılır.
   netStep(dt) {
     const n = this.net;
-    if (!n) { this.netBuf = null; this._netLast = null; return; }
+    if (!n) { this.netBuf = null; this._netLast = null; this._netOff = null; return; }
     const now = performance.now();
+    const hasTs = Number.isFinite(n.ts);
     if (n !== this._netLast) {                         // yeni konum geldi -> sıraya ekle
       this._netLast = n;
       const buf = this.netBuf || (this.netBuf = []);
-      const last = buf[buf.length - 1];
-      if (!last || Math.abs(n.x - last.x) + Math.abs(n.y - last.y) > 600) {      // ilk konum / ışınlanma
-        buf.length = 0; this.x = n.x; this.y = n.y;
-        buf.push({ t: now, x: n.x, y: n.y });
-      } else {
-        // Uzun süre duran oyuncu yürümeye başladı: önceki konum "az önce" sayılsın (zıplamasın, yürüsün)
-        if (now - last.t > 300) { last.t = now - 100; while (buf.length > 1) buf.shift(); }
-        // Aynı pakette gelen konumları da aralıklı say; geride kalma birikirse sıfırla
-        let t = Math.max(now, last.t + 60);
-        if (t - now > 250) t = now;
-        buf.push({ t, x: n.x, y: n.y });
-        if (buf.length > 12) buf.shift();
+      let t = now;
+      if (hasTs) {
+        // GÖNDERİCİ ZAMANI: konum ne zaman yollandıysa o anki yere konur (sunucu toplaması / ağ titremesi hızı bozmaz).
+        // off = yerel saat - gönderici saati (en hızlı gelen pakete göre). Zıplamasın diye yavaşça değişir.
+        const off = now - n.ts;
+        if (this._netOff == null || Math.abs(off - this._netOff) > 1500) { this._netOff = off; buf.length = 0; }
+        else if (off < this._netOff) this._netOff -= Math.min(this._netOff - off, 3);
+        else this._netOff += 0.2;
+        t = n.ts + this._netOff;
+        this._netLate = Math.max(now - t, (this._netLate == null ? 120 : this._netLate) * 0.997);   // son gecikmelerin tepe değeri
       }
+      const lastNow = buf[buf.length - 1];
+      if (!lastNow || Math.abs(n.x - lastNow.x) + Math.abs(n.y - lastNow.y) > 600) {      // ilk konum / ışınlanma
+        buf.length = 0; this.x = n.x; this.y = n.y;
+        buf.push({ t, x: n.x, y: n.y, m: n.m });
+      } else if (hasTs) {
+        if (t > lastNow.t) {                                                               // eski / aynı paket: atla
+          // Duran oyuncu yürümeye başladı: eski konum "az önce" sayılsın (ışınlanır gibi kaymasın)
+          if (t - lastNow.t > 250 && lastNow.m === 0 && (n.x !== lastNow.x || n.y !== lastNow.y)) buf.push({ t: t - 100, x: lastNow.x, y: lastNow.y, m: 0 });
+          buf.push({ t, x: n.x, y: n.y, m: n.m });
+        }
+      } else {
+        // Zaman damgası olmayan eski sürüm: varış zamanına göre
+        if (now - lastNow.t > 300) { lastNow.t = now - 100; while (buf.length > 1) buf.shift(); }
+        let tt = Math.max(now, lastNow.t + 60);
+        if (tt - now > 250) tt = now;
+        buf.push({ t: tt, x: n.x, y: n.y, m: n.m });
+      }
+      if (buf.length > 16) buf.shift();
     }
     const buf = this.netBuf;
-    const T = now - NET_DELAY;
+    // Gecikme: zaman damgalıysa ağın o anki titremesine göre (140-400 ms) yavaşça ayarlanır
+    let delay = NET_DELAY;
+    if (hasTs) {
+      const want = Math.min(400, Math.max(140, (this._netLate || 120) + 110));
+      this._netDelay = this._netDelay == null ? want : this._netDelay + (want - this._netDelay) * Math.min(1, dt * (want > this._netDelay ? 1 : 0.2));
+      delay = this._netDelay;
+    }
+    const T = now - delay;
     while (buf.length > 2 && buf[1].t <= T) buf.shift();                         // geçmiş konumları at
     const a = buf[0], b = buf[1];
     let tx, ty;
-    if (!b || T <= a.t) { tx = a.x; ty = a.y; if (!b && T > a.t) { /* son konumda bekle */ } }
-    else if (T >= b.t) { tx = b.x; ty = b.y; }
+    if (!b || T <= a.t) { tx = a.x; ty = a.y; }
+    else if (T >= b.t) {
+      // Tampon bitti (sunucu bir konumu atlamış olabilir): hâlâ yürüyorsa en çok 120 ms aynı yönde devam et
+      tx = b.x; ty = b.y;
+      if (hasTs && n.m === 1 && b.t > a.t) { const e = Math.min(120, T - b.t) / (b.t - a.t); tx += (b.x - a.x) * e; ty += (b.y - a.y) * e; }
+    }
     else { const u = (T - a.t) / (b.t - a.t); tx = a.x + (b.x - a.x) * u; ty = a.y + (b.y - a.y) * u; }
     // Çok küçük titremeleri yumuşat (ilk karede zıplama olmasın)
     const k = Math.min(1, dt * 20);
+    const ox = this.x, oy = this.y;
     this.x += (tx - this.x) * k; this.y += (ty - this.y) * k;
-    const facing = n.f ? 'left' : 'right', moving = n.m === 1;
+    // Yürüme animasyonu: konum hâlâ kayıyorsa yürüyor say (durma paketi topun durmasından önce gelir)
+    const facing = n.f ? 'left' : 'right', moving = n.m === 1 || (n.m !== 2 && Math.abs(this.x - ox) + Math.abs(this.y - oy) > 0.6);
     const late = moving && this.shownSkin === 'idle' && hasSkin(this.scene, 'walk_r', this.flag);
     if (late || facing !== this.facing || moving !== this.isMoving) { this.facing = facing; this.isMoving = moving; this.refreshVisual(); }
     this.setDepth(this.y);

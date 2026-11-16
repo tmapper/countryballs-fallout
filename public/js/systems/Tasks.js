@@ -29,7 +29,12 @@ export const TASK_ICON = {
   pipes:    { img: null,             emoji: '🔧' },
   waste:    { img: 'varil',          emoji: '🛢' },
   freq:     { img: 'monitor',        emoji: '📡' },
-  scan:     { img: null,             emoji: '🖐' }
+  scan:     { img: null,             emoji: '🖐' },
+  coffee:   { img: null,             emoji: '☕' },
+  medicine: { img: null,             emoji: '💊' },
+  crank:    { img: null,             emoji: '⚙' },
+  plants:   { img: null,             emoji: '🪴' },
+  beds:     { img: null,             emoji: '🛏' }
 };
 
 // Odaya göre göreli konum (dx, dy saklanır: harita değişince yeniden hesaplanır)
@@ -78,7 +83,14 @@ export const STATIONS = [
   { id: 'freq_security',     type: 'freq',   ...at('security', 176, 144) },
   { id: 'scan_medbay',       type: 'scan',   ...at('medbay', 110, 260) },
   { id: 'scan_lab',          type: 'scan',   ...at('lab', 565, 538) },
-  { id: 'scan_dorm',         type: 'scan',   ...at('dorm', 320, 450) }
+  { id: 'scan_dorm',         type: 'scan',   ...at('dorm', 320, 450) },
+  // ---- v0.9.22: 5 yeni tür (ilgili objenin yanında) ----
+  { id: 'coffee_cafeteria',  type: 'coffee',   ...at('cafeteria', 800, 138) },   // içecek makinesi
+  { id: 'medicine_medbay',   type: 'medicine', ...at('medbay', 140, 458), alt: { ring: [820, 651] } },  // hasta yatağı
+  { id: 'crank_generator',   type: 'crank',    ...at('generator', 125, 290) },   // jeneratör
+  { id: 'plants_o2',         type: 'plants',   ...at('o2', 138, 540) },          // saksı
+  { id: 'plants_hall',       type: 'plants',   ...at('hall', 146, 720) },        // saksı
+  { id: 'beds_dorm',         type: 'beds',     ...at('dorm', 530, 180) }         // ranza
 ];
 
 // En fazla 1 iki-aşamalı görev, aynı türden en fazla 2 görev

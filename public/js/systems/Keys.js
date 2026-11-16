@@ -4,12 +4,12 @@
 // Her eylemin 2 tuşu olabilir (ana + yedek). KeyboardEvent.code kullanılır (klavye dilinden bağımsız: KeyW...).
 // Oyun Phaser tuşları yerine buradan okur: isDown('up'), onAction('use', fn).
 const KEY = 'cfs.keys';
-export const ACTIONS = ['up', 'down', 'left', 'right', 'action', 'use', 'report', 'sabotage', 'map', 'chat'];
+export const ACTIONS = ['up', 'down', 'left', 'right', 'action', 'use', 'report', 'sabotage', 'map', 'chat', 'emote'];
 // Atanamayan tuşlar: Esc (pencere kapatır), 0-3 (toplantıda GEÇ, sabotaj menüsü seçimi)
 export const RESERVED = ['Escape', 'Digit0', 'Digit1', 'Digit2', 'Digit3', 'Numpad0', 'Numpad1', 'Numpad2', 'Numpad3'];
 export const DEFAULT_KEYS = {
   up: ['KeyW', 'ArrowUp'], down: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
-  action: ['Space', 'KeyQ'], use: ['KeyE', 'Enter'], report: ['KeyR', ''], sabotage: ['KeyF', ''], map: ['Tab', 'KeyM'], chat: ['KeyT', '']
+  action: ['Space', 'KeyQ'], use: ['KeyE', 'Enter'], report: ['KeyR', ''], sabotage: ['KeyF', ''], map: ['Tab', 'KeyM'], chat: ['KeyT', ''], emote: ['KeyG', '']
 };
 
 let binds = JSON.parse(JSON.stringify(DEFAULT_KEYS));
@@ -18,6 +18,7 @@ try {
   if (s) ACTIONS.forEach((a) => { if (Array.isArray(s[a])) binds[a] = [String(s[a][0] || ''), String(s[a][1] || '')]; });
   // Eski kayıtta "sohbet" yoktu: T başka eyleme atanmışsa sohbete boş başla
   if (!s || !Array.isArray(s.chat)) { const used = ACTIONS.some((a) => a !== 'chat' && binds[a].includes('KeyT')); binds.chat = used ? ['', ''] : ['KeyT', '']; }
+  if (!s || !Array.isArray(s.emote)) { const used = ACTIONS.some((a) => a !== 'emote' && binds[a].includes('KeyG')); binds.emote = used ? ['', ''] : ['KeyG', '']; }
 } catch (e) { /* yoksay */ }
 
 const down = new Set();

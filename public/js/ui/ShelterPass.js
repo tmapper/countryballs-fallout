@@ -18,7 +18,7 @@ const TABS = ['pass', 'crates', 'coll', 'market'];
 // İsteğe bağlı görseller (public/assets/menu/): yoksa emoji ve kodla çizilen arka plan kullanılır.
 // Dosya adları: pass_bg.jpg (arka plan), crate_common.png, crate_rare.png, crate_grand.png, coin.png. Promptlar: docs/GORSEL_PROMPTLARI.md (D bölümü)
 const ART_DIR = 'assets/menu/';
-const ART_FILES = { bg: 'pass_bg.jpg', common: 'crate_common.png', rare: 'crate_rare.png', grand: 'crate_grand.png', coin: 'coin.png?v=2' };
+const ART_FILES = { bg: 'pass_bg.jpg', common: 'crate_common.png', rare: 'crate_rare.png?v=3', grand: 'crate_grand.png', coin: 'coin.png?v=2' };
 
 class ShelterPass {
   constructor() { this.root = null; this.isOpen = false; this.tab = 'pass'; this.centered = false; this.art = {}; }

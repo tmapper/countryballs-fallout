@@ -1799,3 +1799,44 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 .btned-joy.warn { color: #ff8a80; border-right-color: rgba(255,90,79,.6); }
 .btned-hint small { display: block; margin-top: 8px; font: 600 12px system-ui; opacity: .75; }
 .ctl-hint.warn { color: #ffb347; opacity: 1; }
+
+/* ===== v0.9.22 yeni görevler ===== */
+@keyframes tpShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.tp-cof, .tp-med, .tp-crk, .tp-pla, .tp-bed { display: grid; gap: 14px; justify-items: center; width: min(100%, 380px); user-select: none; touch-action: none; }
+.tp-cof-cup { position: relative; width: 120px; height: 150px; border: 4px solid #d8d2c4; border-top: none; border-radius: 0 0 26px 26px; overflow: hidden; background: #1a1612; }
+.tp-cof-cup.shake, .tp-med-bottle.shake { animation: tpShake .3s; }
+.tp-cof-liq { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(#a0622d, #4a2a12); }
+.tp-cof-zone { position: absolute; left: 0; right: 0; border-top: 2px dashed #8dff6a; border-bottom: 2px dashed #8dff6a; background: rgba(141,255,106,.12); }
+.tp-cof-btn.on { filter: brightness(1.3); transform: scale(.96); }
+.tp-med-tray { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; padding: 14px; background: #1b241b; border-radius: 12px; min-height: 60px; width: 100%; }
+.tp-med-pill { width: 46px; height: 22px; border-radius: 12px; border: 2px solid rgba(0,0,0,.35); cursor: pointer; box-shadow: inset 0 -6px 0 rgba(255,255,255,.25); }
+.tp-med-pill.sel { outline: 3px solid #fff; outline-offset: 2px; }
+.tp-med-shelf { display: flex; gap: 18px; }
+.tp-med-bottle { width: 70px; height: 92px; border-radius: 10px 10px 16px 16px; background: rgba(220,240,255,.15); border: 2px solid #9fb3c0; display: grid; place-items: center; cursor: pointer; color: #fff; font-weight: 900; }
+.tp-med-bottle i { width: 40px; height: 14px; border-radius: 4px; }
+.tp-crk-wheel { position: relative; width: 190px; height: 190px; border-radius: 50%; background: radial-gradient(#3c4a3c 30%, #222b22 70%); border: 6px solid #6d7a6d; cursor: grab; }
+.tp-crk-arm { position: absolute; left: 50%; top: 50%; width: 12px; height: 80px; margin-left: -6px; margin-top: -80px; background: #b7bfb7; border-radius: 6px; transform-origin: 50% 100%; pointer-events: none; }
+.tp-crk-knob { position: absolute; top: -14px; left: -10px; width: 32px; height: 32px; border-radius: 50%; background: #ffd23f; border: 3px solid #6b5300; }
+.tp-pla { grid-template-columns: repeat(3, 1fr); }
+.tp-pla .tp-count { grid-column: 1 / -1; font-size: 16px; }
+.tp-pla-pot { position: relative; width: 96px; height: 140px; border: none; border-radius: 10px; background: #2a1e14; display: grid; justify-items: center; align-content: start; padding-top: 8px; cursor: pointer; }
+.tp-pla-pot.on { background: #33281b; }
+.tp-pla-pot.good { box-shadow: 0 0 0 3px #8dff6a; }
+.tp-pla-leaf { font-size: 34px; }
+.tp-pla-gauge { position: absolute; bottom: 10px; left: 50%; width: 18px; height: 70px; margin-left: -9px; background: #111; border-radius: 9px; overflow: hidden; }
+.tp-pla-fill { position: absolute; bottom: 0; left: 0; right: 0; background: #2f8fe0; }
+.tp-pla-zone { position: absolute; left: 0; right: 0; bottom: 60%; height: 30%; border-top: 2px solid #8dff6a; border-bottom: 2px solid #8dff6a; }
+.tp-bed-row { position: relative; width: 100%; height: 52px; background: #6b4a2e; border-radius: 8px; padding: 6px; box-sizing: border-box; cursor: ew-resize; touch-action: none; }
+.tp-bed-pillow { position: absolute; right: 8px; top: 8px; bottom: 8px; width: 13%; background: #eee; border-radius: 8px; }
+.tp-bed-blanket { position: absolute; left: 6px; top: 6px; bottom: 6px; background: repeating-linear-gradient(45deg, #3b6fb6 0 10px, #2f5c98 10px 20px); border-radius: 6px; }
+.tp-bed-row.done .tp-bed-blanket { background: repeating-linear-gradient(45deg, #2e9e4a 0 10px, #23803a 10px 20px); }
+
+/* ===== v0.9.22 emoji + hızlı sohbet ===== */
+.emo-menu { position: fixed; inset: 0; z-index: 55; pointer-events: none; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12vh; }
+.emo-grid { pointer-events: auto; display: grid; grid-template-columns: repeat(4, auto); gap: 8px; padding: 12px; background: rgba(14,18,25,.92); border: 1px solid #2c3d2c; border-radius: 16px; max-width: min(96vw, 560px); animation: panelIn .18s; }
+.emo-btn { border: 1px solid #34463a; background: #1b241b; color: #fff; border-radius: 12px; cursor: pointer; font-family: inherit; }
+.emo-btn:hover { background: #26402a; }
+.emo-e { font-size: 30px; padding: 6px 0; min-width: 64px; }
+.emo-p { font-size: 13px; font-weight: 700; padding: 10px 8px; }
+/* Şapka dükkanı: bayrak ızgarasının "img" kuralı fiyat jetonunu büyütmesin */
+.fp-flag img.ic-coin, .hp-price img.ic-coin { width: 1.1em; height: 1.1em; border: 0; border-radius: 0; object-fit: contain; vertical-align: -0.2em; }

@@ -62,7 +62,7 @@
     "device": "Device (next match)",
     "tunnelHint": "In tunnel: use arrows / joystick to hop to another tunnel, EXIT to leave",
     "specialThanks": "Special Thanks",
-    "credits": "Creator- doors4131 and Turk Mapper\nPublisher- Turk Mapper\nSpecial Thanks- Fiex, Turan123, Alexander",
+    "credits": "Creator- doors4131 and Turk Mapper\nPublisher- Turk Mapper\nSpecial Thanks- Fiex, Turan123, Alexander, Teknonistan\nArtist- Deniz Memmedova",
     "achCompleted": "Achievement Unlocked"
   },
   "lobby": {
@@ -251,7 +251,12 @@
       "pipes": "Tap tiles to rotate them. Build an unbroken pipe from the blue inlet to the right edge.",
       "waste": "Hazardous items go to the yellow-black bin, the rest to the blue one. Mistakes cost 2 points.",
       "freq": "Use both sliders to match the green wave to the dashed yellow one and hold it.",
-      "scan": "Press your hand on the scanner and keep holding until it finishes."
+      "scan": "Press your hand on the scanner and keep holding until it finishes.",
+      "coffee": "Hold FILL and release when the cup is between the lines.",
+      "medicine": "Tap a pill, then the bottle of the same color.",
+      "crank": "Grab the handle and turn it clockwise 3 times.",
+      "plants": "Hold on each pot to water it; release in the green zone, too much drowns it.",
+      "beds": "Drag each blanket to the right to straighten it."
     },
     "stepDone": "Data downloaded! Now upload it in Comms.",
     "fakeTitle": "Fake tasks (you cannot do them)",
@@ -283,7 +288,18 @@
     "freqAmp": "Amplitude",
     "freqRate": "Frequency",
     "scanIdle": "PRESS AND HOLD YOUR HAND",
-    "scanBusy": "SCANNING"
+    "scanBusy": "SCANNING",
+    "coffee": "Brew coffee",
+    "medicine": "Sort medicine",
+    "crank": "Wind the generator",
+    "plants": "Water the plants",
+    "beds": "Make the beds",
+    "coffeeBtn": "FILL",
+    "coffeeLow": "Not enough, a bit more!",
+    "coffeeHigh": "Too much! Emptying cup…",
+    "coffeeSpill": "Spilled! Start over.",
+    "crankHint": "Turn clockwise",
+    "plantsOver": "Too much water! Soil is mud."
   },
   "meeting": {
     "bodyTitle": "DEAD BODY REPORTED!",
@@ -388,7 +404,7 @@
     "offline": "Not connected",
     "connecting": "Connecting...",
     "noServer": "No server address (Settings)",
-    "version": "Version 0.9.21",
+    "version": "Version 0.9.22",
     "exit": "EXIT",
     "back": "BACK",
     "language": "Language",
@@ -860,6 +876,20 @@
     "b_sabotage": "Sabotage",
     "reserved": "{k} is reserved (Esc and 0-3 cannot be bound).",
     "layoutRoleNote": "Note: the impostor layout is shown. If you don't move Use, it sits where Kill is for crewmates; once moved it stays there for every role.",
-    "a_chat": "Chat"
+    "a_chat": "Chat",
+    "a_emote": "Emote / quick chat"
+  },
+  "emote": {
+    "title": "Emote",
+    "p": {
+      "follow": "Follow me",
+      "come": "Come here!",
+      "tasks": "Doing tasks",
+      "sus": "That's sus!",
+      "help": "Help!",
+      "thanks": "Thanks",
+      "where": "Where are you?",
+      "safe": "It's safe here"
+    }
   }
 }

@@ -36,6 +36,7 @@ import { installNet } from './GameNet.js';
 import { installFx } from './GameFx.js';
 import { installTunnel } from './GameTunnel.js';
 import { installEaster } from './GameEaster.js';
+import { installEmote } from './GameEmote.js';
 
 // Görüş yarıçapları (dünya pikseli). İleride "ışıklar kesildi" sabotajında
 // VISION_LIGHTS_OUT kullanılacak.
@@ -170,6 +171,7 @@ export class GameScene extends Phaser.Scene {
       onAction('sabotage', () => { if (this.sys.isActive()) this.openSabotage(); })
     ];
     this.events.once('shutdown', () => offKeys.forEach((f) => f()));
+    this.setupEmotes();   // emoji + hızlı sohbet (GameEmote.js)
     this.setupExtras();   // ceset bildirme, toplantı, sabotaj, mini harita (GameExtras.js)
     this.setupFx();       // ışık, toz, kan, duman (GameFx.js)
     this.setupCull();
@@ -304,6 +306,7 @@ export class GameScene extends Phaser.Scene {
 
   kill(killer, victim) {
     if (this.meeting || this.over) return;
+    if (victim.clearEmote) victim.clearEmote();
     this.emitEv('kill', [killer.id, victim.id]);
     // Öldüren, ölenin tam üstüne ışınlanır (Among Us gibi); kamera kaymadan geçer
     killer.setPosition(victim.x, victim.y);
@@ -559,6 +562,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   // Hayalet bot: görevi kalmadıysa durur, varsa görev istasyonuna yürür
+  // Ölü katil bot da (hayalet) sabotaj yapar: sabotaj hazır olunca ortalama ~15 sn içinde bir tane
+  ghostSabotage(dt) {
+    if (this.isClient || this.over || this.meeting || this.sabotage || this.sabCd > 0 || this.botSabWait > 0) return;
+    const g = this.balls.find((b) => b.isBot && !b.alive && !b.left && b.role === 'impostor');
+    if (!g || Math.random() > dt / 15) return;
+    const aliveImp = this.balls.some((b) => b.alive && b.role === 'impostor');
+    const type = aliveImp && Math.random() < 0.5 ? 'lights' : (Math.random() < 0.5 ? 'reactor' : 'o2');
+    if (SABOTAGES[type]) this.startSabotage(type);
+  }
+
   ghostBotThink(b, dt) {
     const br = b.brain;
     if (!b.tasksLeft) { b.brain = null; return { x: 0, y: 0 }; }
@@ -726,6 +739,7 @@ export class GameScene extends Phaser.Scene {
         navFrameStart();   // bu karede yol bulmaya ayrılan süre (~3 ms) sıfırlanır; botlar sırayla yol alır, hepsi birden dondurmaz
         // Hayalet botlar sadece görevlerine yürür (algı / karar yok)
         this.balls.forEach((b) => { if (b.brain) b.botDir = b.alive ? this.botThink(b, botDt) : this.ghostBotThink(b, botDt); });
+        this.ghostSabotage(botDt);
       }
       this.balls.forEach((b) => {
         if (!b.brain || !b.botDir) return;
@@ -922,6 +936,8 @@ export class GameScene extends Phaser.Scene {
       st.useCd = this.emergencyCd > 0 ? Math.ceil(this.emergencyCd) : 0;
       st.task = !st.useCd;
     }
+    // Ölü katil de sabotaj yapabilir (hayaletken)
+    if (me.role === 'impostor') { st.sabotage = true; st.sabReady = !this.sabotage && this.sabCd <= 0 && !me.inTunnel; st.sabCd = this.sabotage ? 0 : Math.max(0, Math.ceil(this.sabCd)); st.sabFrac = Math.min(1, Math.max(0, this.sabCd) / 30); }
     if (!me.alive) return st;
     st.report = !me.inTunnel && !!this.nearestBody(me, REPORT_RANGE);
     if (me.role === 'impostor') { st.sabotage = true; st.sabReady = !this.sabotage && this.sabCd <= 0; st.sabCd = this.sabotage ? 0 : Math.max(0, Math.ceil(this.sabCd)); st.sabFrac = Math.min(1, Math.max(0, this.sabCd) / 30); }
@@ -946,3 +962,4 @@ installNet(GameScene);
 installFx(GameScene);
 installTunnel(GameScene);
 installEaster(GameScene);
+installEmote(GameScene);

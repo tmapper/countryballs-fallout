@@ -1620,7 +1620,22 @@ function handle(c, m) {
         // m: 0 duruyor, 1 yürüyor, 2 tünelin içinde (sadece Katil tünelde olabilir; başkası 2 yollarsa 0 sayılır)
         const me = r.players.get(c.id);
         const mv = d.m === 2 ? (me && me.role === 'impostor' && r.state === 'game' ? 2 : 0) : (d.m ? 1 : 0);
-        (r.pos || (r.pos = new Map())).set(c.id, [c.id, d.x | 0, d.y | 0, d.f ? 1 : 0, mv, k === 'lp' ? 1 : 0]);
+        const ts = Number.isInteger(d.ts) && d.ts >= 0 && d.ts < 1e7 ? d.ts : -1;     // gönderici zamanı (akıcı oynatma için)
+        const row = [c.id, d.x | 0, d.y | 0, d.f ? 1 : 0, mv, k === 'lp' ? 1 : 0];
+        if (ts >= 0) row.push(ts);
+        (r.pos || (r.pos = new Map())).set(c.id, row);
+        return;
+      }
+      // Emoji / hızlı sohbet: sadece numara (0-15), hız sınırı; ölünün emojisi sadece ölülere gider
+      if (k === 'emo') {
+        const e = m.d.e;
+        if (r.state !== 'game' || !Number.isInteger(e) || e < 0 || e > 15) return;
+        const now = Date.now();
+        if (now - (c.lastEmo || 0) < 1200) return;
+        c.lastEmo = now;
+        const out = { t: 'relay', from: c.id, d: { k: 'emo', e } };
+        if (r.dead && r.dead.has(c.id)) { r.players.forEach((p) => { if (p.id !== c.id && r.dead.has(p.id)) send(p.client, out); }); }
+        else broadcast(r, out, c.id);
         return;
       }
       const msg = { t: 'relay', from: c.id, d: m.d };

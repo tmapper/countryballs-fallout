@@ -23,6 +23,7 @@ import { SPEED } from '../entities/CountryBall.js';
 import { BotBrain, warmNav } from '../systems/BotBrain.js';
 import { pickTasks } from '../systems/Tasks.js';
 import { i18n } from '../systems/I18n.js';
+import { EMOTE_COUNT } from './GameEmote.js';
 
 const TASK_MIN_GAP = 1500;      // iki görev arası en az (ms): en kısa mini oyun bile bundan uzun
 const TASK_RANGE = 230;
@@ -70,14 +71,16 @@ export function installNet(GameScene) {
     this.posT -= dt;
     this.idleT = (this.idleT || 0) + dt;
     if (this.posT > 0) return;
-    this.posT = POS_RATE;
+    this.posT += POS_RATE;                       // biriktir: FPS düşükken de tam saniyede 10 (eskiden 30 FPS'de 7,5'a düşüyordu)
+    if (this.posT < -POS_RATE) this.posT = 0;
+    const ts = Math.round(performance.now()) % 1e7;   // gönderici zamanı: alıcı hızı buna göre oynatır
     // SUNUCU TASARRUFU: konum sadece değişince gönderilir; duran oyuncu saniyede bir "buradayım" der
     const me = this.player;
     const cur = [Math.round(me.x), Math.round(me.y), me.facing === 'left' ? 1 : 0, me.inTunnel ? 2 : (me.isMoving ? 1 : 0)];
     const key = cur.join(',');
     if (key !== this.lastPosKey || this.idleT >= 1) {
       this.lastPosKey = key; this.idleT = 0;
-      net.relay({ k: 'p', x: cur[0], y: cur[1], f: cur[2], m: cur[3] });
+      net.relay({ k: 'p', x: cur[0], y: cur[1], f: cur[2], m: cur[3], ts });
     }
     if (this.isHost) {
       // sadece yeri değişen botlar (+ 2 sn'de bir hepsi)
@@ -91,7 +94,7 @@ export function installNet(GameScene) {
         const k = r.join(',');
         if (full || k !== b.lastSent) { b.lastSent = k; rows.push(r); }
       });
-      if (rows.length) net.relay({ k: 'bp', b: rows });
+      if (rows.length) net.relay({ k: 'bp', b: rows, ts });
     }
   };
 
@@ -100,16 +103,19 @@ export function installNet(GameScene) {
     const fromHost = net.room && from === net.room.hostId;
     if (d.k === 'pp') {                               // sunucunun toplu konum mesajı
       if (from !== '*') return;                       // başka oyuncudan gelen sahte toplu konum
-      (d.a || []).forEach(([id, x, y, f, m, lobby]) => { if (!lobby && id !== net.id) this.onRelay(id, { k: 'p', x, y, f, m }); });
+      (d.a || []).forEach(([id, x, y, f, m, lobby, ts]) => { if (!lobby && id !== net.id) this.onRelay(id, { k: 'p', x, y, f, m, ts }); });
       return;
     }
     if (d.k === 'p') {
       const b = this.ball(from);
-      if (b && !b.isMe && !b.brain && this.validPos(b, d)) { b.net = { x: d.x, y: d.y, f: d.f ? 1 : 0, m: d.m === 2 ? 2 : (d.m ? 1 : 0) }; b.inTunnel = (d.m === 2 && b.alive) ? 'net' : null; }
+      if (b && !b.isMe && !b.brain && this.validPos(b, d)) { b.net = { x: d.x, y: d.y, f: d.f ? 1 : 0, m: d.m === 2 ? 2 : (d.m ? 1 : 0), ts: Number.isFinite(d.ts) ? d.ts : undefined }; b.inTunnel = (d.m === 2 && b.alive) ? 'net' : null; }
     } else if (!fromHost && (d.k === 'bp' || d.k === 'ev')) {
       // sahte host mesajı: yok say (sunucu da engeller)
     } else if (d.k === 'bp' && this.isClient) {
-      d.b.forEach(([id, x, y, f, m]) => { const b = this.ball(id); if (b) { b.net = { x, y, f, m }; if (!b.alive) b.ghostBot = true; } });
+      const ts = Number.isFinite(d.ts) ? d.ts : undefined;
+      d.b.forEach(([id, x, y, f, m]) => { const b = this.ball(id); if (b) { b.net = { x, y, f, m, ts }; if (!b.alive) b.ghostBot = true; } });
+    } else if (d.k === 'emo') {
+      this.onEmoteNet(from, d.e);
     } else if (d.k === 'req' && this.isHost) {
       this.onRequest(this.ball(from), d);
     } else if (d.k === 'ev' && this.isClient) {
@@ -190,7 +196,7 @@ export function installNet(GameScene) {
         if (this.sabotage && who.alive && who.role !== 'impostor' && near(who, this.sabotage.def.fix, FIX_RANGE)) this.fixSabotage();
         break;
       case 'sab':
-        if (who.alive && who.role === 'impostor' && !who.inTunnel && !this.sabotage && this.sabCd <= 0) this.startSabotage(d.type);   // tünelden sabotaj yok
+        if (who.role === 'impostor' && !who.left && !who.inTunnel && !this.sabotage && this.sabCd <= 0) this.startSabotage(d.type);   // tünelden sabotaj yok
         break;
     }
   };
@@ -216,6 +222,7 @@ export function installNet(GameScene) {
         case 'gunDrop': { this.guns = this.guns || []; if (!this.gunById(a[0])) { const g = { id: a[0], x: a[1], y: a[2], taken: false, spr: null }; this.guns.push(g); this.showGun(g); } break; }
         case 'botTask': { const b = this.ball(a[0]); if (b) b.netTasksDone = (b.netTasksDone || 0) + 1; break; }
         case 'revote': this.restartVote(); break;
+        case 'emo': { const e = Number(a[1]); if (B(0) && e >= 0 && e < EMOTE_COUNT) this.showEmoteOn(B(0), e | 0); break; }
         case 'gunTake': { const g = this.gunById(a[1]); if (g) { g.taken = false; this.takeGun(this.ball(a[0]), g); } break; }
       }
     } finally {
