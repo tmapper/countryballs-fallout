@@ -290,7 +290,7 @@ export function startMatch(settings) {
     { id: 'me', flag: settings.myFlag, role: roles[0], me: true, name: net.profile.name || '', hat: loadHat() },
     ...settings.botFlags.map((flag, i) => ({ id: 'b' + i, flag, role: roles[i + 1], me: false, hat: botHat(flag) }))
   ];
-  startWith(players, 'offline');
+  startWith(players, 'offline', { map: settings.map || 'ring' });   // tek kişilikte seçilen harita
 }
 
 // players: [{ id, flag, role, me, name, bot }]   netMode: 'offline' | 'host' | 'client'

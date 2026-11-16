@@ -1621,13 +1621,13 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 @media (prefers-reduced-motion: reduce) { .meeting.urgent .mt-time { animation: none; } }
 
 /* Özel Teşekkürler / Credits */
-.credits-panel { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 14px; background: rgba(0,0,0,.75); }
+.credits-panel { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 14px; background: rgba(0,0,0,.75); }
 .credits-panel.hidden { display: none; }
 .credits-card { width: 100%; max-width: 420px; max-height: 70vh; display: flex; flex-direction: column; background: linear-gradient(180deg,#1a1528,#0d0a14); border: 2px solid #6b5b8c; border-radius: 16px; color: #e8e0f5; font-family: system-ui; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.7); }
 .credits-head { display: flex; align-items: center; padding: 14px 16px; border-bottom: 2px solid rgba(107,91,140,.4); }
 .credits-head h2 { margin: 0; flex: 1; font-size: 18px; letter-spacing: .08em; color: #c4b0ff; }
 .credits-x { background: none; border: none; color: #c4b0ff; font-size: 22px; cursor: pointer; }
-.credits-scroll { flex: 1; overflow: hidden; position: relative; height: 280px; mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent); }
+.credits-scroll { flex: none; overflow: hidden; position: relative; height: min(280px, 50vh); mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent); }
 .credits-text { position: absolute; left: 0; right: 0; padding: 40px 24px; text-align: center; font: 700 16px/1.8 system-ui; color: #e8e0f5; white-space: pre-line; animation: creditsScroll 12s linear infinite; }
 @keyframes creditsScroll {
   0% { transform: translateY(100%); }

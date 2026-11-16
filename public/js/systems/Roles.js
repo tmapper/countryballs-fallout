@@ -10,7 +10,7 @@
 export const ROLES = ['impostor', 'sheriff', 'crewmate'];
 export const ROLE_COLORS = { impostor: '#e5484d', sheriff: '#3e8bff', crewmate: '#46c46a' };
 export const MIN_PLAYERS = 4;
-export const MAX_PLAYERS = 10;          // tek kişilik lobi
+export const MAX_PLAYERS = 15;          // tek kişilik lobi (sen + en fazla 14 bot)
 export const ONLINE_MAX = 25;           // çevrimiçi oda
 // Rol sayıları oyuncu sayısına göre (sunucudaki impCount / sheriffCount ile aynı):
 //   Katil : 1-7 kişi 1 · 8-12 kişi 2 · 13-19 kişi 3 · 20-25 kişi 4
