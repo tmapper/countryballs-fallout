@@ -54,7 +54,8 @@ class Market {
     window.addEventListener('keydown', (e) => { if (this.isOpen && e.key === 'Escape') this.close(); });
     net.on('market', (m) => { this.list = m.list || []; if (this.isOpen) this.render(); });
     net.on('account', () => { if (this.isOpen) this.render(); });
-    net.on('shopError', (m) => this.msg(i18n.t('market.err_' + m.code) || i18n.t('shop.err_' + m.code) || m.code, true));
+    // Sadece pazar açıkken (başka ekranların mağaza hataları burada görünmesin); çeviri yoksa sıradaki yedek
+    net.on('shopError', (m) => { if (!this.isOpen) return; const c = m.code; this.msg(i18n.tf('market.err_' + c, i18n.tf('shop.err_' + c, i18n.tf('shop.' + c, c))), true); });
     i18n.onChange(() => this.isOpen && this.render());
   }
 
@@ -133,9 +134,9 @@ class Market {
   }
 
   itemLabel(type, item) {
-    if (type === 'flag') return i18n.t('countries.' + item) || item;
+    if (type === 'flag') return i18n.tf('countries.' + item, item);
     const h = HATS.find((x) => x.id === item);
-    return h ? (i18n.t('hats.' + item) || h.name || item) : item;
+    return h ? i18n.tf('hats.' + item, h.name || item) : item;
   }
 
   ownedFlags() {
@@ -170,16 +171,16 @@ class Market {
     const coinsEl = card.querySelector('.mk-coins');
     if (coinsEl) coinsEl.innerHTML = coinHtml(acc ? Number(acc.coins ?? 0) : 0);
     const h2 = card.querySelector('h2');
-    if (h2) h2.textContent = i18n.t('market.title') || 'PAZAR YERİ';
+    if (h2) h2.textContent = i18n.tf('market.title', 'PAZAR YERİ');
     card.querySelectorAll('.mk-tabs button').forEach((b) => {
       const keys = { browse: 'market.tabBrowse', sell: 'market.tabSell', mine: 'market.tabMine' };
-      b.textContent = i18n.t(keys[b.dataset.tab]) || b.dataset.tab;
+      b.textContent = i18n.tf(keys[b.dataset.tab], b.dataset.tab);
       b.classList.toggle('on', b.dataset.tab === this.tab);
     });
 
     if (!body) return;
     if (!acc) {
-      body.innerHTML = `<p class="mk-empty">${esc(i18n.t('market.needLogin') || 'Giriş yapmalısın')}</p>`;
+      body.innerHTML = `<p class="mk-empty">${esc(i18n.tf('market.needLogin', 'Giriş yapmalısın'))}</p>`;
       return;
     }
 
@@ -190,7 +191,7 @@ class Market {
 
   renderBrowse(body) {
     if (!this.list.length) {
-      body.innerHTML = `<p class="mk-empty">${esc(i18n.t('market.empty') || 'Henüz ilan yok. İlk ilanı sen ver!')}</p>`;
+      body.innerHTML = `<p class="mk-empty">${esc(i18n.tf('market.empty', 'Henüz ilan yok. İlk ilanı sen ver!'))}</p>`;
       return;
     }
     const me = net.account && net.account.name;
@@ -205,12 +206,12 @@ class Market {
         ${thumb}
         <div class="mk-info">
           <b>${esc(this.itemLabel(x.type, x.item))}</b>
-          <small>${x.type === 'flag' ? (i18n.t('pass.rarity.' + rar) || rar) : (i18n.t('market.hat') || 'Şapka')} · ${esc(x.sellerName)}</small>
+          <small>${x.type === 'flag' ? i18n.tf('pass.rarity.' + rar, rar) : (i18n.tf('market.hat', 'Şapka'))} · ${esc(x.sellerName)}</small>
           <div class="mk-price">${coinHtml(Number(x.price) || 0)}</div>
         </div>
         ${mine
-          ? `<button type="button" class="mk-btn ghost" data-cancel="${esc(x.id)}">${esc(i18n.t('market.cancel') || 'İptal')}</button>`
-          : `<button type="button" class="mk-btn primary" data-buy="${esc(x.id)}">${esc(i18n.t('market.buy') || 'SATIN AL')}</button>`}
+          ? `<button type="button" class="mk-btn ghost" data-cancel="${esc(x.id)}">${esc(i18n.tf('market.cancel', 'İptal'))}</button>`
+          : `<button type="button" class="mk-btn primary" data-buy="${esc(x.id)}">${esc(i18n.tf('market.buy', 'SATIN AL'))}</button>`}
       </div>`;
     }).join('')}</div>`;
     body.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', () => {
@@ -232,13 +233,13 @@ class Market {
 
     body.innerHTML = `
       <div class="mk-sell">
-        <p class="mk-hint">${esc(i18n.t('market.sellHint') || 'Sahip olduğun tarihi bayrak veya şapkayı sat. Mistik bayraklar satılamaz.')}</p>
+        <p class="mk-hint">${esc(i18n.tf('market.sellHint', 'Sahip olduğun tarihi bayrak veya şapkayı sat. Mistik bayraklar satılamaz.'))}</p>
         <div class="mk-kind">
-          <button type="button" class="mk-chip ${kind === 'flag' ? 'on' : ''}" data-kind="flag">${esc(i18n.t('market.kindFlag') || 'Bayrak')}</button>
-          <button type="button" class="mk-chip ${kind === 'hat' ? 'on' : ''}" data-kind="hat">${esc(i18n.t('market.kindHat') || 'Şapka')}</button>
+          <button type="button" class="mk-chip ${kind === 'flag' ? 'on' : ''}" data-kind="flag">${esc(i18n.tf('market.kindFlag', 'Bayrak'))}</button>
+          <button type="button" class="mk-chip ${kind === 'hat' ? 'on' : ''}" data-kind="hat">${esc(i18n.tf('market.kindHat', 'Şapka'))}</button>
         </div>
         ${!items.length
-          ? `<p class="mk-empty">${esc(i18n.t('market.noItems') || 'Satılacak eşyan yok')}</p>`
+          ? `<p class="mk-empty">${esc(i18n.tf('market.noItems', 'Satılacak eşyan yok'))}</p>`
           : `
         <div class="mk-pick">
           ${items.map((id) => {
@@ -254,11 +255,11 @@ class Market {
           }).join('')}
         </div>
         <label class="mk-price-row">
-          <span>${esc(i18n.t('market.price') || 'Fiyat (jeton)')}</span>
+          <span>${esc(i18n.tf('market.price', 'Fiyat (jeton)'))}</span>
           <input type="number" class="mk-price-in" min="50" max="50000" step="10" value="${this.sellPrice}">
         </label>
-        <p class="mk-hint small">${esc(i18n.t('market.priceHint') || 'Min 50 · Max 50.000')}</p>
-        <button type="button" class="mk-btn primary mk-list-btn" ${this.sellItem ? '' : 'disabled'}>${esc(i18n.t('market.listBtn') || 'İLANI YAYINLA')}</button>
+        <p class="mk-hint small">${esc(i18n.tf('market.priceHint', 'Min 50 · Max 50.000'))}</p>
+        <button type="button" class="mk-btn primary mk-list-btn" ${this.sellItem ? '' : 'disabled'}>${esc(i18n.tf('market.listBtn', 'İLANI YAYINLA'))}</button>
         `}
       </div>`;
 
@@ -281,7 +282,7 @@ class Market {
       const price = Math.max(50, Math.min(50000, Math.floor(Number(priceIn && priceIn.value) || this.sellPrice)));
       if (!this.sellItem) return;
       net.send({ t: 'marketSell', kind: this.sellKind, item: this.sellItem, price });
-      this.msg(i18n.t('market.listed') || 'İlan yayınlandı');
+      this.msg(i18n.tf('market.listed', 'İlan yayınlandı'));
       this.sellItem = '';
       setTimeout(() => { net.send({ t: 'marketList' }); this.tab = 'mine'; this.root.querySelectorAll('.mk-tabs button').forEach((x) => x.classList.toggle('on', x.dataset.tab === 'mine')); this.render(); }, 500);
     });
@@ -291,7 +292,7 @@ class Market {
     const me = net.account && net.account.name;
     const mine = this.list.filter((x) => (x.mine !== undefined ? x.mine : x.sellerName === me));
     if (!mine.length) {
-      body.innerHTML = `<p class="mk-empty">${esc(i18n.t('market.noMine') || 'Aktif ilanın yok')}</p>`;
+      body.innerHTML = `<p class="mk-empty">${esc(i18n.tf('market.noMine', 'Aktif ilanın yok'))}</p>`;
       return;
     }
     body.innerHTML = `<div class="mk-grid">${mine.map((x) => {
@@ -304,7 +305,7 @@ class Market {
           <b>${esc(this.itemLabel(x.type, x.item))}</b>
           <div class="mk-price">${coinHtml(Number(x.price) || 0)}</div>
         </div>
-        <button type="button" class="mk-btn ghost" data-cancel="${esc(x.id)}">${esc(i18n.t('market.cancel') || 'İptal')}</button>
+        <button type="button" class="mk-btn ghost" data-cancel="${esc(x.id)}">${esc(i18n.tf('market.cancel', 'İptal'))}</button>
       </div>`;
     }).join('')}</div>`;
     body.querySelectorAll('[data-cancel]').forEach((b) => b.addEventListener('click', () => {

@@ -67,8 +67,8 @@ class GameSettings {
     const msg = (t) => { const m = q('.gs-codemsg'); m.classList.toggle('hidden', !t); m.querySelector('small').textContent = t || ''; };
     const redeem = () => {
       const code = q('.gs-code').value.trim();
-      if (!code) { msg(i18n.t('menu.redeemEmpty') || 'Kod gir'); return; }
-      if (!net.account) { msg(i18n.t('shop.needLogin') || 'Giriş yapmalısın'); return; }
+      if (!code) { msg(i18n.tf('menu.redeemEmpty', 'Kod gir')); return; }
+      if (!net.account) { msg(i18n.tf('shop.needLogin', 'Giriş yapmalısın')); return; }
       msg('...');
       if (net.status !== 'online') {
         net.connect();
@@ -81,10 +81,15 @@ class GameSettings {
     q('.gs-code').addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); redeem(); } });
     net.on('redeem', (m) => {
       if (!this.isOpen) return;
-      if (m.ok) { msg((i18n.t('menu.redeemOk') || 'Kod kabul edildi!') + ' +' + (Number(m.coins) || 0)); q('.gs-code').value = ''; }
+      if (m.ok) { msg((i18n.tf('menu.redeemOk', 'Kod kabul edildi!')) + ' +' + (Number(m.coins) || 0)); q('.gs-code').value = ''; }
       else msg(m.err === 'used' ? i18n.t('menu.redeemUsed') : m.err === 'login' ? i18n.t('shop.needLogin') : i18n.t('menu.redeemFail'));
     });
-    window.addEventListener('keydown', (e) => { if (this.isOpen && e.key === 'Escape') { e.stopPropagation(); this.close(); } }, true);
+    window.addEventListener('keydown', (e) => {
+      if (!this.isOpen || e.key !== 'Escape') return;
+      e.stopPropagation();
+      if (keyBindPanel.isOpen) { keyBindPanel.close(); return; }          // önce üstteki tuş atama penceresi kapansın
+      this.close();
+    }, true);
     i18n.onChange(() => this.isOpen && this.render());
   }
 
@@ -101,9 +106,9 @@ class GameSettings {
       c.querySelector('.credits-x').addEventListener('click', () => this.closeCredits());
       window.addEventListener('keydown', (e) => { if (!c.classList.contains('hidden') && e.key === 'Escape') { e.stopPropagation(); this.closeCredits(); } }, true);
     }
-    const text = (i18n.t('ui.credits') || '').replace(/\\n/g, '\n');
+    const text = (i18n.tf('ui.credits', '')).replace(/\\n/g, '\n');
     this.creditsRoot.querySelector('.credits-text').textContent = text;
-    this.creditsRoot.querySelector('h2').textContent = i18n.t('ui.specialThanks') || 'Özel Teşekkürler';
+    this.creditsRoot.querySelector('h2').textContent = i18n.tf('ui.specialThanks', 'Özel Teşekkürler');
     this.creditsRoot.classList.remove('hidden');
     const tx = this.creditsRoot.querySelector('.credits-text');
     tx.style.animation = 'none';

@@ -115,6 +115,7 @@ export class GameScene extends Phaser.Scene {
         if (b.role === 'impostor' || this.over || !b.tasksLeft) return;   // hayalet bot da görevini bitirir
         b.tasksLeft--;
         this.addTaskDone(1);
+        this.emitEv('botTask', [b.id]);          // herkes botun kalan görevini bilsin (kurucu değişirse doğru sayı)
       };
     });
     this.buildFiexArmy();   // gizli sürpriz: sadece hayaletler görür (GameEaster.js)
@@ -123,7 +124,7 @@ export class GameScene extends Phaser.Scene {
       if (!b.brain || b.role === 'impostor' || Math.random() > 0.5) return;
       const others = this.balls.filter((o) => o !== b);
       b.brain.buddy = others[Math.floor(Math.random() * others.length)];
-      b.brain.buddyUntil = 40000 + Math.random() * 20000;
+      b.brain.buddyUntil = this.time.now + 40000 + Math.random() * 20000;   // oyun saati sayfa açılışından sayar: şimdiye göre
     });
     this.buildTaskMarkers();
     this.events.once('shutdown', () => { this.taskPanel.close(true); gameSettings.close(); ghostChat.hide(); stopAllLoops(); });
@@ -264,6 +265,8 @@ export class GameScene extends Phaser.Scene {
     if (this.canFix()) { this.fixSabotage(); return; }
     if (me.role === 'impostor' && this.nearestTunnelOk()) { this.useTunnel(); return; }
     if (this.taskPanel.isOpen) return;
+    const gun = this.nearGun();                                       // yerdeki şerif silahı (KULLAN ile alınır)
+    if (gun) { this.pickGun(gun); return; }
     const t = this.nearTask();
     if (!t) { if (this.nearEmergency()) this.pressEmergency(); return; }
     this.taskOpen = true;
@@ -426,7 +429,7 @@ export class GameScene extends Phaser.Scene {
 
     if (b.role === 'impostor') {
       if (br.restT > 0) br.restT -= dt;
-      const seen = this.botVisible(b);
+      const seen = this.botVisible(b, b.cooldown <= 0);               // öldürmeye hazırsa görüş bilgisi hep taze
       const crew = seen.filter((o) => o.role !== 'impostor');      // katil ortaklarını tanır (insan katil de görür)
       // KAÇIŞ: az önce öldürdü -> cesetten uzaklaş. Yakın tünel varsa ona yürür ve girer; yoksa uzak bir odaya gider.
       if (br.flee > 0) {
@@ -474,7 +477,7 @@ export class GameScene extends Phaser.Scene {
         if (crew.length || !br.goal) br.preyGo = false;
       }
       // Mantıklı sabotaj (ortak bekleme süresi)
-      if (!this.sabotage && this.sabCd <= 0 && !this.isClient && br.react <= 0) this.botSabotage(b, crew);
+      if (!this.sabotage && this.sabCd <= 0 && !(this.botSabWait > 0) && !this.isClient && br.react <= 0 && !b.inTunnel) this.botSabotage(b, crew);
       // Ara sıra yer değiştirmek için tünel (kimse görmüyorsa)
       if (br.tunGoal) {
         if (crew.length) br.tunGoal = null;                          // görülürse vazgeç
@@ -767,7 +770,7 @@ export class GameScene extends Phaser.Scene {
         lastHud.report !== hud.report || lastHud.sabotage !== hud.sabotage || lastHud.useLabel !== hud.useLabel ||
         lastHud.cooldown !== hud.cooldown || lastHud.tunnel !== hud.tunnel || lastHud.inGame !== hud.inGame ||
         lastHud.sabReady !== hud.sabReady || lastHud.cdFrac !== hud.cdFrac || lastHud.sabFrac !== hud.sabFrac ||
-        lastHud.tunnelExit !== hud.tunnelExit) {
+        lastHud.tunnelExit !== hud.tunnelExit || lastHud.useCd !== hud.useCd || lastHud.sabCd !== hud.sabCd) {
       this._lastHud = Object.assign({}, hud);
       this.registry.set('hud', hud);
     }
@@ -842,8 +845,8 @@ export class GameScene extends Phaser.Scene {
     this.fpsLow = fps < 30 ? this.fpsLow + 0.16 : Math.max(0, this.fpsLow - 0.32);
     if (this.fpsLow > 6 && getQuality() === 'high' && !this.autoLowDone) {
       this.autoLowDone = true;
-      setQuality('low');
-      if (getPerf() === 'high') setPerf('balanced');   // işlemci yükünü de azalt
+      setQuality('low', false);                          // sadece bu oturum: kayıtlı ayarın değişmez
+      if (getPerf() === 'high') setPerf('balanced', false);   // işlemci yükünü de azalt (kaydedilmez)
       this.toast(i18n.t('ui.autoLow'), '#ffd23f');
     }
   }
@@ -912,7 +915,13 @@ export class GameScene extends Phaser.Scene {
     st.task = !this.taskOpen && !!this.nearTask();
     if (st.task) st.useLabel = 'use';
     if (!this.taskOpen && this.canFix()) { st.task = true; st.useLabel = 'fix'; }
-    else if (!st.task && !this.taskOpen && this.nearEmergency() && this.emergencyLeft > 0) { st.task = true; st.useLabel = 'meeting'; }
+    else if (!st.task && !this.taskOpen && this.nearGun()) { st.task = true; st.useLabel = 'use'; }   // yerdeki silah
+    else if (!st.task && !this.taskOpen && this.nearEmergency() && this.emergencyLeft > 0) {
+      // Acil düğme: 15 sn kilitliyken buton sönük ve üstünde geri sayım
+      st.useLabel = 'meeting';
+      st.useCd = this.emergencyCd > 0 ? Math.ceil(this.emergencyCd) : 0;
+      st.task = !st.useCd;
+    }
     if (!me.alive) return st;
     st.report = !me.inTunnel && !!this.nearestBody(me, REPORT_RANGE);
     if (me.role === 'impostor') { st.sabotage = true; st.sabReady = !this.sabotage && this.sabCd <= 0; st.sabCd = this.sabotage ? 0 : Math.max(0, Math.ceil(this.sabCd)); st.sabFrac = Math.min(1, Math.max(0, this.sabCd) / 30); }

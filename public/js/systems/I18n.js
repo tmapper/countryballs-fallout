@@ -45,6 +45,11 @@ class I18n {
     return String(found).replace(/\{(\w+)\}/g, (_, name) => (name in params ? params[name] : `{${name}}`));
   }
 
+  // Anahtar var mı? (t() eksik anahtarda anahtarın kendisini döndürür, bu yüzden "t(x) || 'yedek'" hiç çalışmaz)
+  has(key) { return this._lookup(this.data[this.lang], key) !== undefined || this._lookup(this.data.en, key) !== undefined; }
+  // Eksikse yedek metin
+  tf(key, fallback, params) { return this.has(key) ? this.t(key, params) : fallback; }
+
   _lookup(obj, key) {
     return key.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), obj);
   }

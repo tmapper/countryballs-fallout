@@ -200,7 +200,7 @@ class ShelterPass {
           <div class="sp-spin-pointer"></div>
           <div class="sp-spin-track" style="--item-w:${ITEM_W}px"></div>
         </div>
-        <div class="sp-spin-hint">${i18n.t('pass.spinning') || 'Dönüyor...'}</div>
+        <div class="sp-spin-hint">${i18n.tf('pass.spinning', 'Dönüyor...')}</div>
       </div>`;
     v.classList.remove('hidden');
 
@@ -281,8 +281,8 @@ class ShelterPass {
     const all = r.querySelector('.sp-all');
     all.textContent = st.claimable ? `${i18n.t('pass.claimAll')} (${st.claimable})` : i18n.t('pass.claimAll');
     all.disabled = !st.claimable;
-    const tx = (k) => String(i18n.t(k) || '').replace(/</g, '&lt;');
-    const names = { pass: icon('ticket') + tx('pass.tabPass'), crates: `${icon('crate')}${tx('pass.tabCrates')}${st.crates ? ` (${st.crates})` : ''}`, coll: icon('flag') + tx('pass.tabColl'), market: icon('scales') + (i18n.t('pass.tabMarket') || 'PAZAR') };
+    const tx = (k) => String(i18n.tf(k, '')).replace(/</g, '&lt;');
+    const names = { pass: icon('ticket') + tx('pass.tabPass'), crates: `${icon('crate')}${tx('pass.tabCrates')}${st.crates ? ` (${st.crates})` : ''}`, coll: icon('flag') + tx('pass.tabColl'), market: icon('scales') + (i18n.tf('pass.tabMarket', 'PAZAR')) };
     r.querySelectorAll('.pass-tabs button').forEach((b) => { b.innerHTML = names[b.dataset.tab]; b.classList.toggle('on', b.dataset.tab === this.tab); });
     r.querySelectorAll('.pass-pane').forEach((p) => p.classList.toggle('on', p.dataset.pane === this.tab));
 
@@ -339,7 +339,7 @@ class ShelterPass {
         <small>${odds}</small>
         <div class="sp-crate-acts">
           <button class="mm-tbtn small primary sp-open" type="button">${i18n.t('pass.open')}</button>
-          <button class="mm-tbtn small sp-buy" type="button" title="${i18n.t('pass.buyCrateHint') || ''}">${coinHtml(price)}</button>
+          <button class="mm-tbtn small sp-buy" type="button" title="${i18n.tf('pass.buyCrateHint', '')}">${coinHtml(price)}</button>
         </div>`;
       const openBtn = d.querySelector('.sp-open');
       openBtn.disabled = !n;

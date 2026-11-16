@@ -759,6 +759,7 @@ function leaveRoom(c) {
   if (r.state === 'game' && r.match && r.match.roster[c.id]) r.match.roster[c.id].left = true;   // maç sürerken ayrılan = yenilgi sayılır
   r.players.delete(c.id);
   if (!r.players.size) { rooms.delete(r.code); return; }
+  if (r.state === 'game' && r.dead) r.dead.add(c.id);     // maçtan çıkan oyuncu artık "yaşayan" sayılmaz
   if (r.hostId === c.id) {
     r.hostId = r.players.keys().next().value;               // en eski oyuncu host olur
     if (r.state === 'game') {
@@ -1177,15 +1178,25 @@ function handle(c, m) {
     case 'rename': {
       const u = c.account && accounts.users[c.account];
       if (!u) return;
-      const name = String(m.name || '').trim().slice(0, 16);
-      if (name.length < 3 || !/^[\w\u00C0-\u024F\u0400-\u04FF \-]+$/i.test(name)) {
+      const name = String(m.name || '').trim().replace(/\s+/g, ' ').slice(0, 16);
+      const letters = (name.match(/[\p{L}\p{N}]/gu) || []).length;                    // en az 3 harf/rakam ("---" olmaz)
+      const low = (s) => String(s).toLocaleLowerCase('tr').normalize('NFC');           // Türkçe İ/ı doğru küçülsün
+      const RESERVED = ['admin', 'administrator', 'moderator', 'moderatör', 'mod', 'sistem', 'system', 'server', 'sunucu', 'anthropic', 'yetkili'];
+      if (name.length < 3 || letters < 3 || !/^[\w\u00C0-\u024F\u0400-\u04FF \-]+$/i.test(name)) {
         send(c, { t: 'rename', ok: 0, err: 'bad' }); return;
       }
-      // unique check
-      const key = Object.keys(accounts.users).find((k) => accounts.users[k].name && accounts.users[k].name.toLowerCase() === name.toLowerCase() && k !== c.account);
+      if (RESERVED.some((w) => low(name).replace(/[\s\-_]/g, '').startsWith(w))) { send(c, { t: 'rename', ok: 0, err: 'taken' }); return; }
+      // Benzersiz: başka hesabın görünen adı YA DA giriş adı ile aynı olamaz
+      const key = Object.keys(accounts.users).find((k) => k !== c.account && (low(k) === low(name) || (accounts.users[k].name && low(accounts.users[k].name) === low(name))));
       if (key) { send(c, { t: 'rename', ok: 0, err: 'taken' }); return; }
       u.name = name;
       saveAccounts();
+      // Odadaki görünen ad da hemen değişsin
+      clients.forEach((cl) => {
+        if (cl.account !== c.account) return;
+        const rr = rooms.get(cl.room), pl = rr && rr.players.get(cl.id);
+        if (pl) { pl.name = name; roomUpdate(rr); }
+      });
       send(c, { t: 'account', account: publicAcc(u) });
       send(c, { t: 'rename', ok: 1 });
       break;
@@ -1473,6 +1484,8 @@ function handle(c, m) {
       r.state = 'game';
       r.roles = Object.fromEntries(all.map((p) => [p.id, p.role]));   // kurucu çıkarsa yeni kurucuya verilir
       r.dead = new Set();          // ölüler (host'un olaylarından): ölülerin sohbeti sadece ölülere gider
+      r.killCount = {};            // HİLE KORUMASI: sunucunun saydığı öldürmeler (host'un 'kill' olayları)
+      r.taskReq = {};              // HİLE KORUMASI: oyuncunun host'a yolladığı görev istekleri (en fazla bu kadar görev sayılır)
       // Maç kaydı: kim hangi rolde ve hangi hesap. Sonuç gelince istatistik buna göre yazılır.
       r.match = { startAt: Date.now(), done: false, roster: {} };
       all.forEach((sp) => {
@@ -1512,8 +1525,15 @@ function handle(c, m) {
       const r = rooms.get(c.room);
       if (!r || r.hostId !== c.id || r.state !== 'game' || !r.match || r.match.done) return;
       const mt = r.match;
-      const winner = m.winner === 'impostor' ? 'impostor' : m.winner === 'crew' ? 'crew' : null;
+      let winner = m.winner === 'impostor' ? 'impostor' : m.winner === 'crew' ? 'crew' : null;
       if (!winner) return;
+      // HİLE KORUMASI (kısmi): sunucunun kendi tuttuğu rol + ölüm kaydıyla tutarsız kazanan bildirimi düzeltilir
+      if (r.roles && r.dead) {
+        const ids = Object.keys(r.roles), alive = ids.filter((id) => !r.dead.has(id));
+        const imps = alive.filter((id) => r.roles[id] === 'impostor').length, others = alive.length - imps;
+        if (winner === 'impostor' && imps === 0) winner = 'crew';                       // katil kalmamışken katil kazandı denemez
+        else if (winner === 'crew' && imps > 0 && imps >= others) winner = 'impostor';  // katiller çoğunluktayken masum kazandı denemez
+      }
       mt.done = true;
       const entries = Object.entries(mt.roster);
       const distinct = new Set(entries.map(([, e]) => e.key));
@@ -1526,7 +1546,10 @@ function handle(c, m) {
         const st = ensureStats(u), before = publicAcc(u);
         const got = per.get(pid) || {};
         const won = !e.left && (e.role === 'impostor' ? 'impostor' : 'crew') === winner;
-        const tasks = e.role === 'impostor' ? 0 : num(got.tasks, MAX_TASKS_PER_MATCH), kills = e.role === 'impostor' ? num(got.kills, 10) : 0;
+        // Görev / öldürme: bildirilen sayı, sunucunun gördüğü sayıyı geçemez (host kendi görevlerini yerelde yaptığı için ona güvenilir)
+        const seenTasks = pid === r.hostId ? MAX_TASKS_PER_MATCH : ((r.taskReq && r.taskReq[pid]) || 0);
+        const tasks = e.role === 'impostor' ? 0 : Math.min(num(got.tasks, MAX_TASKS_PER_MATCH), seenTasks);
+        const kills = e.role === 'impostor' ? Math.min(num(got.kills, 10), (r.killCount && r.killCount[pid]) || 0) : 0;
         st.played++; st.tasks += tasks; st.kills += kills;
         if (e.role === 'impostor') st.asImpostor++; else if (e.role === 'sheriff') st.asSheriff++; else st.asCrew++;
         if (e.left) st.left++;
@@ -1584,10 +1607,12 @@ function handle(c, m) {
       // Ölüleri takip et (ölü sohbetini yaşayanlara göndermemek için)
       if (k === 'ev' && r.state === 'game' && Array.isArray(m.d.a)) {
         const a = m.d.a, dead = r.dead || (r.dead = new Set());
-        if (m.d.n === 'kill') dead.add(a[1]);
+        if (m.d.n === 'kill') { dead.add(a[1]); const kc = r.killCount || (r.killCount = {}); kc[a[0]] = (kc[a[0]] || 0) + 1; }
         else if (m.d.n === 'shoot') dead.add(a[2] ? a[1] : a[0]);
         else if (m.d.n === 'endMeeting' && a[0] != null) dead.add(a[0]);
+        else if (m.d.n === 'gunTake' && r.roles && r.roles[a[0]] && r.roles[a[0]] !== 'impostor') r.roles[a[0]] = 'sheriff';   // silahı alan yeni şerif (kurucu değişirse doğru rol gitsin)
       }
+      if (k === 'req' && m.d.a === 'task' && r.state === 'game') { const tr = r.taskReq || (r.taskReq = {}); tr[c.id] = (tr[c.id] || 0) + 1; }
       // SUNUCU TASARRUFU: oyuncu konumları (p: oyunda, lp: lobide) tek tek herkese gitmez; odada biriktirilip
       // saniyede 10 kez TEK toplu mesajla gönderilir (25 kişide mesaj sayısı ~24 kat azalır).
       if ((k === 'p' || k === 'lp') && !m.to) {

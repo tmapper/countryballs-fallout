@@ -500,7 +500,8 @@
     "suggestSend": "Gönder",
     "suggestShort": "En az 3 karakter yaz",
     "suggestThanks": "Teşekkürler, önerin kaydedildi!",
-    "passBtn": "Sığınak Bileti"
+    "passBtn": "Sığınak Bileti",
+    "err_banned": "Bu hesap yasaklandı."
   },
   "levels": {
     "title": {
@@ -856,6 +857,9 @@
     "b_tunnel": "Tünel",
     "b_use": "Kullan",
     "b_report": "Bildir",
-    "b_sabotage": "Sabotaj"
+    "b_sabotage": "Sabotaj",
+    "reserved": "{k} tuşu ayrılmış (Esc ve 0-3 atanamaz).",
+    "layoutRoleNote": "Not: Katil düzeni gösteriliyor. Taşımadığın Kullan butonu masumken Öldür'ün yerinde durur; taşırsan her rolde senin koyduğun yerde.",
+    "a_chat": "Sohbet"
   }
 }

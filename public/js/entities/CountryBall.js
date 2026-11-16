@@ -12,6 +12,7 @@ import { RES } from '../systems/Resolution.js';
 import { sfx } from '../systems/Sound.js';
 import { ensureLookTextures, ensureHatTexture, hatDef } from '../systems/Looks.js';
 
+const NET_DELAY = 140;   // ms: uzaktaki oyuncular bu kadar geriden, akıcı oynatılır
 export const SPEED = 290;        // saniyede piksel
 export const BALL_WIDTH = 96;
 export const GHOST_SPEED = 1.5;   // hayaletler %50 hızlı    // dünyada topun genişliği (piksel)
@@ -171,13 +172,41 @@ export class CountryBall extends Phaser.GameObjects.Container {
   }
 
   // Ağdan gelen konuma yumuşakça yaklaş (uzak oyuncular ve host'un botları)
+  // ÇEVRİMİÇİ AKICILIK: uzaktaki oyuncunun konumları ~10/sn ve düzensiz aralıklarla (sunucu 100 ms'de bir toplar) gelir.
+  // Eskiden top her yeni konuma hızla atılıp bekliyordu (kesik kesik / "kasma" görüntüsü). Artık gelen konumlar
+  // sıraya alınır ve top NET_DELAY kadar geriden, iki konum arasında düz çizgide sabit hızla oynatılır.
   netStep(dt) {
     const n = this.net;
-    if (!n) return;
-    const k = Math.min(1, dt * 14);
-    const dx = n.x - this.x, dy = n.y - this.y;
-    if (Math.abs(dx) + Math.abs(dy) > 600) { this.x = n.x; this.y = n.y; }      // ışınlanma (tünel, toplantı)
-    else { this.x += dx * k; this.y += dy * k; }
+    if (!n) { this.netBuf = null; this._netLast = null; return; }
+    const now = performance.now();
+    if (n !== this._netLast) {                         // yeni konum geldi -> sıraya ekle
+      this._netLast = n;
+      const buf = this.netBuf || (this.netBuf = []);
+      const last = buf[buf.length - 1];
+      if (!last || Math.abs(n.x - last.x) + Math.abs(n.y - last.y) > 600) {      // ilk konum / ışınlanma
+        buf.length = 0; this.x = n.x; this.y = n.y;
+        buf.push({ t: now, x: n.x, y: n.y });
+      } else {
+        // Uzun süre duran oyuncu yürümeye başladı: önceki konum "az önce" sayılsın (zıplamasın, yürüsün)
+        if (now - last.t > 300) { last.t = now - 100; while (buf.length > 1) buf.shift(); }
+        // Aynı pakette gelen konumları da aralıklı say; geride kalma birikirse sıfırla
+        let t = Math.max(now, last.t + 60);
+        if (t - now > 250) t = now;
+        buf.push({ t, x: n.x, y: n.y });
+        if (buf.length > 12) buf.shift();
+      }
+    }
+    const buf = this.netBuf;
+    const T = now - NET_DELAY;
+    while (buf.length > 2 && buf[1].t <= T) buf.shift();                         // geçmiş konumları at
+    const a = buf[0], b = buf[1];
+    let tx, ty;
+    if (!b || T <= a.t) { tx = a.x; ty = a.y; if (!b && T > a.t) { /* son konumda bekle */ } }
+    else if (T >= b.t) { tx = b.x; ty = b.y; }
+    else { const u = (T - a.t) / (b.t - a.t); tx = a.x + (b.x - a.x) * u; ty = a.y + (b.y - a.y) * u; }
+    // Çok küçük titremeleri yumuşat (ilk karede zıplama olmasın)
+    const k = Math.min(1, dt * 20);
+    this.x += (tx - this.x) * k; this.y += (ty - this.y) * k;
     const facing = n.f ? 'left' : 'right', moving = n.m === 1;
     const late = moving && this.shownSkin === 'idle' && hasSkin(this.scene, 'walk_r', this.flag);
     if (late || facing !== this.facing || moving !== this.isMoving) { this.facing = facing; this.isMoving = moving; this.refreshVisual(); }

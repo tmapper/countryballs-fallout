@@ -22,6 +22,8 @@ export class BootScene extends Phaser.Scene {
     Promise.all([loadJSON('locales/tr.json'), loadJSON('locales/en.json')])
       .then(([tr, en]) => {
         i18n.init({ tr, en });
+        const ver = document.querySelector('#cfs-loader .ld-ver');                 // sürüm tek yerden (dil dosyası)
+        if (ver) ver.textContent = 'BUNKER-07 · ' + i18n.t('menu.version');
         step(20, 'loader.chars');
         // Kritik olanları bekle; prop/flag arka planda (menü hemen açılsın)
         return Promise.all([track(loadCharacters(), 70, 'loader.cinematics'), track(loadRoleMeta(), 80, 'loader.roles'), track(loadKillMeta(), 90, 'loader.kills')]);
@@ -36,7 +38,7 @@ export class BootScene extends Phaser.Scene {
       })
       .catch((err) => {
         console.error(err);
-        L.error((i18n.t('ui.loadError') || 'Error') + ': ' + err.message);
+        L.error((i18n.tf('ui.loadError', 'Error')) + ': ' + err.message);
       });
   }
 }

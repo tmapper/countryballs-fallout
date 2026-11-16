@@ -92,6 +92,13 @@ const indexHtml = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8');
 const head = indexHtml.slice(indexHtml.indexOf('<head>') + 6, indexHtml.indexOf('</head>'))
   .replace(/\s*<link rel="stylesheet"[^>]*>/g, '');
 
+// Yükleme ekranı (index.html'deki #cfs-loader) tek dosyada da olsun; resimleri gömülü veriden
+const lStart = indexHtml.indexOf('<!-- ÖZEL YÜKLEME EKRANI');
+const lEnd = lStart >= 0 ? indexHtml.indexOf('</script>', lStart) + 9 : -1;
+const loaderHtml = lStart >= 0 ? indexHtml.slice(lStart, lEnd)
+  .replace('src="assets/menu/logo.png"', `src="${assets['assets/menu/logo.png'] || ''}"`)
+  .replace('src="assets/menu/coin.png?v=2"', `src="${assets['assets/menu/coin.png'] || ''}"`) : '';
+
 const modCode = order.map((k) => `__def(${JSON.stringify(k)}, function () {\n${modules.get(k)}\n});`).join('\n');
 
 const html = `<!DOCTYPE html>
@@ -103,6 +110,7 @@ ${css}
 </head>
 <body>
 <div id="game"></div>
+${loaderHtml}
 <script>
 ${phaser.replace(/<\/script/gi, '<\\/script')}
 </script>

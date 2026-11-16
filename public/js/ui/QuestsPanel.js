@@ -34,6 +34,8 @@ class QuestsPanel {
 
   render() {
     if (!this.root || this.root.classList.contains('hidden')) return;
+    // Başlıklar seçili dile göre (eskiden hep Türkçe kalıyordu)
+    this.root.querySelectorAll('[data-t]').forEach((e) => { e.textContent = i18n.t(e.dataset.t); });
     const acc = net.account;
     const q = (acc && acc.quests) || { daily: [], weekly: [] };
     const fill = (el, list) => {
@@ -43,12 +45,12 @@ class QuestsPanel {
         const done = !!row.claimed || prog >= def.goal;
         const pct = Math.min(100, (prog / def.goal) * 100);
         return `<div class="qs-item${done ? ' done' : ''}">
-          <div class="qs-name">${esc(i18n.t('quest.' + row.id) || row.id)}</div>
+          <div class="qs-name">${esc(i18n.tf('quest.' + row.id, row.id))}</div>
           <div class="qs-bar"><i style="width:${pct}%"></i></div>
           <div class="qs-meta"><span>${prog}/${def.goal}</span><span>${coinHtml(def.reward)}</span>
-          ${done && !row.claimed ? `<button type="button" data-claim="${esc(row.id)}" class="qs-claim">${esc(i18n.t('quest.claim') || 'AL')}</button>` : (row.claimed ? '✓' : '')}
+          ${done && !row.claimed ? `<button type="button" data-claim="${esc(row.id)}" class="qs-claim">${esc(i18n.tf('quest.claim', 'AL'))}</button>` : (row.claimed ? '✓' : '')}
           </div></div>`;
-      }).join('') || `<div class="qs-empty">${esc(i18n.t('quest.login') || 'Giriş yap')}</div>`;
+      }).join('') || `<div class="qs-empty">${esc(i18n.tf('quest.login', 'Giriş yap'))}</div>`;
       el.querySelectorAll('[data-claim]').forEach((b) => b.addEventListener('click', () => net.send({ t: 'questClaim', id: b.dataset.claim })));
     };
     fill(this.root.querySelector('.qs-daily'), q.daily);
@@ -58,10 +60,10 @@ class QuestsPanel {
     const wf = (acc && acc.weekFlag) || q.weekFlag;
     const row = this.root.querySelector('.qs-flag-row');
     if (wf && wf.code) {
-      row.innerHTML = `<img alt="" src="assets/flags/${wf.code}.webp" onerror="this.style.display='none'"><b>${esc(i18n.t('countries.' + wf.code) || wf.code)}</b>
-        <small>${wf.owned ? (i18n.t('quest.owned') || 'Senin') : (i18n.t('quest.tryFlag') || 'Bu hafta dene')}</small>`;
+      row.innerHTML = `<img alt="" src="assets/flags/${wf.code}.webp" onerror="this.style.display='none'"><b>${esc(i18n.tf('countries.' + wf.code, wf.code))}</b>
+        <small>${wf.owned ? (i18n.tf('quest.owned', 'Senin')) : (i18n.tf('quest.tryFlag', 'Bu hafta dene'))}</small>`;
     } else {
-      row.innerHTML = `<small>${esc(i18n.t('quest.login') || 'Giriş yap')}</small>`;
+      row.innerHTML = `<small>${esc(i18n.tf('quest.login', 'Giriş yap'))}</small>`;
     }
   }
 }

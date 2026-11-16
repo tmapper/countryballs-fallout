@@ -9,6 +9,7 @@ import { i18n } from '../systems/I18n.js';
 import { net } from '../systems/Net.js';
 import { getFlagThumb } from '../systems/Flags.js';
 import { icon } from './Icons.js';
+import { actionOf } from '../systems/Keys.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 export const CHAT_MAX = 120;
@@ -69,7 +70,7 @@ class LobbyChat {
       if (!this.visible || e.repeat) return;
       const t = e.target;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
-      if (e.code === 'KeyT') { e.preventDefault(); this.setOpen(true); this.input.focus(); }
+      if (actionOf(e.code).includes('chat')) { e.preventDefault(); this.setOpen(true); this.input.focus(); }   // Ayarlar > Tuş atama (varsayılan T)
     });
     i18n.onChange(() => this.texts());
     this.texts();

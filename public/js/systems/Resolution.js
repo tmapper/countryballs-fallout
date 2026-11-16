@@ -27,9 +27,10 @@ try {
   else if (!q && isMobile()) quality = 'low';
 } catch (e) { /* yoksay */ }
 export const getQuality = () => quality;
-export function setQuality(q) {
+// persist = false: sadece bu oturum (otomatik düşürme oyuncunun kayıtlı seçimini ezmesin)
+export function setQuality(q, persist = true) {
   quality = q === 'low' || q === 'med' ? q : 'high';
-  try { localStorage.setItem(Q_KEY, quality); } catch (e) { /* yoksay */ }
+  if (persist) try { localStorage.setItem(Q_KEY, quality); } catch (e) { /* yoksay */ }
   window.dispatchEvent(new Event('resize'));
 }
 

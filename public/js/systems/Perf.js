@@ -36,9 +36,9 @@ function applyFps() {
 
 export function attachPerf(phaserGame) { game = phaserGame; applyFps(); }
 
-export function setPerf(v) {
+export function setPerf(v, persist = true) {
   if (!PERF_LEVELS[v]) return;
   level = v;
-  try { localStorage.setItem(KEY, v); } catch (e) { /* yoksay */ }
+  if (persist) try { localStorage.setItem(KEY, v); } catch (e) { /* yoksay */ }
   applyFps();
 }

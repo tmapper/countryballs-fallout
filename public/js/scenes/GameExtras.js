@@ -399,18 +399,37 @@ export function installExtras(GameScene) {
       if (m.left <= 0) {
         this.setMeetingPhase('vote');
         this.emitEv('phase', ['vote']);
-        this.balls.filter((b) => b.alive && !b.isMe && (b.brain || !this.online)).forEach((b) => {
-          // Oylama süresine göre: sürenin %10-%60'ı içinde (kısa oylamada da süre bitmeden oy verir)
-          const span = Math.max(2, (this.cfg.vote || VOTE_TIME) - 2);
-          const at = Math.min(span, 1 + span * (0.1 + Math.random() * 0.5));
-          m.timers.push(this.time.delayedCall(at * 1000, () => this.castVote(b, this.botVoteFor(b))));
-        });
+        this.scheduleBotVotes();
       }
     } else if (m.phase === 'vote') {
       meetingUI.setPhase('vote', m.left);
       const voters = this.balls.filter((b) => b.alive);
       if (m.left <= 0 || voters.every((b) => m.votes.has(b))) this.finishVoting();
     }
+  };
+
+  // Botların oyu: oylama süresinin %10-%60'ı içinde (kısa oylamada da süre bitmeden)
+  P.scheduleBotVotes = function () {
+    const m = this.meeting;
+    if (!m) return;
+    this.balls.filter((b) => b.alive && !b.isMe && (b.brain || !this.online)).forEach((b) => {
+      const span = Math.max(2, (this.cfg.vote || VOTE_TIME) - 2);
+      const at = Math.min(span, 1 + span * (0.1 + Math.random() * 0.5));
+      m.timers.push(this.time.delayedCall(at * 1000, () => this.castVote(b, this.botVoteFor(b))));
+    });
+  };
+
+  // Kurucu oylama sırasında çıktı: oylar eski kurucudaydı -> oylama baştan (herkes yeniden oy verir)
+  P.restartVote = function () {
+    const m = this.meeting;
+    if (!m) return;
+    m.timers.forEach((t) => t.remove(false));
+    m.timers = [this.time.addEvent({ delay: 250, loop: true, callback: () => this.tickMeeting(0.25) })];   // süre sayacı yeniden
+    m.votes = new Map();
+    m.phase = 'discuss';                                   // setMeetingPhase 'vote'a geçsin diye
+    this.setMeetingPhase('vote');
+    meetingUI.resetVotes();
+    if (!this.isClient) { this.emitEv('revote', []); this.scheduleBotVotes(); }
   };
 
   P.botVoteFor = function (b) {
@@ -505,6 +524,7 @@ export function installExtras(GameScene) {
     if (!m) return;
     if (ejected && wasImp !== undefined && !ejected.role) ejected.role = wasImp ? 'impostor' : 'crewmate';
     m.phase = 'results';
+    m.resultEjected = ejected || null;                    // kurucu bu sırada çıkarsa yeni kurucu aynı sonucu uygular
     meetingUI.showResults(byId, skips);
     m.timers.push(this.time.delayedCall(RESULT_TIME * 1000, () => {
       if (ejected) {
@@ -573,6 +593,7 @@ export function installExtras(GameScene) {
     this.meeting = null;
     ghostChat.suspend(false);
     this.sabCd = 0;                              // toplantıdan sonra sabotaj beklemesi sıfırlanır: katil hemen sabotaj yapabilir
+    this.botSabWait = 8 + Math.random() * 10;    // ...ama BOT katil hemen basmaz (herkes kafeteryadayken her maç aynı olmasın)
     this.emergencyCd = EMERGENCY_COOLDOWN;
     minimap.show();
     playMusic('music_game');
@@ -582,7 +603,7 @@ export function installExtras(GameScene) {
   // ---------- SABOTAJ ----------
   P.openSabotage = function () {
     const me = this.player;
-    if (this.over || this.meeting || me.role !== 'impostor' || !me.alive || this.sabotage || this.sabCd > 0) return;
+    if (this.over || this.meeting || me.role !== 'impostor' || !me.alive || me.inTunnel || this.sabotage || this.sabCd > 0) return;
     if (this.taskPanel && this.taskPanel.isOpen) return;
     sabMenu.open(SABOTAGE_TYPES, (t) => (this.isClient ? this.req('sab', { type: t }) : this.startSabotage(t)));
   };
@@ -645,6 +666,7 @@ export function installExtras(GameScene) {
   P.updateSabotage = function (dt) {
     if (this.sabCd > 0) this.sabCd -= dt;
     if (this.emergencyCd > 0) this.emergencyCd -= dt;
+    if (this.botSabWait > 0) this.botSabWait -= dt;
     const s = this.sabotage;
     if (s) {
       if (s.def.time) {
@@ -697,7 +719,13 @@ export function installExtras(GameScene) {
     const c = this.add.container(g.x, g.y - 10).setDepth(g.y);
     const glow = this.add.circle(0, 0, 34, 0x3e8bff, 0.28);
     const ring = this.add.circle(0, 0, 26, 0x000000, 0).setStrokeStyle(4, 0x7fb6ff, 0.9);
-    const ic = this.add.text(0, -2, '🔫', { fontSize: '34px' }).setOrigin(0.5);
+    // Tabanca çizimi (emoji her telefonda farklı görünüyordu: bazılarında su tabancası)
+    const ic = this.add.graphics();
+    ic.fillStyle(0x1b1f26, 1).lineStyle(2, 0x000000, 1);
+    ic.fillRoundedRect(-18, -12, 30, 11, 3).strokeRoundedRect(-18, -12, 30, 11, 3);     // namlu + gövde
+    ic.fillStyle(0x6b4a2b, 1).fillRoundedRect(-14, -3, 10, 16, 3).strokeRoundedRect(-14, -3, 10, 16, 3);   // kabza
+    ic.lineStyle(2, 0x1b1f26, 1).strokeCircle(-1, 1, 4);                                   // tetik korkuluğu
+    ic.fillStyle(0xd9dde3, 1).fillRect(-16, -11, 24, 3);                                   // parlama
     c.add([glow, ring, ic]);
     this.tweens.add({ targets: glow, scale: 1.35, alpha: 0.08, duration: 800, yoyo: true, repeat: -1 });
     this.tweens.add({ targets: ic, y: -10, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
@@ -722,17 +750,28 @@ export function installExtras(GameScene) {
     }
   };
 
+  // Yakınımdaki alınabilir silah (oyuncu KULLAN ile alır; istemeden şerif olmasın)
+  P.nearGun = function () {
+    const me = this.player;
+    if (!this.guns || !me.alive || me.role === 'impostor' || me.role === 'sheriff' || me.inTunnel) return null;
+    return this.guns.find((g) => !g.taken && Math.hypot(me.x - g.x, me.y - g.y) < GUN_RANGE) || null;
+  };
+
+  P.pickGun = function (g) {
+    if (!g || g.taken) return;
+    if (this.isClient) { if (!(g.askT > this.time.now)) { g.askT = this.time.now + 800; this.req('gun', { g: g.id }); } return; }
+    this.takeGun(this.player, g);
+  };
+
   P.updateGuns = function () {
     if (!this.guns || !this.guns.length || this.meeting || this.over) return;
+    // Alınmış silaha yürüyen botlar vazgeçsin
+    this.balls.forEach((b) => { if (b.gunGo && b.gunGo.taken) { b.gunGo = null; if (b.brain) { b.brain.goal = null; b.brain.path = []; } } });
+    if (this.isClient) return;
     for (const g of this.guns) {
       if (g.taken) continue;
-      if (this.isClient) {                       // sadece kendim: yanına gelince host'a sor
-        const me = this.player;
-        if (me.alive && me.role !== 'impostor' && Math.hypot(me.x - g.x, me.y - g.y) < GUN_RANGE && !(g.askT > this.time.now)) { g.askT = this.time.now + 800; this.req('gun', { g: g.id }); }
-        continue;
-      }
-      // Host / tek başına: üstünden geçen ilk yaşayan masum (katil ve hayalet alamaz)
-      const taker = this.balls.find((b) => b.alive && b.role !== 'impostor' && b.role !== 'sheriff' && !b.inTunnel && Math.hypot(b.x - g.x, b.y - g.y) < GUN_RANGE);
+      // Host / tek başına: BOTLAR üstünden geçince otomatik alır (oyuncular KULLAN ile)
+      const taker = this.balls.find((b) => b.brain && b.alive && b.role !== 'impostor' && b.role !== 'sheriff' && !b.inTunnel && Math.hypot(b.x - g.x, b.y - g.y) < GUN_RANGE);
       if (taker) { this.takeGun(taker, g); continue; }
       // Silahı gören masum bot ona yürür
       this.balls.forEach((b) => {

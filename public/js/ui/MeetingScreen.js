@@ -59,6 +59,13 @@ export class MeetingScreen {
       if (card && !card.classList.contains('dead')) { e.stopPropagation(); this.pick(card.dataset.id); }
     });
     r.querySelector('.mt-panel').addEventListener('click', () => this.setPending(null));
+    // Klavye: 0 = GEÇ (iki kez basınca onay), Esc = seçimi bırak
+    window.addEventListener('keydown', (e) => {
+      if (!this.root || this.root.classList.contains('hidden') || this.phase !== 'vote') return;
+      const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+      if (e.code === 'Digit0' || e.code === 'Numpad0') { e.preventDefault(); this.pick('skip'); }
+    });
+    r.querySelector('.mt-skip').title = '0';
     r.addEventListener('pointerdown', (e) => e.stopPropagation());
     const inp = this.chatInput = r.querySelector('.mt-chat-input');
     const send = (v) => { const now = performance.now(); if (now - (this.lastSend || 0) < 600) return; this.lastSend = now; if (this.opts && this.opts.onChat) this.opts.onChat(v); };
@@ -161,6 +168,16 @@ export class MeetingScreen {
     }
   }
 
+  // Kurucu oylamada çıktı: oylama baştan (herkes yeniden oy verir)
+  resetVotes() {
+    if (!this.root) return;
+    this.myVote = null; this.votedN = 0; this.setPending(null);
+    this.root.querySelectorAll('.mt-player').forEach((b) => b.classList.remove('has-voted', 'chosen'));
+    this.root.querySelector('.mt-skip').classList.remove('chosen');
+    this.renderCount();
+    this.lastPhase = null;                 // süre çubuğu yeni oylamaya göre dolsun (bir sonraki tikte)
+  }
+
   // Seçim (onay bekliyor): yanlış dokunuşla oy gitmesin diye iki adımlı
   pick(id) {
     if (!this.opts || !this.opts.canVote || this.phase !== 'vote' || this.myVote) return;
@@ -186,7 +203,7 @@ export class MeetingScreen {
       const raw = (i18n.data[i18n.lang] && i18n.data[i18n.lang].chat && i18n.data[i18n.lang].chat.phrases)
         || (i18n.data.tr && i18n.data.tr.chat && i18n.data.tr.chat.phrases) || [];
       const phrases = Array.isArray(raw) && raw.length ? raw : ['...'];
-      panel.innerHTML = `<div class="mt-qp-title">${esc(i18n.t('chat.quickTitle') || 'Quick')}</div>` +
+      panel.innerHTML = `<div class="mt-qp-title">${esc(i18n.tf('chat.quickTitle', 'Quick'))}</div>` +
         phrases.slice(0, 10).map((t) => `<button type="button" class="mt-qp-item" data-text="${esc(t)}">${esc(t)}</button>`).join('') +
         `<button type="button" class="mt-qp-close">✕</button>`;
       panel.querySelectorAll('[data-text]').forEach((b) => b.addEventListener('click', () => {
@@ -195,12 +212,12 @@ export class MeetingScreen {
       }));
     } else {
       const alive = (this.opts.players || []).filter((p) => p.alive && !p.me);
-      panel.innerHTML = `<div class="mt-qp-title">${esc(i18n.t('chat.suspectBtn') || 'Suspect')}</div>` +
+      panel.innerHTML = `<div class="mt-qp-title">${esc(i18n.tf('chat.suspectBtn', 'Suspect'))}</div>` +
         alive.map((p) => `<button type="button" class="mt-qp-item" data-name="${esc(p.name)}">${esc(p.name)}</button>`).join('') +
         `<button type="button" class="mt-qp-close">✕</button>`;
       panel.querySelectorAll('[data-name]').forEach((b) => b.addEventListener('click', () => {
         panel.classList.add('hidden');
-        const msg = i18n.t('chat.suspectOf', { name: b.dataset.name }) || (b.dataset.name + ' şüpheli');
+        const msg = i18n.tf('chat.suspectOf', b.dataset.name + ' şüpheli', { name: b.dataset.name });
         if (this.opts.onChat) this.opts.onChat(msg);
       }));
     }

@@ -157,10 +157,10 @@ export class MainMenu {
       const inp = r.querySelector('.mm-redeem');
       const el = r.querySelector('.mm-redeem-msg');
       const code = (inp && inp.value || '').trim();
-      if (!code) { el.textContent = i18n.t('menu.redeemEmpty') || 'Kod gir'; return; }
-      if (!net.account) { el.textContent = i18n.t('shop.needLogin') || 'Giriş yapmalısın'; return; }
+      if (!code) { el.textContent = i18n.tf('menu.redeemEmpty', 'Kod gir'); return; }
+      if (!net.account) { el.textContent = i18n.tf('shop.needLogin', 'Giriş yapmalısın'); return; }
       if (net.status !== 'online') {
-        el.textContent = i18n.t('menu.connecting') || 'Sunucuya bağlanıyor...';
+        el.textContent = i18n.tf('menu.connecting', 'Sunucuya bağlanıyor...');
         net.connect();
         // bağlanınca tekrar dene
         const once = () => {
@@ -190,15 +190,15 @@ export class MainMenu {
       const el = r.querySelector('.mm-redeem-msg');
       if (!el) return;
       if (m.ok) {
-        el.innerHTML = esc(i18n.t('menu.redeemOk') || 'Kod kabul edildi!') + ' +' + coinHtml(Number(m.coins) || 0);
+        el.innerHTML = esc(i18n.tf('menu.redeemOk', 'Kod kabul edildi!')) + ' +' + coinHtml(Number(m.coins) || 0);
         r.querySelector('.mm-redeem').value = '';
         if (m.account) net.account = m.account;
         this.renderAccount();
       } else {
-        const err = m.err === 'used' ? (i18n.t('menu.redeemUsed') || 'Bu kod zaten kullanıldı')
-          : m.err === 'login' ? (i18n.t('shop.needLogin') || 'Giriş yapmalısın')
+        const err = m.err === 'used' ? (i18n.tf('menu.redeemUsed', 'Bu kod zaten kullanıldı'))
+          : m.err === 'login' ? (i18n.tf('shop.needLogin', 'Giriş yapmalısın'))
           : m.err === 'error' ? 'Sunucu hatası'
-          : (i18n.t('menu.redeemFail') || 'Geçersiz kod');
+          : (i18n.tf('menu.redeemFail', 'Geçersiz kod'));
         el.textContent = err;
       }
     });
@@ -279,7 +279,7 @@ export class MainMenu {
     if (a === 'tutorial') {
       this.openModal('howto');
       const how = this.root.querySelector('.mm-howto');
-      if (how) how.innerHTML = (i18n.t('menu.tutorialText') || i18n.t('menu.howtoText') || '').replace(/\n/g, '<br>');
+      if (how) how.innerHTML = i18n.tf('menu.tutorialText', i18n.tf('menu.howtoText', '')).replace(/\n/g, '<br>');
       return;
     }
     const fn = { online: this.handlers.onOnline, create: this.handlers.onCreate, solo: this.handlers.onSolo }[a];
@@ -356,13 +356,13 @@ export class MainMenu {
       <div class="pf-xp"><i style="width:${xpPercent(a)}%"></i></div>
       <div class="pf-xptext">${a.level >= 100 ? esc(i18n.t('levels.max')) : esc(i18n.t('levels.xpText', { a: a.xpInto, b: a.xpNeed }))}</div>
       <div class="pf-edit">
-        <label>${esc(i18n.t('profile.photo') || 'Profil fotoğrafı')}</label>
+        <label>${esc(i18n.tf('profile.photo', 'Profil fotoğrafı'))}</label>
         <div class="pf-edit-row">
           <input type="file" accept="image/*" class="pf-photo-file" hidden>
-          <button type="button" class="mm-tbtn small pf-photo-btn">${esc(i18n.t('profile.pickPhoto') || 'Fotoğraf seç')}</button>
-          <button type="button" class="mm-tbtn small pf-photo-clear">${esc(i18n.t('profile.clearPhoto') || 'Kaldır')}</button>
+          <button type="button" class="mm-tbtn small pf-photo-btn">${esc(i18n.tf('profile.pickPhoto', 'Fotoğraf seç'))}</button>
+          <button type="button" class="mm-tbtn small pf-photo-clear">${esc(i18n.tf('profile.clearPhoto', 'Kaldır'))}</button>
         </div>
-        <p class="pf-edit-msg mm-hint">${esc(i18n.t('profile.photoHint') || 'Sadece bu cihazda görünür')}</p>
+        <p class="pf-edit-msg mm-hint">${esc(i18n.tf('profile.photoHint', 'Sadece bu cihazda görünür'))}</p>
       </div>
       <div class="pf-grid">
         ${cell('played', st.played || 0)}${cell('wins', st.wins || 0, 'hi')}${cell('losses', st.losses || 0, 'lo')}
@@ -381,7 +381,7 @@ export class MainMenu {
     if (file) file.addEventListener('change', () => {
       const f = file.files && file.files[0];
       if (!f) return;
-      if (f.size > 800000) { box.querySelector('.pf-edit-msg').textContent = i18n.t('profile.photoBig') || 'Dosya çok büyük (max ~800KB)'; return; }
+      if (f.size > 800000) { box.querySelector('.pf-edit-msg').textContent = i18n.tf('profile.photoBig', 'Dosya çok büyük (max ~800KB)'); return; }
       const reader = new FileReader();
       reader.onload = () => {
         try { localStorage.setItem('cfs.avatar', reader.result); } catch (e) { box.querySelector('.pf-edit-msg').textContent = 'Kayıt başarısız'; return; }

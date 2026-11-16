@@ -500,7 +500,8 @@
     "suggestSend": "Send",
     "suggestShort": "Write at least 3 characters",
     "suggestThanks": "Thanks, your suggestion was saved!",
-    "passBtn": "Shelter Pass"
+    "passBtn": "Shelter Pass",
+    "err_banned": "This account is banned."
   },
   "levels": {
     "title": {
@@ -856,6 +857,9 @@
     "b_tunnel": "Vent",
     "b_use": "Use",
     "b_report": "Report",
-    "b_sabotage": "Sabotage"
+    "b_sabotage": "Sabotage",
+    "reserved": "{k} is reserved (Esc and 0-3 cannot be bound).",
+    "layoutRoleNote": "Note: the impostor layout is shown. If you don't move Use, it sits where Kill is for crewmates; once moved it stays there for every role.",
+    "a_chat": "Chat"
   }
 }

@@ -9,8 +9,8 @@ import { sfx } from '../systems/Sound.js';
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
 function showAchToast(id) {
-  const name = i18n.t('ach.' + id) || id;
-  const label = i18n.t('ui.achCompleted') || i18n.t('ach.completed') || 'Başarım Tamamlandı';
+  const name = i18n.tf('ach.' + id, id);
+  const label = i18n.tf('ui.achCompleted', i18n.tf('ach.completed', 'Başarım Tamamlandı'));
   const d = document.createElement('div');
   d.className = 'ach-toast';
   d.innerHTML = `<span class="ach-star">★</span><div class="ach-body"><div class="ach-label">${esc(label)}</div><div class="ach-name">${esc(name)}</div></div>`;
@@ -41,7 +41,7 @@ class AchievementsPanel {
     net.on('achUnlock', (m) => {
       showAchToast(m.id);
       if (this.isOpen) {
-        this.msg((i18n.t('ach.unlock') || 'Açıldı') + ': ' + (i18n.t('ach.' + m.id) || m.id) + ` (+${m.reward || 0})`);
+        this.msg((i18n.tf('ach.unlock', 'Açıldı')) + ': ' + i18n.tf('ach.' + m.id, m.id) + ` (+${m.reward || 0})`);
         this.render();
       }
     });
@@ -70,19 +70,19 @@ class AchievementsPanel {
   render() {
     const unlocked = new Set((net.account && net.account.achievements) || []);
     const body = this.root.querySelector('.ach-body');
-    this.root.querySelector('h2').textContent = i18n.t('ach.title') || 'BAŞARIMLAR';
+    this.root.querySelector('h2').textContent = i18n.tf('ach.title', 'BAŞARIMLAR');
     this.root.querySelector('.ach-prog').textContent = `${unlocked.size}/${ACHIEVEMENTS.length}`;
     body.innerHTML = ACHIEVEMENTS.map((a) => {
       const on = unlocked.has(a.id);
       if (!on) {
         return `<div class="ach-item locked"><div class="ach-ico">?</div>
-          <div class="ach-info"><b>${esc(i18n.t('ach.hidden') || '???')}</b>
-          <small>${esc(i18n.t('ach.hiddenHint') || 'Gizli başarım')}</small></div>
+          <div class="ach-info"><b>${esc(i18n.tf('ach.hidden', '???'))}</b>
+          <small>${esc(i18n.tf('ach.hiddenHint', 'Gizli başarım'))}</small></div>
           <span class="ach-rew">${coinHtml(a.reward)}</span></div>`;
       }
       return `<div class="ach-item on"><div class="ach-ico">★</div>
-        <div class="ach-info"><b>${esc(i18n.t('ach.' + a.id) || a.id)}</b>
-        <small>${esc(i18n.t('ach.desc_' + a.id) || '')}</small></div>
+        <div class="ach-info"><b>${esc(i18n.tf('ach.' + a.id, a.id))}</b>
+        <small>${esc(i18n.tf('ach.desc_' + a.id, ''))}</small></div>
         <span class="ach-rew">+${a.reward} ${COIN_IMG}</span></div>`;
     }).join('');
   }

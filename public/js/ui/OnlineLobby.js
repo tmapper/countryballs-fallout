@@ -174,7 +174,7 @@ export class RoomHud {
     r.querySelector('.rh-start').addEventListener('click', () => this.onStart && this.onStart());
     r.querySelector('.rh-passbtn').addEventListener('click', () => {
       if (net.account) shelterPass.open();
-      else this.root.querySelector('.rh-note').textContent = i18n.t('shop.needLogin') || 'Giriş gerekli';
+      else this.root.querySelector('.rh-note').textContent = i18n.tf('shop.needLogin', 'Giriş gerekli');
     });
     r.querySelector('.rh-code').addEventListener('click', () => {
       const code = net.room && net.room.code;

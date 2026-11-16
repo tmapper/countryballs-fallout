@@ -32,16 +32,16 @@ class Suggest {
     r.querySelector('.sg-send').addEventListener('click', () => this.send());
     r.addEventListener('keydown', (e) => e.stopPropagation());
     window.addEventListener('keydown', (e) => { if (this.isOpen && e.key === 'Escape') this.close(); });
-    net.on('suggestOk', () => this.msg(i18n.t('suggest.thanks') || 'Teşekkürler, önerin kaydedildi!'));
+    net.on('suggestOk', () => this.msg(i18n.tf('suggest.thanks', 'Teşekkürler, önerin kaydedildi!')));
     i18n.onChange(() => this.isOpen && this.render());
   }
 
   render() {
     const r = this.root;
-    r.querySelector('h2').textContent = i18n.t('suggest.title') || 'ÖNERİ KUTUSU';
-    r.querySelector('.sg-hint').textContent = i18n.t('suggest.hint') || 'Oyuna dair fikir, hata bildirimi veya isteğini yaz.';
-    r.querySelector('.sg-send').textContent = i18n.t('suggest.send') || 'GÖNDER';
-    r.querySelector('.sg-txt').placeholder = i18n.t('suggest.placeholder') || 'Önerini yaz...';
+    r.querySelector('h2').textContent = i18n.tf('suggest.title', 'ÖNERİ KUTUSU');
+    r.querySelector('.sg-hint').textContent = i18n.tf('suggest.hint', 'Oyuna dair fikir, hata bildirimi veya isteğini yaz.');
+    r.querySelector('.sg-send').textContent = i18n.tf('suggest.send', 'GÖNDER');
+    r.querySelector('.sg-txt').placeholder = i18n.tf('suggest.placeholder', 'Önerini yaz...');
   }
 
   msg(text, bad) {
@@ -55,7 +55,7 @@ class Suggest {
   send() {
     const ta = this.root.querySelector('.sg-txt');
     const text = (ta.value || '').trim();
-    if (text.length < 3) { this.msg(i18n.t('suggest.short') || 'En az 3 karakter yaz', true); return; }
+    if (text.length < 3) { this.msg(i18n.tf('suggest.short', 'En az 3 karakter yaz'), true); return; }
     net.connect();
     net.send({ t: 'suggest', text });
     ta.value = '';

@@ -1795,3 +1795,7 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 .btned-b i { font-style: normal; font-size: 26px; line-height: 1; }
 .btned-b span { font: 800 10px system-ui; margin-top: 2px; text-align: center; }
 .btned-b.drag { cursor: grabbing; border-color: #ffd23f; transform: scale(1.08); z-index: 3; }
+.btned-b.joy { border-color: #ff5a4f; box-shadow: 0 0 0 3px rgba(255,90,79,.35), 0 6px 18px rgba(0,0,0,.5); }
+.btned-joy.warn { color: #ff8a80; border-right-color: rgba(255,90,79,.6); }
+.btned-hint small { display: block; margin-top: 8px; font: 600 12px system-ui; opacity: .75; }
+.ctl-hint.warn { color: #ffb347; opacity: 1; }

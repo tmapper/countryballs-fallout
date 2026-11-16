@@ -267,7 +267,7 @@ export class UIScene extends Phaser.Scene {
     const ul = h.useLabel || 'use';
     const inGame = !!h.inGame, isDead = !!this.registry.get('dead');
     // KULLAN: hep görünür (görev yanındayken parlar). Katilde tünelin solunda, şerifte tünelin yerinde.
-    this.setButton(this.useBtn, inGame, i18n.t('actions.' + ul), ACTION_COLORS[ul], !!h.task, 0, 0, ul);
+    this.setButton(this.useBtn, inGame, i18n.t('actions.' + ul), ACTION_COLORS[ul], !!h.task, h.useCd || 0, h.useCd ? Math.min(1, h.useCd / 15) : 0, ul);
     if (h.action === 'kill') this.useBtn.setPosition(this.tunnelBtn.x - this.tunnelBtn.r - 16 - this.useBtn.r, this.tunnelBtn.y);
     else this.useBtn.setPosition(h.action ? this.tunnelBtn.x : this.actionBtn.x, h.action ? this.tunnelBtn.y : this.actionBtn.y);
     // BİLDİR: canlıyken hep görünür, cesede yakınken parlar

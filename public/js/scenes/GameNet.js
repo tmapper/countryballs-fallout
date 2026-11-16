@@ -190,7 +190,7 @@ export function installNet(GameScene) {
         if (this.sabotage && who.alive && who.role !== 'impostor' && near(who, this.sabotage.def.fix, FIX_RANGE)) this.fixSabotage();
         break;
       case 'sab':
-        if (who.alive && who.role === 'impostor' && !this.sabotage && this.sabCd <= 0) this.startSabotage(d.type);
+        if (who.alive && who.role === 'impostor' && !who.inTunnel && !this.sabotage && this.sabCd <= 0) this.startSabotage(d.type);   // tünelden sabotaj yok
         break;
     }
   };
@@ -214,6 +214,8 @@ export function installNet(GameScene) {
         case 'tasks': this.taskDone = a[0]; this.taskTotal = a[1]; this.publishTasks(); break;
         case 'over': this.finishGame(a[0], a[1]); break;
         case 'gunDrop': { this.guns = this.guns || []; if (!this.gunById(a[0])) { const g = { id: a[0], x: a[1], y: a[2], taken: false, spr: null }; this.guns.push(g); this.showGun(g); } break; }
+        case 'botTask': { const b = this.ball(a[0]); if (b) b.netTasksDone = (b.netTasksDone || 0) + 1; break; }
+        case 'revote': this.restartVote(); break;
         case 'gunTake': { const g = this.gunById(a[1]); if (g) { g.taken = false; this.takeGun(this.ball(a[0]), g); } break; }
       }
     } finally {
@@ -233,19 +235,30 @@ export function installNet(GameScene) {
       b.net = null; b.netValid = null;
       b.brain = new BotBrain(b);
       b.botTasks = pickTasks(TASKS_PER_PLAYER, { flat: true });
-      if (b.role !== 'impostor') b.tasksLeft = TASKS_PER_PLAYER;
+      // Kalan görev: eski kurucunun 'botTask' olaylarından sayıldı (eskiden hep 5'e dönüyordu -> fazla sayılıyordu)
+      if (b.role !== 'impostor') b.tasksLeft = Math.max(0, TASKS_PER_PLAYER - (b.netTasksDone || 0));
+      if (!b.alive && !b.tasksLeft) { b.brain = null; return; }
       b.onBotTask = (t) => {
         t.done = true;
         if (b.role === 'impostor' || this.over || !b.tasksLeft) return;
         b.tasksLeft--;
         this.addTaskDone(1);
+        this.emitEv('botTask', [b.id]);
       };
     });
     if (this.balls.some((b) => b.brain)) warmNav();
     this.registry.set('role', this.player.role);
     this.toast(i18n.t('online.youAreHost'), '#ffd23f');
-    // Toplantının oy bilgisi eski kurucudaydı: kimse atılmadan kapat, maç sürsün
-    if (this.meeting) this.endMeeting(null);
+    // Toplantı sürüyorsa: tartışmada devam; oylamada oylama baştan (oylar eski kurucudaydı); sonuçtaysa aynı sonucu uygula
+    const m = this.meeting;
+    if (m) {
+      m.timers.forEach((t) => t.remove(false));
+      // Toplantı süre sayacı artık BENDE host olarak işler (client sayacı sadece ekranı güncelliyordu)
+      m.timers = [this.time.addEvent({ delay: 250, loop: true, callback: () => this.tickMeeting(0.25) })];
+      if (m.phase === 'vote') this.restartVote();
+      else if (m.phase === 'results') m.timers.push(this.time.delayedCall(2500, () => this.endMeeting(m.resultEjected || null)));
+      else if (m.phase !== 'discuss') this.endMeeting(null);
+    }
     this.emitEv('tasks', [this.taskDone, this.taskTotal]);
     this.checkEnd();
   };
