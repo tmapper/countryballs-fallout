@@ -109,7 +109,7 @@ export function installNet(GameScene) {
     } else if (!fromHost && (d.k === 'bp' || d.k === 'ev')) {
       // sahte host mesajı: yok say (sunucu da engeller)
     } else if (d.k === 'bp' && this.isClient) {
-      d.b.forEach(([id, x, y, f, m]) => { const b = this.ball(id); if (b) b.net = { x, y, f, m }; });
+      d.b.forEach(([id, x, y, f, m]) => { const b = this.ball(id); if (b) { b.net = { x, y, f, m }; if (!b.alive) b.ghostBot = true; } });
     } else if (d.k === 'req' && this.isHost) {
       this.onRequest(this.ball(from), d);
     } else if (d.k === 'ev' && this.isClient) {
@@ -181,6 +181,11 @@ export function installNet(GameScene) {
         this.addTaskDone(1);
         break;
       }
+      case 'gun': {
+        const g = this.gunById(d.g);
+        if (g && !g.taken && !this.meeting && who.alive && !who.inTunnel && who.role !== 'impostor' && who.role !== 'sheriff' && near(who, g, 70)) this.takeGun(who, g);
+        break;
+      }
       case 'fix':
         if (this.sabotage && who.alive && who.role !== 'impostor' && near(who, this.sabotage.def.fix, FIX_RANGE)) this.fixSabotage();
         break;
@@ -208,6 +213,8 @@ export function installNet(GameScene) {
         case 'sabFix': this.fixSabotage(); break;
         case 'tasks': this.taskDone = a[0]; this.taskTotal = a[1]; this.publishTasks(); break;
         case 'over': this.finishGame(a[0], a[1]); break;
+        case 'gunDrop': { this.guns = this.guns || []; if (!this.gunById(a[0])) { const g = { id: a[0], x: a[1], y: a[2], taken: false, spr: null }; this.guns.push(g); this.showGun(g); } break; }
+        case 'gunTake': { const g = this.gunById(a[1]); if (g) { g.taken = false; this.takeGun(this.ball(a[0]), g); } break; }
       }
     } finally {
       this.applyingNet = false;
@@ -220,7 +227,8 @@ export function installNet(GameScene) {
     this.netMode = 'host'; this.isHost = true; this.isClient = false;
     this.balls.forEach((b) => {
       if (roles[b.id]) b.role = roles[b.id];
-      if (!b.isBot || b.isMe || !b.alive || b.left) return;
+      if (!b.isBot || b.isMe || b.left || (!b.alive && b.role === 'impostor')) return;
+      if (!b.alive) b.ghostBot = true;          // ölü masum bot: hayalet olarak görevlerine devam eder
       // Bot artık bende düşünür (ağdan konum beklemez)
       b.net = null; b.netValid = null;
       b.brain = new BotBrain(b);
@@ -228,7 +236,7 @@ export function installNet(GameScene) {
       if (b.role !== 'impostor') b.tasksLeft = TASKS_PER_PLAYER;
       b.onBotTask = (t) => {
         t.done = true;
-        if (b.role === 'impostor' || !b.alive || this.over || !b.tasksLeft) return;
+        if (b.role === 'impostor' || this.over || !b.tasksLeft) return;
         b.tasksLeft--;
         this.addTaskDone(1);
       };
@@ -253,7 +261,7 @@ export function installNet(GameScene) {
       const left = Math.max(0, TASKS_PER_PLAYER - ((b.taskIds && b.taskIds.size) || 0));
       if (left) { this.taskTotal -= left; this.publishTasks(); this.emitEv('tasks', [this.taskDone, this.taskTotal]); }
     }
-    if (b.alive) this.die(b, { noBody: true });
+    if (b.alive) this.die(b, { noBody: true, noGun: true });
     b.setVisible(false);
     this.toast(this.nameOf(b) + ' ✕', '#ffb347');
     if (this.isHost) this.checkEnd();

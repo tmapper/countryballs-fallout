@@ -1064,7 +1064,7 @@ function handle(c, m) {
     // listing: { id, seller, sellerName, type:'flag'|'hat', item, price, at }
     case 'marketList': {
       if (!accounts.market) accounts.market = [];
-      send(c, { t: 'market', list: accounts.market.slice(-100) });
+      send(c, { t: 'market', list: accounts.market.slice(-100).map((x) => ({ ...x, mine: x.seller === c.account })) });
       break;
     }
     case 'marketSell': {
@@ -1638,7 +1638,8 @@ function handle(c, m) {
       const now = Date.now(), list = (modTries.get(c.account) || []).filter((x) => now - x < 600000);
       if (list.length >= 5 || tooMany(c)) { send(c, { t: 'modErr', code: 'tooMany' }); return; }
       const got = String(m.code || '').trim().toUpperCase(), want = modCode();
-      const ok = got.length === MOD_CODE_LEN && crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want));
+      const gb = Buffer.from(got), wb = Buffer.from(want);
+      const ok = got.length === MOD_CODE_LEN && gb.length === wb.length && crypto.timingSafeEqual(gb, wb);   // Türkçe harf: bayt sayısı farklı, eskiden hata verip cevapsız kalıyordu
       if (!ok) { list.push(now); modTries.set(c.account, list); send(c, { t: 'modErr', code: got.length === MOD_CODE_LEN ? 'wrong' : 'len', left: 5 - list.length }); return; }
       modTries.delete(c.account);
       u.mod = 1; modLog(c, 'becameMod', c.account); saveAccounts();

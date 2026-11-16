@@ -13,6 +13,7 @@
     "bombSub": "The bunker is sealed. There is no way back outside.",
     "emergencyUsed": "You have no emergency meetings left.",
     "emergencyWait": "Emergency button ready in {s}s.",
+    "gotGun": "You picked up the gun! You are now the SHERIFF.",
     "gunPickup": "You picked up the Sheriff gun!"
   },
   "ui": {
@@ -49,6 +50,11 @@
     "qHigh": "High",
     "qMed": "Medium",
     "qLow": "Low (fast)",
+    "perf": "Performance",
+    "perfHigh": "High",
+    "perfBal": "Balanced",
+    "perfSaver": "Battery saver",
+    "perfNote": "If the game stutters pick Balanced or Battery saver. FPS is never capped.",
     "showFps": "Show FPS",
     "fullscreen": "Fullscreen",
     "resume": "RESUME",
@@ -808,5 +814,9 @@
     "w_kills_8": "Get 8 kills",
     "w_crates_3": "Open 3 crates",
     "w_hist_1": "Get 1 historical flag"
+  },
+  "easter": {
+    "fiexSub": "A secret camp for ghosts",
+    "fiexHello": "Fiex's army salutes you! 🫡"
   }
 }

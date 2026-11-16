@@ -1762,3 +1762,5 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
   .mt-votes img { width: 18px; height: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .meeting.can-vote .mt-player, .mt-skip.pending { animation: none !important; } }
+.gs-perfnote { padding-top: 0 !important; margin-top: -4px; }
+.gs-perfnote small { font: 600 11px system-ui; opacity: .65; line-height: 1.3; }

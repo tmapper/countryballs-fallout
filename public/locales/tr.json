@@ -13,6 +13,7 @@
     "bombSub": "Sığınak mühürlendi. Artık dışarı çıkış yok.",
     "emergencyUsed": "Acil toplantı hakkın bitti.",
     "emergencyWait": "Acil düğme {s} sn sonra kullanılabilir.",
+    "gotGun": "Silahı aldın! Artık ŞERİFSİN.",
     "gunPickup": "Şerif silahını aldın!"
   },
   "ui": {
@@ -49,6 +50,11 @@
     "qHigh": "Yüksek",
     "qMed": "Orta",
     "qLow": "Düşük (hızlı)",
+    "perf": "Performans",
+    "perfHigh": "Yüksek",
+    "perfBal": "Dengeli",
+    "perfSaver": "Pil tasarrufu",
+    "perfNote": "Kasma olursa Dengeli ya da Pil tasarrufu seç. FPS hiçbir modda sınırlanmaz.",
     "showFps": "FPS göster",
     "fullscreen": "Tam ekran",
     "resume": "DEVAM ET",
@@ -808,5 +814,9 @@
     "w_kills_8": "8 öldürme",
     "w_crates_3": "3 kasa aç",
     "w_hist_1": "1 tarihi bayrak kazan"
+  },
+  "easter": {
+    "fiexSub": "Hayaletler için gizli kamp",
+    "fiexHello": "Fiex'in ordusu seni selamlıyor! 🫡"
   }
 }

@@ -16,7 +16,7 @@ import { staticBall } from '../entities/CountryBall.js';
 import { ghostChat } from '../ui/Chat.js';
 
 export const REPORT_RANGE = 170;        // oyuncu cesede bu kadar yakınsa BİLDİR çıkar
-export const BOT_REPORT_RANGE = 420;    // bot cesedi bu mesafeden görürse bildirir
+export const BOT_REPORT_RANGE = 520;    // bot cesedi bu mesafeden görürse bildirir
 export const EMERGENCY_RANGE = 230;
 export const EMERGENCY_COOLDOWN = 15;    // acil düğme bekleme süresi (sn): maç başı + her toplantı sonrası     // acil toplantı düğmesine yakınlık
 const DISCUSS_TIME = 12;
@@ -555,15 +555,15 @@ export function installExtras(GameScene) {
         if (b.role === 'sheriff' && topT && topT !== b && !al.has(topT) && topN >= 4 && Math.random() < 0.6) br.suspect = topT;
         // Toplantıdan sonra masumların yarısı bir arkadaşla birlikte gezer (yalnız kalan kolay av olur)
         br.buddy = null;
-        if (Math.random() < 0.5) {
+        if (Math.random() < 0.75) {
           let bb = null, bd = Infinity;
           this.balls.forEach((o) => { if (o === b || !o.alive || o === br.distrust) return; const d = Math.hypot(o.x - b.x, o.y - b.y); if (d < bd) { bd = d; bb = o; } });
-          if (bb) { br.buddy = bb; br.buddyUntil = this.time.now + 20000 + Math.random() * 15000; }
+          if (bb) { br.buddy = bb; br.buddyUntil = this.time.now + 30000 + Math.random() * 20000; }
         }
       });
     }
     meetingUI.close();
-    if (ejected) this.die(ejected, { noBody: true });
+    if (ejected) this.die(ejected, { noBody: true, noGun: true });   // atılan şerifin silahı da gider
     // cesetler kaldırılır, herkes masanın etrafına döner
     this.bodies.forEach((b) => b.destroy());
     this.bodies = [];
@@ -681,6 +681,70 @@ export function installExtras(GameScene) {
     if (!b.brain.path.length) b.brain.goTo(fix.x, fix.y);
     return b.brain.update(dt);
   };
+
+  // ---------- ŞERİF SİLAHI ----------
+  // Şerif ölünce (öldürülür / masumu vurup ölür) silahı yere düşer. Yaşayan bir masum üstünden geçince alır ve ŞERİF olur.
+  // Host / tek başına oyun karar verir; client yanına gelince ister ('gun' isteği), herkes 'gunTake' olayıyla görür.
+  const GUN_RANGE = 70;
+  P.dropGun = function (x, y) {
+    this.guns = this.guns || [];
+    const g = { id: (this.gunSeq = (this.gunSeq || 0) + 1), x, y, taken: false, spr: null };
+    this.guns.push(g);
+    this.showGun(g);
+    this.emitEv('gunDrop', [g.id, Math.round(x), Math.round(y)]);
+    return g;
+  };
+
+  P.showGun = function (g) {
+    const c = this.add.container(g.x, g.y - 10).setDepth(g.y);
+    const glow = this.add.circle(0, 0, 34, 0x3e8bff, 0.28);
+    const ring = this.add.circle(0, 0, 26, 0x000000, 0).setStrokeStyle(4, 0x7fb6ff, 0.9);
+    const ic = this.add.text(0, -2, '🔫', { fontSize: '34px' }).setOrigin(0.5);
+    c.add([glow, ring, ic]);
+    this.tweens.add({ targets: glow, scale: 1.35, alpha: 0.08, duration: 800, yoyo: true, repeat: -1 });
+    this.tweens.add({ targets: ic, y: -10, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    g.spr = c;
+  };
+
+  P.takeGun = function (ball, g) {
+    if (!g || g.taken || !ball) return;
+    g.taken = true;
+    if (g.spr) { g.spr.destroy(); g.spr = null; }
+    this.emitEv('gunTake', [ball.id, g.id]);
+    if (ball.alive && (!this.isClient || ball.isMe)) {
+      ball.role = 'sheriff';
+      ball.cooldown = Math.max(ball.cooldown || 0, 5);
+      if (ball.brain) { ball.brain.doing = null; ball.gunGo = null; }
+    }
+    if (ball.isMe) {
+      this.registry.set('role', 'sheriff');
+      this.toast(i18n.t('game.gotGun'), '#7fb6ff');
+      sfx('vote', 0.8);
+      this.applyRoleTags();
+    }
+  };
+
+  P.updateGuns = function () {
+    if (!this.guns || !this.guns.length || this.meeting || this.over) return;
+    for (const g of this.guns) {
+      if (g.taken) continue;
+      if (this.isClient) {                       // sadece kendim: yanına gelince host'a sor
+        const me = this.player;
+        if (me.alive && me.role !== 'impostor' && Math.hypot(me.x - g.x, me.y - g.y) < GUN_RANGE && !(g.askT > this.time.now)) { g.askT = this.time.now + 800; this.req('gun', { g: g.id }); }
+        continue;
+      }
+      // Host / tek başına: üstünden geçen ilk yaşayan masum (katil ve hayalet alamaz)
+      const taker = this.balls.find((b) => b.alive && b.role !== 'impostor' && b.role !== 'sheriff' && !b.inTunnel && Math.hypot(b.x - g.x, b.y - g.y) < GUN_RANGE);
+      if (taker) { this.takeGun(taker, g); continue; }
+      // Silahı gören masum bot ona yürür
+      this.balls.forEach((b) => {
+        if (!b.brain || !b.alive || b.role === 'impostor' || b.role === 'sheriff' || b.fixing || b.gunGo === g) return;
+        if (Math.hypot(b.x - g.x, b.y - g.y) < 450 && canSee(this.grid, b, g, 450)) { b.gunGo = g; b.brain.doing = null; b.brain.goTo(g.x, g.y); }
+      });
+    }
+  };
+
+  P.gunById = function (id) { return (this.guns || []).find((g) => g.id === id) || null; };
 
   // ---------- Acil toplantı düğmesi ----------
   P.nearEmergency = function () {

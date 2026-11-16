@@ -195,7 +195,7 @@ class Market {
     }
     const me = net.account && net.account.name;
     body.innerHTML = `<div class="mk-grid">${this.list.slice().reverse().map((x) => {
-      const mine = x.sellerName === me;
+      const mine = x.mine !== undefined ? !!x.mine : x.sellerName === me;   // sunucu hesaba göre söyler (isim değişse de doğru)
       const thumb = x.type === 'flag'
         ? `<img class="mk-thumb" alt="" src="${getFlagThumb(x.item, 72, 48)}">`
         : `<img class="mk-thumb mk-hat-thumb" alt="" src="${getHatThumb(x.item)}">`;
@@ -289,7 +289,7 @@ class Market {
 
   renderMine(body) {
     const me = net.account && net.account.name;
-    const mine = this.list.filter((x) => x.sellerName === me);
+    const mine = this.list.filter((x) => (x.mine !== undefined ? x.mine : x.sellerName === me));
     if (!mine.length) {
       body.innerHTML = `<p class="mk-empty">${esc(i18n.t('market.noMine') || 'Aktif ilanın yok')}</p>`;
       return;

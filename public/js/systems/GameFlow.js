@@ -255,7 +255,7 @@ function buildGame(m) {
   // kendi topun en öne alınır. Yürüme dokusu hazır olmayan top kısa süre duruş karesiyle kayar.
   flushSkins(m.flags, undefined, ['idle']);
   const me = m.players.find((p) => p.me);
-  if (me) wantSkin(me.flag, true);
+  if (me) flushSkins([me.flag]);    // kendi topunun yürüme kareleri hemen hazır (tek bayrak, kısa)
   game.scene.getScene('GameScene').events.once('create', (scene) => {
     if (match === m && !m.revealDone) scene.scene.sleep();
   });

@@ -10,6 +10,7 @@ import { getQuality, setQuality } from '../systems/Resolution.js';
 import { releaseGameKeys } from './Chat.js';
 import { setDevice, isMobile } from '../systems/Device.js';
 import { perfHud } from '../systems/PerfHud.js';
+import { getPerf, setPerf } from '../systems/Perf.js';
 
 class GameSettings {
   constructor() { this.root = null; this.isOpen = false; this.creditsRoot = null; }
@@ -24,6 +25,8 @@ class GameSettings {
       <div class="gs-row"><span data-t="ui.mute"></span><button class="gs-tog gs-mute" type="button"></button></div>
       <div class="gs-row"><span data-t="ui.language"></span><div class="gs-seg gs-lang"><button type="button" data-v="tr">Türkçe</button><button type="button" data-v="en">English</button></div></div>
       <div class="gs-row"><span data-t="ui.quality"></span><div class="gs-seg gs-q"><button type="button" data-v="high" data-t="ui.qHigh"></button><button type="button" data-v="med" data-t="ui.qMed"></button><button type="button" data-v="low" data-t="ui.qLow"></button></div></div>
+      <div class="gs-row"><span data-t="ui.perf"></span><div class="gs-seg gs-perf"><button type="button" data-v="high" data-t="ui.perfHigh"></button><button type="button" data-v="balanced" data-t="ui.perfBal"></button><button type="button" data-v="saver" data-t="ui.perfSaver"></button></div></div>
+      <div class="gs-row gs-perfnote"><small data-t="ui.perfNote"></small></div>
       <div class="gs-row"><span data-t="ui.showFps"></span><button class="gs-tog gs-fps" type="button"></button></div>
       <div class="gs-row"><span data-t="ui.device"></span><div class="gs-seg gs-dev"><button type="button" data-v="mobile">Mobil</button><button type="button" data-v="pc">PC</button></div></div>
       <div class="gs-row gs-fsrow"><span data-t="ui.fullscreen"></span><button class="gs-tog gs-fs" type="button"></button></div>
@@ -44,6 +47,7 @@ class GameSettings {
     q('.gs-fps').addEventListener('click', () => { perfHud.setEnabled(!perfHud.enabled); this.render(); });
     r.querySelectorAll('.gs-lang button').forEach((b) => b.addEventListener('click', () => { i18n.setLanguage(b.dataset.v); this.render(); }));
     r.querySelectorAll('.gs-q button').forEach((b) => b.addEventListener('click', () => { setQuality(b.dataset.v); this.render(); }));
+    r.querySelectorAll('.gs-perf button').forEach((b) => b.addEventListener('click', () => { setPerf(b.dataset.v); this.render(); }));
     r.querySelectorAll('.gs-dev button').forEach((b) => b.addEventListener('click', () => { setDevice(b.dataset.v); this.render(); this.msgDev = true; }));
     q('.gs-fs').addEventListener('click', () => {
       const d = document;
@@ -93,6 +97,7 @@ class GameSettings {
     q('.gs-mute').textContent = i18n.t(m ? 'ui.on' : 'ui.off'); q('.gs-mute').classList.toggle('on', m);
     r.querySelectorAll('.gs-lang button').forEach((b) => b.classList.toggle('on', b.dataset.v === i18n.lang));
     r.querySelectorAll('.gs-q button').forEach((b) => b.classList.toggle('on', b.dataset.v === getQuality()));
+    r.querySelectorAll('.gs-perf button').forEach((b) => b.classList.toggle('on', b.dataset.v === getPerf()));
     q('.gs-fps').textContent = i18n.t(perfHud.enabled ? 'ui.on' : 'ui.off'); q('.gs-fps').classList.toggle('on', perfHud.enabled);
     r.querySelectorAll('.gs-dev button').forEach((b) => b.classList.toggle('on', b.dataset.v === (isMobile() ? 'mobile' : 'pc')));
     q('.gs-dev [data-v="mobile"]').textContent = i18n.lang === 'en' ? 'Mobile' : 'Mobil';

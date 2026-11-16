@@ -16,6 +16,7 @@ import { CountryBall, SPEED } from '../entities/CountryBall.js';
 import { BotBrain, navFrameStart, warmNav } from '../systems/BotBrain.js';
 import { ROLE_COLORS, impCount } from '../systems/Roles.js';
 import { RES, getQuality, setQuality } from '../systems/Resolution.js';
+import { perf, getPerf, setPerf } from '../systems/Perf.js';
 import { backToLobby, playKillCutscene, gameOver } from '../systems/GameFlow.js';
 import {
   KILL_RANGE, SHOOT_RANGE, KILL_COOLDOWN, FIRST_KILL_COOLDOWN, SHOOT_COOLDOWN, FIRST_SHOOT_COOLDOWN,
@@ -33,6 +34,7 @@ import { installExtras, REPORT_RANGE, EMERGENCY_RANGE } from './GameExtras.js';
 import { installNet } from './GameNet.js';
 import { installFx } from './GameFx.js';
 import { installTunnel } from './GameTunnel.js';
+import { installEaster } from './GameEaster.js';
 
 // Görüş yarıçapları (dünya pikseli). İleride "ışıklar kesildi" sabotajında
 // VISION_LIGHTS_OUT kullanılacak.
@@ -109,10 +111,18 @@ export class GameScene extends Phaser.Scene {
       if (b.role !== 'impostor') b.tasksLeft = TASKS_PER_PLAYER;
       b.onBotTask = (t) => {
         t.done = true;
-        if (b.role === 'impostor' || !b.alive || this.over || !b.tasksLeft) return;
+        if (b.role === 'impostor' || this.over || !b.tasksLeft) return;   // hayalet bot da görevini bitirir
         b.tasksLeft--;
         this.addTaskDone(1);
       };
+    });
+    this.buildFiexArmy();   // gizli sürpriz: sadece hayaletler görür (GameEaster.js)
+    // Maç başında masum botların yarısı biriyle birlikte gezer (yalnız kalan kolay av olur)
+    this.balls.forEach((b) => {
+      if (!b.brain || b.role === 'impostor' || Math.random() > 0.5) return;
+      const others = this.balls.filter((o) => o !== b);
+      b.brain.buddy = others[Math.floor(Math.random() * others.length)];
+      b.brain.buddyUntil = 40000 + Math.random() * 20000;
     });
     this.buildTaskMarkers();
     this.events.once('shutdown', () => { this.taskPanel.close(true); gameSettings.close(); ghostChat.hide(); stopAllLoops(); });
@@ -343,18 +353,19 @@ export class GameScene extends Phaser.Scene {
   die(ball, opts = {}) {
     if (!ball.alive) return;
     ball.alive = false;
-    ball.brain = null;
-    // Ölen botun yapılmamış görevleri toplamdan düşer (ölü bot görev yapmaz). Oyuncu hayalet olarak devam eder.
-    if (!ball.isMe && ball.tasksLeft && !this.isClient) { this.taskTotal -= ball.tasksLeft; ball.tasksLeft = 0; this.publishTasks(); this.emitEv('tasks', [this.taskDone, this.taskTotal]); }
+    // HAYALET BOT: ölen masum bot görevlerine devam eder (Among Us gibi). Sadece görev yapar: kimseyi görmez,
+    // bildirmez, oy vermez, öldürülemez; yaşayanlar onu görmez, ölüler görür. Katil bot hayalet olunca durur.
+    if (ball.brain && ball.role !== 'impostor' && ball.tasksLeft > 0) {
+      const br = ball.brain;
+      br.reset(); br.wait = 1.5; br.suspect = null; br.buddy = null; br.distrust = null; br.chasing = false;
+      ball.fixing = false; ball.gunGo = null;
+      ball.ghostBot = true;
+    } else ball.brain = null;
     if (ball.isMe && this.taskPanel) this.taskPanel.close();
     if (!opts.noBody) { this.spawnBody(ball); this.fxDeath(ball); }
-    // Şerif ölünce silahını düşür (masumlar alabilir)
-    // (Silah alma özelliği henüz yazılmamış: spawnGunPickup yoktu ve şerif ölünce oyun çöküyordu / toplantı donuyordu)
-    if (ball.role === 'sheriff' && !opts.noGun && typeof this.spawnGunPickup === 'function') {
-      this.guns = this.guns || [];
-      this.guns.push({ x: ball.x, y: ball.y, taken: false, spr: null });
-      this.spawnGunPickup(this.guns[this.guns.length - 1]);
-    }
+    // Şerif ölünce silahını yere düşürür: yaşayan bir masum üstünden geçince alır ve yeni şerif olur (GameExtras: silah)
+    // Kararı host / tek başına oyun verir; client 'gunDrop' olayıyla görür.
+    if (ball.role === 'sheriff' && !opts.noGun && !this.isClient) this.dropGun(ball.x, ball.y);
     if (ball.isMe) {
       // Ölüler sohbeti: sadece diğer ölüler görür
       ghostChat.show({ local: !this.online, me: { name: ball.name || net.profile.name || i18n.t('countries.' + ball.flag), flag: ball.flag } });
@@ -389,9 +400,16 @@ export class GameScene extends Phaser.Scene {
     return lightsOut ? this.visionLightsOut : this.visionNormal;
   }
 
-  botVisible(b) {
+  // PERFORMANS: görüş ışını hesabı pahalı; botun "kimi görüyorum" listesi kısa süre önbellekte tutulur
+  // (Performans moduna göre 0,12-0,4 sn). fresh = true: önbelleği atla (öldürmeden hemen önceki son kontrol).
+  botVisible(b, fresh = false) {
+    const now = this.time.now, c = b._vis;
+    if (!fresh && c && now - c.t < perf().visTtl * 1000) return c.list.filter((o) => o.alive);
     const R = this.botSight(b);
-    return this.balls.filter((o) => o !== b && o.alive && Math.hypot(o.x - b.x, o.y - b.y) <= R && canSee(this.grid, b, o, R));
+    const R2 = R * R;
+    const list = this.balls.filter((o) => o !== b && o.alive && (o.x - b.x) ** 2 + (o.y - b.y) ** 2 <= R2 && canSee(this.grid, b, o, R));
+    b._vis = { t: now, list };
+    return list;
   }
 
   botThink(b, dt) {
@@ -401,6 +419,7 @@ export class GameScene extends Phaser.Scene {
     let chase = null;
 
     if (b.role === 'impostor') {
+      if (br.restT > 0) br.restT -= dt;
       const seen = this.botVisible(b);
       const crew = seen.filter((o) => o.role !== 'impostor');      // katil ortaklarını tanır (insan katil de görür)
       // KAÇIŞ: az önce öldürdü -> cesetten uzaklaş. Yakın tünel varsa ona yürür ve girer; yoksa uzak bir odaya gider.
@@ -418,15 +437,17 @@ export class GameScene extends Phaser.Scene {
       if (b.cooldown <= 0 && crew.length === 1) {
         const t = crew[0];
         const d = Math.hypot(t.x - b.x, t.y - b.y);
-        if (d <= KILL_RANGE && br.react <= 0 && !br.aimT) { br.aimT = 0.25 + Math.random() * 0.35; }   // tepki gecikmesi
+        // DENGE: bot katil hemen saldırmaz; kurban bir süre yalnız kalmalı (masumlara kaçma / tanık gelme şansı)
+        if (d <= KILL_RANGE && br.react <= 0 && !br.aimT && !(br.restT > 0)) { br.aimT = 0.7 + Math.random() * 0.8; }
         if (br.aimT) {
           br.aimT -= dt;
           if (br.aimT <= 0) {
             br.aimT = 0;
             // Hâlâ menzilde ve hâlâ tenha mı?
-            const still = this.botVisible(b).filter((o) => o.role !== 'impostor');
+            const still = this.botVisible(b, true).filter((o) => o.role !== 'impostor');
             if (still.length === 1 && still[0] === t && Math.hypot(t.x - b.x, t.y - b.y) <= KILL_RANGE) {
               this.kill(b, t);
+              br.restT = 4 + Math.random() * 6;   // DENGE: bot katil öldürdükten sonra bekleme süresine ek olarak biraz daha bekler
               this.botEscape(b);
               return { x: 0, y: 0 };
             }
@@ -526,6 +547,13 @@ export class GameScene extends Phaser.Scene {
       }
     }
     return br.update(dt, chase);
+  }
+
+  // Hayalet bot: görevi kalmadıysa durur, varsa görev istasyonuna yürür
+  ghostBotThink(b, dt) {
+    const br = b.brain;
+    if (!b.tasksLeft) { b.brain = null; return { x: 0, y: 0 }; }
+    return br.update(dt);
   }
 
   // Bot katil tünele girer: SADECE yanında tünel varsa (oyuncuyla aynı kural)
@@ -679,17 +707,19 @@ export class GameScene extends Phaser.Scene {
     if (!this.over) {
       this._botFrame = (this._botFrame || 0) + 1;
       this._botAcc = (this._botAcc || 0) + dt;
-      const botSkip = (getQuality() === 'low' || this.balls.length > 12) ? 3 : 2;
-      const runBots = (this._botFrame % botSkip) === 0 || this.balls.length <= 6;
+      // Performans moduna göre botlar 2/3/4 karede bir düşünür (Yüksek modda az botla her karede)
+      const botSkip = Math.max(perf().botSkip, (getQuality() === 'low' || this.balls.length > 12) ? 3 : 2);
+      const runBots = (this._botFrame % botSkip) === 0 || (this.balls.length <= 6 && getPerf() === 'high');
       // AKICILIK: bot "düşünmesi" (yol bulma, görüş) 2-3 karede bir; YÜRÜMESİ ise her karede.
       // Eskiden yürüme de seyrekti, botlar ekranda 20-30 FPS'de zıplıyormuş gibi görünüyordu.
       if (runBots) {
         const botDt = Math.min(this._botAcc, 0.25); this._botAcc = 0;
         navFrameStart();   // bu karede yol bulmaya ayrılan süre (~3 ms) sıfırlanır; botlar sırayla yol alır, hepsi birden dondurmaz
-        this.balls.forEach((b) => { if (b.brain && b.alive) b.botDir = this.botThink(b, botDt); });
+        // Hayalet botlar sadece görevlerine yürür (algı / karar yok)
+        this.balls.forEach((b) => { if (b.brain) b.botDir = b.alive ? this.botThink(b, botDt) : this.ghostBotThink(b, botDt); });
       }
       this.balls.forEach((b) => {
-        if (!b.brain || !b.alive || !b.botDir) return;
+        if (!b.brain || !b.botDir) return;
         // Ara noktayı geçme: düşük FPS'de (ve bot düşünmesi 2-3 karede bir olduğundan) bir adım 12 px'lik varış
         // payından uzun olabiliyordu; bot noktanın etrafında ileri-geri sallanıp HİÇ ilerleyemiyordu.
         let d = b.botDir;
@@ -701,6 +731,7 @@ export class GameScene extends Phaser.Scene {
         const mv = b.move(d, dt, canStand) || (d !== b.botDir && Math.hypot(b.botDir.t.x - b.x, b.botDir.t.y - b.y) < 12);
         if (b.brain) b.brain.report(mv, dt);
       });
+      this.updateGuns(dt);                 // yerdeki şerif silahları (alma)
     }
 
     if (busy) {
@@ -786,7 +817,7 @@ export class GameScene extends Phaser.Scene {
     this.cullT -= dt;
     if (this.cullT > 0 || !this.cullList) return;
     // Düşük kalitede daha seyrek cull (CPU tasarrufu)
-    this.cullT = getQuality() === 'low' ? 0.28 : 0.16;
+    this.cullT = Math.max(perf().cull, getQuality() === 'low' ? 0.28 : 0.16);
     const v = this.cameras.main.worldView, M = 160;
     const me = this.player, seeAll = !me.alive || !this.fog.enabled;
     const R = this.visionRadius + 260;
@@ -806,6 +837,7 @@ export class GameScene extends Phaser.Scene {
     if (this.fpsLow > 6 && getQuality() === 'high' && !this.autoLowDone) {
       this.autoLowDone = true;
       setQuality('low');
+      if (getPerf() === 'high') setPerf('balanced');   // işlemci yükünü de azalt
       this.toast(i18n.t('ui.autoLow'), '#ffd23f');
     }
   }
@@ -813,15 +845,17 @@ export class GameScene extends Phaser.Scene {
   // Görüş: duvar arkasındaki / görüş alanı dışındaki oyuncular ve cesetler hiç görünmez (yumuşak geçişle)
   updateSight(dt) {
     const me = this.player;
+    this.updateFiexArmy(dt);
     const all = !me.alive || !this.fog.enabled;
     this.sightT = (this.sightT || 0) - dt;
     if (this.sightT <= 0) {
-      this.sightT = getQuality() === 'low' ? 0.14 : 0.08;
+      this.sightT = Math.max(perf().sight, getQuality() === 'low' ? 0.14 : 0.08);
       const r = this.visionRadius + 30;
       const see = (o) => all || canSee(this.grid, me, o, r);
       this.balls.forEach((b) => { if (!b.isMe && b.alive) b.seen = see(b); });
       // Hayaletler birbirini görür (ölü gerçek oyuncular; ölü botlar dolaşmadığı için gizli kalır)
-      this.balls.forEach((b) => { if (!b.isMe && !b.alive) b.ghostSeen = !me.alive && !b.left && !b.brain && !b.isBot; });
+      // Hayalet botlar da (görev yapanlar) ölülere görünür
+      this.balls.forEach((b) => { if (!b.isMe && !b.alive) b.ghostSeen = !me.alive && !b.left && (!b.isBot || !!b.ghostBot); });
       this.bodies.forEach((c) => { c.seen = see(c); });
     }
     const k = Math.min(1, dt * 12);
@@ -896,3 +930,4 @@ installExtras(GameScene);
 installNet(GameScene);
 installFx(GameScene);
 installTunnel(GameScene);
+installEaster(GameScene);

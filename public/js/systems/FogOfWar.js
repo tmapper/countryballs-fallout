@@ -6,6 +6,7 @@
 // bölge kadar küçük bir canvas var (dünyanın 1/FOG_SCALE'i): her karede çok daha az iş.
 // Doku büyütülürken yumuşatıldığı için kenarlar pikselli görünmez.
 import { computeVisibility, drawFog } from './Vision.js';
+import { perf } from './Perf.js';
 
 export const FOG_SCALE = 6;
 // Sis koyuluğu: 1 = simsiyah, daha düşük = karanlıkta silüetler hafifçe seçilir.
@@ -51,7 +52,8 @@ export class FogOfWar {
   update(x, y, radius) {
     if (!this.enabled) return;
     this._frame++;
-    if (this.skipFrames && (this._frame & this.skipFrames)) return;
+    const skip = Math.max(this.skipFrames, perf().fogSkip);     // performans moduna göre 1/2/3 karede bir
+    if (skip && (this._frame % (skip + 1))) return;
 
     const v = this.scene.cameras.main.worldView;
     const ox = Math.floor((v.x - PAD) / FOG_SCALE) * FOG_SCALE, oy = Math.floor((v.y - PAD) / FOG_SCALE) * FOG_SCALE;

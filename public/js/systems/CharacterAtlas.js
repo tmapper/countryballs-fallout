@@ -17,7 +17,7 @@ import { loadJSON, loadImage } from './Assets.js';
 import { createSkinCanvas, composeFrame, SKIN_SCALE } from './SkinFactory.js';
 
 const LAYERS = ['overlay', 'sil', 'shade'];
-const SLICE_MS = 6; // her parçada en fazla bu kadar çalış (kare akıcı kalsın)
+import { perf } from './Perf.js';
 
 // Pişirilmiş bilgiler: baked.walk.pivot, baked.idle.layers ...
 export const baked = {};
@@ -75,7 +75,7 @@ function step(job) {
 
 function work() {
   timer = null;
-  const end = performance.now() + SLICE_MS;
+  const end = performance.now() + perf().skinSlice;   // performans moduna göre 6/4/3 ms (kare akıcı kalsın)
   while (queue.length && performance.now() < end) {
     const job = queue[0];
     if (step(job)) { queue.shift(); register(target, job); }

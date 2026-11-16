@@ -12,6 +12,7 @@ import { runStartPrompts } from './ui/StartPrompts.js';
 import { net } from './systems/Net.js';
 import { initFit } from './systems/FitScreen.js';
 import { isMobile } from './systems/Device.js';
+import { attachPerf } from './systems/Perf.js';
 
 // iOS: iki parmakla yakınlaştırmayı engelle
 document.addEventListener('gesturestart', (e) => e.preventDefault());
@@ -47,6 +48,7 @@ const config = {
 
 const game = new Phaser.Game(config);
 attachResolution(game);
+attachPerf(game);   // performans modu (Ayarlar > Performans); FPS sınırı yok
 initFlow(game);
 
 setChatGame(game);
