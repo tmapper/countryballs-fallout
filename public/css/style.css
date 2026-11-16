@@ -1446,7 +1446,18 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 /* Çok kısa yatay telefonlar */
 @media (max-height: 420px) and (orientation: landscape) {
   .quests-side { display: none; }
-  .mm-id { display: none; }
+  /* Kimlik kartı gizlenmez (giriş/kayıt ve profil butonu burada): küçültülmüş hali */
+  .mm-id { display: block; width: min(250px, 100%); transform: none; }
+  .mm-id-head { padding: 3px 8px; gap: 6px; }
+  .mm-id-head b { font-size: 11px; } .mm-id-head i { font-size: 11px; }
+  .mm-id-head span { width: 16px; height: 16px; } .mm-id-head span .ic { width: 12px; height: 12px; }
+  .mm-id-body { padding: 5px 8px; gap: 8px; }
+  .mm-id-photo { width: 36px; height: 42px; font-size: 20px; }
+  .mm-id-name { font-size: 14px; }
+  .mm-id-title { display: none; }
+  .mm-id-level { font-size: 11px; }
+  .mm-id-actions { padding: 0 8px 6px; gap: 6px; }
+  .mm-id-actions .mm-tbtn.small { padding: 4px 8px; font-size: 11px; }
   .pass-how { display: none; }
   .fp-sub { display: none; }
   .mainmenu .mm-presents, .mainmenu .mm-kicker { display: none; }
