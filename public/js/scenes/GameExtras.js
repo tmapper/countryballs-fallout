@@ -158,8 +158,9 @@ export function installExtras(GameScene) {
     stopKillCutscene();
     ghostChat.suspend(true);
     this.emitEv('meeting', [caller.id, body ? body.ball.id : null]);
-    const m = this.meeting = { caller, body, votes: new Map(), accuse: new Map(), phase: 'discuss', left: this.cfg.discuss, timers: [], sheriffMisfire: !!this._sheriffMisfire };
+    const m = this.meeting = { caller, body, votes: new Map(), accuse: new Map(), phase: 'discuss', left: this.cfg.discuss, timers: [], sheriffMisfire: !!this._sheriffMisfire, sheriffSuccess: !!this._sheriffSuccess };
     this._sheriffMisfire = false;
+    this._sheriffSuccess = false;
     this.cancelSabotage();
     if (this.taskPanel) this.taskPanel.close(true);
     this.taskOpen = false;
@@ -446,6 +447,15 @@ export function installExtras(GameScene) {
     // Şerif masum vurup öldüyse → kanıt karışık, skip eğilimi (kriz hariç)
     if (m.sheriffMisfire && !crisis) {
       if (b.role !== 'impostor' && Math.random() < 0.75) return 'skip';
+    }
+    // Şerif katili başarıyla vurduysa → o şerife asla oy verme (alibi + ekstra koruma)
+    if (m.sheriffSuccess && b.role !== 'impostor') {
+      const goodSheriff = this.balls.find((o) => o.alive && o.role === 'sheriff');
+      if (goodSheriff) {
+        if (!br.alibi) br.alibi = new Set();
+        br.alibi.add(goodSheriff);
+        if (br.suspect === goodSheriff) br.suspect = null;
+      }
     }
     if (b.role !== 'impostor' && br.suspect && br.suspect.alive) return idOf(br.suspect);   // kendi gözüyle gördü
     const score = new Map();

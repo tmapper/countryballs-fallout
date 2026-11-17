@@ -13,7 +13,7 @@ const STORAGE_KEY = 'cfs_flag';
 export const FLAG_LIST = [
   'TR', 'AZ', 'KZ', 'UZ', 'TM', 'KG', 'PK', 'SA', 'EG', 'IQ', 'IR', 'GE',
   'DE', 'FR', 'IT', 'ES', 'PT', 'GB', 'NL', 'PL', 'CZ', 'GR', 'CH', 'AT', 'HU',
-  'SE', 'NO', 'FI', 'DK', 'IE', 'BE', 'UA', 'RU', 'RO', 'BG', 'RS', 'HR',
+  'SE', 'NO', 'FI', 'DK', 'IE', 'BE', 'UA', 'RU', 'CR', 'RO', 'BG', 'RS', 'HR',
   'US', 'MX', 'BR', 'AR', 'CA', 'AU', 'JP', 'KR', 'CN', 'IN', 'ID', 'MY', 'TH'
 ];
 
@@ -114,6 +114,8 @@ const DRAW = {
   FI: (c) => nordic(c, '#fff', '#002f6c', W * 0.27, H * 0.27),
   UA: (c) => stripesH(c, ['#0057b7', '#ffd700']),
   RU: (c) => stripesH(c, ['#fff', '#0039a6', '#d52b1e']),
+  // Kırım bayrağı: üst mavi ince, ortada geniş beyaz, alt kırmızı ince (1:4:1)
+  CR: (c) => stripesH(c, ['#006fb0', '#fff', '#da251d'], [1, 4, 1]),
   US: (c) => {
     for (let i = 0; i < 13; i++) { c.fillStyle = i % 2 ? '#fff' : '#b22234'; c.fillRect(0, (H / 13) * i, W, Math.ceil(H / 13) + 1); }
     c.fillStyle = '#3c3b6e'; c.fillRect(0, 0, W * 0.4, H * (7 / 13));

@@ -6,7 +6,7 @@
 // Dil değişince 'languageChanged' olayı yayınlanır, arayüz kendini yeniler.
 
 const STORAGE_KEY = 'cfs_language';
-const SUPPORTED = ['tr', 'en'];
+const SUPPORTED = ['tr', 'en', 'ru'];
 
 class I18n {
   constructor() {
@@ -31,9 +31,10 @@ class I18n {
     this.listeners.forEach((fn) => fn(lang));
   }
 
-  // tr <-> en arasında geçiş yapar
+  // diller arasında sırayla geçiş yapar
   toggle() {
-    this.setLanguage(this.lang === 'tr' ? 'en' : 'tr');
+    const i = SUPPORTED.indexOf(this.lang);
+    this.setLanguage(SUPPORTED[(i + 1) % SUPPORTED.length]);
   }
 
   onChange(fn) { this.listeners.push(fn); }

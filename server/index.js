@@ -791,12 +791,12 @@ function applyFlag(c) {
 
 // ---------------- ADMİN KOMUTLARI (sohbete / ile yazılır; sadece admin) ----------------
 let LOC_NAMES = {};
-try { ['tr', 'en'].forEach((l) => { LOC_NAMES[l] = JSON.parse(fs.readFileSync(path.join(PUBLIC, 'locales', l + '.json'), 'utf8')).countries || {}; }); } catch (e) { /* isimler yoksa sadece kodla çalışır */ }
+try { ['tr', 'en', 'ru'].forEach((l) => { LOC_NAMES[l] = JSON.parse(fs.readFileSync(path.join(PUBLIC, 'locales', l + '.json'), 'utf8')).countries || {}; }); } catch (e) { /* isimler yoksa sadece kodla çalışır */ }
 const fold = (x) => String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 // "finland", "turkey", "Finlandiya", "FI" -> 'FI'
 function flagFromSpec(spec) {
   const sp = fold(spec); if (!sp) return null;
-  const codes = [...new Set([...Object.keys(LOC_NAMES.tr || {}), ...Object.keys(LOC_NAMES.en || {})])];
+  const codes = [...new Set([...Object.keys(LOC_NAMES.tr || {}), ...Object.keys(LOC_NAMES.en || {}), ...Object.keys(LOC_NAMES.ru || {})])];
   let hit = codes.find((k) => fold(k) === sp);
   if (!hit) hit = codes.find((k) => fold((LOC_NAMES.tr || {})[k]) === sp || fold((LOC_NAMES.en || {})[k]) === sp);
   if (!hit && sp.length >= 3) hit = codes.find((k) => fold((LOC_NAMES.tr || {})[k]).startsWith(sp) || fold((LOC_NAMES.en || {})[k]).startsWith(sp));
@@ -869,6 +869,7 @@ function adminCommand(c, r, text) {
     case 'roles': say((r.force || []).length ? (r.force || []).map((e) => e.spec + ' → ' + ROLE_TR[e.role]).join(', ') : 'Ayarlı rol yok.'); break;
     case 'clearroles': r.force = []; say('✔ Rol ayarları silindi.'); break;
     case 'coins': case 'jeton': {
+      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
       const k = findAccount(c, r, tok[0]); const n = num(tok[1]);
       if (!k || !n) { say('Kullanım: /coins <hedef> <±sayı>'); break; }
       const u = accounts.users[k]; ensureWallet(u); u.coins = Math.max(0, u.coins + n); saveAccounts(); pushAccount(k);
@@ -905,18 +906,21 @@ function adminCommand(c, r, text) {
       break;
     }
     case 'xp': {
+      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
       const k = findAccount(c, r, tok[0]); const n = num(tok[1]);
       if (!k || !n) { say('Kullanım: /xp <hedef> <sayı>  (Sığınak Bileti XP)'); break; }
       const u = accounts.users[k]; ensureMeta(u); addPassXp(u, n); saveAccounts(); pushAccount(k);
       say('✔ ' + u.name + ': bilet XP ' + u.pass.xp + '/' + (PASS_LEVELS * PASS_BAR_XP)); break;
     }
     case 'crate': case 'kasa': {
+      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
       const k = findAccount(c, r, tok[0]); const tier = String(tok[1] || '').toLowerCase(); const n = Math.max(1, Math.min(50, num(tok[2]) || 1));
       if (!k || !CRATE_ODDS[tier]) { say('Kullanım: /crate <hedef> <common|rare|grand> [adet]'); break; }
       const u = accounts.users[k]; ensureMeta(u); u.crates[tier] += n; saveAccounts(); pushAccount(k);
       say('✔ ' + u.name + ': +' + n + ' ' + tier + ' kasa'); break;
     }
     case 'flag': case 'bayrak': {
+      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
       const k = findAccount(c, r, tok[0]); const what = tok.slice(1).join(' ');
       if (!k || !what) { say('Kullanım: /flag <hedef> <bayrak|all>'); break; }
       const u = accounts.users[k]; ensureMeta(u);
@@ -945,6 +949,7 @@ function adminCommand(c, r, text) {
     }
     case 'season': { const si = seasonInfo(); say('Sezon ' + si.id + ' · ' + si.daysLeft + ' gün kaldı'); break; }
     case 'hat': case 'sapka': case 'şapka': {
+      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
       const k = findAccount(c, r, tok[0]); const what = String(tok[1] || '').toLowerCase();
       if (!k || !what) { say('Kullanım: /hat <hedef> <şapka_id|all>  (ör. /hat ben top_hat)'); break; }
       const u = accounts.users[k]; ensureMeta(u);
@@ -958,9 +963,12 @@ function adminCommand(c, r, text) {
       if (!u.hats.includes(what)) u.hats.push(what);
       saveAccounts(); pushAccount(k); say('✔ ' + u.name + ': şapka ' + what + ' verildi'); break;
     }
-    case 'modcode': case 'modkod': say('Moderatör kodu: ' + modCode() + (ENV_MOD_CODE.length === MOD_CODE_LEN ? ' (MOD_CODE ortam değişkeninden)' : '')); break;
+    case 'modcode': case 'modkod':
+      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
+      say('Moderatör kodu: ' + modCode() + (ENV_MOD_CODE.length === MOD_CODE_LEN ? ' (MOD_CODE ortam değişkeninden)' : '')); break;
     case 'mods': case 'moderatorler': say('Moderatörler: ' + (Object.entries(accounts.users).filter(([, u]) => isModUser(u)).map(([, u]) => u.name).join(', ') || '(yok)')); break;
     case 'unmod': {
+      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
       const k = findAccount(c, r, tok.join(' '));
       if (!k) { say('Kullanım: /unmod <hedef>'); break; }
       accounts.users[k].mod = 0; saveAccounts(); pushAccount(k); say('✔ ' + accounts.users[k].name + ' artık moderatör değil'); break;
@@ -1653,10 +1661,10 @@ function handle(c, m) {
       c.lastChat = now;
       const text = String(m.text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 120);
       if (!text) return;
-      // / ile başlayan mesajlar: admin ise komut, değilse yayma (görünmez kalsın) + uyarı
+      // / ile başlayan mesajlar: admin veya moderatör ise komut, değilse yayma (görünmez kalsın) + uyarı
       if (text[0] === '/') {
-        if (isAdmin(c)) { adminCommand(c, r, text); return; }
-        sysMsg(c, 'Bu komut için admin yetkisi gerekli. Hesabın Upstash cfs:admins hash\'inde 1 olmalı veya admin=1 yazılmalı.');
+        if (isMod(c)) { adminCommand(c, r, text); return; }
+        sysMsg(c, 'Bu komut için moderatör veya admin yetkisi gerekli. Moderatör paneli kodu ile açıldıktan sonra /help yazabilirsin.');
         return;
       }
       const pl = r.players.get(c.id);

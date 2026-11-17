@@ -19,9 +19,9 @@ export class BootScene extends Phaser.Scene {
     const L = window.cfsLoader || { set() {}, done() {}, error() {} };
     const step = (p, key) => L.set(p, i18n.t(key));
     const track = (pr, p, key) => pr.then((v) => { step(p, key); return v; });
-    Promise.all([loadJSON('locales/tr.json'), loadJSON('locales/en.json')])
-      .then(([tr, en]) => {
-        i18n.init({ tr, en });
+    Promise.all([loadJSON('locales/tr.json'), loadJSON('locales/en.json'), loadJSON('locales/ru.json')])
+      .then(([tr, en, ru]) => {
+        i18n.init({ tr, en, ru });
         const ver = document.querySelector('#cfs-loader .ld-ver');                 // sürüm tek yerden (dil dosyası)
         if (ver) ver.textContent = 'BUNKER-07 · ' + i18n.t('menu.version');
         step(20, 'loader.chars');

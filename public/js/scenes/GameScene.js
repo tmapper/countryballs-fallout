@@ -352,6 +352,15 @@ export class GameScene extends Phaser.Scene {
         playKillCutscene('sheriff_kill', sheriff.flag, target.flag, i18n.t('game.shotBySheriff', { name: countryName(sheriff) }), 'sheriff');
       }
       this.toast(i18n.t('game.impostorShot', { name: countryName(sheriff) }), ROLE_COLORS.sheriff);
+      // Başarılı şerif vuruşu: botlar şerifi masum bilsin, şüpheyi temizlesin
+      this._sheriffSuccess = true;
+      this.balls.forEach((w) => {
+        if (!w.brain || !w.alive || w === sheriff) return;
+        if (!w.brain.alibi) w.brain.alibi = new Set();
+        w.brain.alibi.add(sheriff);
+        if (w.brain.suspect === sheriff) w.brain.suspect = null;
+        if (w.brain.lead === sheriff) w.brain.lead = null;
+      });
     } else {
       // Yanlış kişi: Şerif ölür, hedef yaşar
       this.die(sheriff);

@@ -25,7 +25,7 @@ class GameSettings {
       <label class="gs-row"><span data-t="ui.musicVol"></span><input class="gs-music" type="range" min="0" max="100"><b class="gs-mv"></b></label>
       <label class="gs-row"><span data-t="ui.sfxVol"></span><input class="gs-sfx" type="range" min="0" max="100"><b class="gs-sv"></b></label>
       <div class="gs-row"><span data-t="ui.mute"></span><button class="gs-tog gs-mute" type="button"></button></div>
-      <div class="gs-row"><span data-t="ui.language"></span><div class="gs-seg gs-lang"><button type="button" data-v="tr">Türkçe</button><button type="button" data-v="en">English</button></div></div>
+      <div class="gs-row"><span data-t="ui.language"></span><div class="gs-seg gs-lang"><button type="button" data-v="tr">Türkçe</button><button type="button" data-v="en">English</button><button type="button" data-v="ru">Русский</button></div></div>
       <div class="gs-row"><span data-t="ui.quality"></span><div class="gs-seg gs-q"><button type="button" data-v="high" data-t="ui.qHigh"></button><button type="button" data-v="med" data-t="ui.qMed"></button><button type="button" data-v="low" data-t="ui.qLow"></button></div></div>
       <div class="gs-row"><span data-t="ui.perf"></span><div class="gs-seg gs-perf"><button type="button" data-v="high" data-t="ui.perfHigh"></button><button type="button" data-v="balanced" data-t="ui.perfBal"></button><button type="button" data-v="saver" data-t="ui.perfSaver"></button></div></div>
       <div class="gs-row gs-perfnote"><small data-t="ui.perfNote"></small></div>
