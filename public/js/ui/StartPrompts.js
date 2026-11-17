@@ -7,11 +7,12 @@ import { getDevice, setDevice, applyDeviceClass } from '../systems/Device.js';
 import { icon } from './Icons.js';
 
 export const UPDATE = {
-  id: '0.9.22',
+  id: '0.9.23',
   tr: {
     title: 'Yeni Güncelleme!',
     items: [
       '5 yeni görev: Kahve doldur, İlaçları ayır, Jeneratörü kurla, Bitkileri sula, Yatakları düzelt',
+      'Çok oyunculu akıcılık baştan yazıldı: kötü/değişken internette de takılma yok',
       'Ölen katiller hayaletken de sabotaj yapabilir',
       'Çok oyunculuda diğer oyuncular ve botlar çok daha akıcı hareket ediyor',
       'Emoji + hızlı sohbet: 😀 düğmesi ya da G tuşu ("Beni takip et" diyince botlar peşine takılabilir)',
@@ -31,6 +32,7 @@ export const UPDATE = {
     title: 'New Update!',
     items: [
       '5 new tasks: Brew coffee, Sort medicine, Wind the generator, Water the plants, Make the beds',
+      'Rewritten multiplayer smoothing: no stutter even on bad or changing connections',
       'Dead impostors can sabotage as ghosts',
       'Much smoother movement of other players and bots in multiplayer',
       'Emotes + quick chat: 😀 button or G key (say "Follow me" and bots may tag along)',

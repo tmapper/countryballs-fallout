@@ -145,7 +145,9 @@ export function installNet(GameScene) {
   // Host: bir oyuncunun isteğini kontrol et ve uygula
   P.onRequest = function (who, d) {
     if (!who || this.over) return;
-    const near = (a, b, r) => a && b && Math.hypot(a.x - b.x, a.y - b.y) <= r + SLACK;
+    // Menzil: gösterilen (gecikmeli oynatılan) VE en son gelen konumların en yakını (kötü ağda haklı istek reddedilmesin)
+    const pts = (o) => (o.net && !o.isMe && !o.brain ? [o, o.net] : [o]);
+    const near = (a, b, r) => a && b && pts(a).some((p) => pts(b).some((q) => Math.hypot(p.x - q.x, p.y - q.y) <= r + SLACK));
     switch (d.a) {
       case 'kill': {
         const t = this.ball(d.t);

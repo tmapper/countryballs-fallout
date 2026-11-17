@@ -710,7 +710,9 @@ export function installExtras(GameScene) {
   const GUN_RANGE = 70;
   P.dropGun = function (x, y) {
     this.guns = this.guns || [];
-    const g = { id: (this.gunSeq = (this.gunSeq || 0) + 1), x, y, taken: false, spr: null };
+    // Kimlik: kurucu değiştiyse eski silahlarla çakışmasın (yeni kurucunun sayacı 0'dan başlıyordu)
+    this.gunSeq = Math.max(this.gunSeq || 0, ...(this.guns.map((o) => o.id)));
+    const g = { id: ++this.gunSeq, x, y, taken: false, spr: null };
     this.guns.push(g);
     this.showGun(g);
     this.emitEv('gunDrop', [g.id, Math.round(x), Math.round(y)]);

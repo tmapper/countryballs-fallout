@@ -9,10 +9,10 @@
 import { baked, ensureIdle, hasSkin, skinKey, wantSkin } from '../systems/CharacterAtlas.js';
 import { SKIN_SCALE } from '../systems/SkinFactory.js';
 import { RES } from '../systems/Resolution.js';
+import { NetSmoother } from '../systems/NetSmooth.js';
 import { sfx } from '../systems/Sound.js';
 import { ensureLookTextures, ensureHatTexture, hatDef } from '../systems/Looks.js';
 
-const NET_DELAY = 140;   // ms: uzaktaki oyuncular bu kadar geriden, akıcı oynatılır
 export const SPEED = 290;        // saniyede piksel
 export const BALL_WIDTH = 96;
 export const GHOST_SPEED = 1.5;   // hayaletler %50 hızlı    // dünyada topun genişliği (piksel)
@@ -198,70 +198,26 @@ export class CountryBall extends Phaser.GameObjects.Container {
   // Ağdan gelen konuma yumuşakça yaklaş (uzak oyuncular ve host'un botları)
   // ÇEVRİMİÇİ AKICILIK: uzaktaki oyuncunun konumları ~10/sn ve düzensiz aralıklarla (sunucu 100 ms'de bir toplar) gelir.
   // Eskiden top her yeni konuma hızla atılıp bekliyordu (kesik kesik / "kasma" görüntüsü). Artık gelen konumlar
-  // sıraya alınır ve top NET_DELAY kadar geriden, iki konum arasında düz çizgide sabit hızla oynatılır.
+  // sıraya alınır ve top ağın titremesine göre ayarlanan bir gecikmeyle (NetSmooth.js), iki konum arasında düz çizgide sabit hızla oynatılır.
   netStep(dt) {
     const n = this.net;
-    if (!n) { this.netBuf = null; this._netLast = null; this._netOff = null; return; }
+    if (!n) { this.netSm = null; this._netLast = null; return; }
     const now = performance.now();
-    const hasTs = Number.isFinite(n.ts);
-    if (n !== this._netLast) {                         // yeni konum geldi -> sıraya ekle
+    const sm = this.netSm || (this.netSm = new NetSmoother());
+    if (n !== this._netLast) {                         // yeni konum geldi -> sıraya ekle (gönderici zamanıyla)
       this._netLast = n;
-      const buf = this.netBuf || (this.netBuf = []);
-      let t = now;
-      if (hasTs) {
-        // GÖNDERİCİ ZAMANI: konum ne zaman yollandıysa o anki yere konur (sunucu toplaması / ağ titremesi hızı bozmaz).
-        // off = yerel saat - gönderici saati (en hızlı gelen pakete göre). Zıplamasın diye yavaşça değişir.
-        const off = now - n.ts;
-        if (this._netOff == null || Math.abs(off - this._netOff) > 1500) { this._netOff = off; buf.length = 0; }
-        else if (off < this._netOff) this._netOff -= Math.min(this._netOff - off, 3);
-        else this._netOff += 0.2;
-        t = n.ts + this._netOff;
-        this._netLate = Math.max(now - t, (this._netLate == null ? 120 : this._netLate) * 0.997);   // son gecikmelerin tepe değeri
-      }
-      const lastNow = buf[buf.length - 1];
-      if (!lastNow || Math.abs(n.x - lastNow.x) + Math.abs(n.y - lastNow.y) > 600) {      // ilk konum / ışınlanma
-        buf.length = 0; this.x = n.x; this.y = n.y;
-        buf.push({ t, x: n.x, y: n.y, m: n.m });
-      } else if (hasTs) {
-        if (t > lastNow.t) {                                                               // eski / aynı paket: atla
-          // Duran oyuncu yürümeye başladı: eski konum "az önce" sayılsın (ışınlanır gibi kaymasın)
-          if (t - lastNow.t > 250 && lastNow.m === 0 && (n.x !== lastNow.x || n.y !== lastNow.y)) buf.push({ t: t - 100, x: lastNow.x, y: lastNow.y, m: 0 });
-          buf.push({ t, x: n.x, y: n.y, m: n.m });
-        }
-      } else {
-        // Zaman damgası olmayan eski sürüm: varış zamanına göre
-        if (now - lastNow.t > 300) { lastNow.t = now - 100; while (buf.length > 1) buf.shift(); }
-        let tt = Math.max(now, lastNow.t + 60);
-        if (tt - now > 250) tt = now;
-        buf.push({ t: tt, x: n.x, y: n.y, m: n.m });
-      }
-      if (buf.length > 16) buf.shift();
+      sm.push(now, n.ts, n.x, n.y, n.m);
+      if (sm.snap) { sm.snap = false; this.x = n.x; this.y = n.y; }   // ışınlanma / ilk konum
     }
-    const buf = this.netBuf;
-    // Gecikme: zaman damgalıysa ağın o anki titremesine göre (140-400 ms) yavaşça ayarlanır
-    let delay = NET_DELAY;
-    if (hasTs) {
-      const want = Math.min(400, Math.max(140, (this._netLate || 120) + 110));
-      this._netDelay = this._netDelay == null ? want : this._netDelay + (want - this._netDelay) * Math.min(1, dt * (want > this._netDelay ? 1 : 0.2));
-      delay = this._netDelay;
-    }
-    const T = now - delay;
-    while (buf.length > 2 && buf[1].t <= T) buf.shift();                         // geçmiş konumları at
-    const a = buf[0], b = buf[1];
-    let tx, ty;
-    if (!b || T <= a.t) { tx = a.x; ty = a.y; }
-    else if (T >= b.t) {
-      // Tampon bitti (sunucu bir konumu atlamış olabilir): hâlâ yürüyorsa en çok 120 ms aynı yönde devam et
-      tx = b.x; ty = b.y;
-      if (hasTs && n.m === 1 && b.t > a.t) { const e = Math.min(120, T - b.t) / (b.t - a.t); tx += (b.x - a.x) * e; ty += (b.y - a.y) * e; }
-    }
-    else { const u = (T - a.t) / (b.t - a.t); tx = a.x + (b.x - a.x) * u; ty = a.y + (b.y - a.y) * u; }
+    const p = sm.sample(now, dt);
+    if (!p) return;
+    const tx = p.x, ty = p.y;
     // Çok küçük titremeleri yumuşat (ilk karede zıplama olmasın)
     const k = Math.min(1, dt * 20);
     const ox = this.x, oy = this.y;
     this.x += (tx - this.x) * k; this.y += (ty - this.y) * k;
     // Yürüme animasyonu: konum hâlâ kayıyorsa yürüyor say (durma paketi topun durmasından önce gelir)
-    const facing = n.f ? 'left' : 'right', moving = n.m === 1 || (n.m !== 2 && Math.abs(this.x - ox) + Math.abs(this.y - oy) > 0.6);
+    const facing = n.f ? 'left' : 'right', moving = n.m !== 2 && (p.m === 1 || Math.abs(this.x - ox) + Math.abs(this.y - oy) > 0.6);   // oynatılan andaki durum
     const late = moving && this.shownSkin === 'idle' && hasSkin(this.scene, 'walk_r', this.flag);
     if (late || facing !== this.facing || moving !== this.isMoving) { this.facing = facing; this.isMoving = moving; this.refreshVisual(); }
     this.setDepth(this.y);
