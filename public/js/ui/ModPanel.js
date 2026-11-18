@@ -34,8 +34,19 @@ const T = {
       noPerm: 'No permission.', noUser: 'Player not found.', self: 'You cannot target yourself.', protected: 'This person is protected (admin / moderator).', notInRoom: 'Player is not in a room.', guest: 'Guests have no account; they can only be kicked.', bad: 'Invalid action.', slow: 'Slow down a little.' },
     deleted: 'Your account was deleted by a moderator.',
   },
+  ru: {
+    enterCode: 'ВВЕСТИ КОД', moderator: 'МОДЕРАТОР', codeTitle: 'Код модератора', codeHint: 'Введи 15-символьный код модератора. Если код верный, аккаунт станет модераторским.',
+    confirm: 'ПОДТВЕРДИТЬ', back: 'Назад', panelTitle: 'Панель модератора', search: 'Поиск игрока или аккаунта…', refresh: 'Обновить',
+    kick: 'ВЫГНАТЬ', ban: 'БАН', unban: 'РАЗБАН', del: 'УДАЛИТЬ', sure: 'ТОЧНО?', empty: 'Никого не найдено.',
+    online: 'в сети', offline: 'не в сети', guest: 'гость', banned: 'БАН', inGame: 'в матче', room: 'комната',
+    ok: 'Права модератора выданы!',
+    done: { kick: '{n} выгнан из комнаты', ban: '{n} забанен', unban: '{n} разбанен', delete: 'Аккаунт {n} удалён' },
+    err: { needLogin: 'Сначала войди.', locked: 'Ещё заблокировано.', tooMany: 'Слишком много попыток. Попробуй через 10 минут.', wrong: 'Неверный код.', len: 'Код должен быть 15 символов.',
+      noPerm: 'Нет прав.', noUser: 'Игрок не найден.', self: 'Нельзя применить к себе.', protected: 'Этот человек защищён (админ / модератор).', notInRoom: 'Игрок не в комнате.', guest: 'У гостя нет аккаунта; можно только выгнать.', bad: 'Неверное действие.', slow: 'Подожди секунду.' },
+    deleted: 'Твой аккаунт удалён модератором.',
+  },
 };
-const L = () => T[i18n.lang === 'en' ? 'en' : 'tr'];
+const L = () => T[i18n.lang] || T.en;
 
 class ModPanel {
   constructor() { this.menu = null; this.root = null; this.list = []; this.sure = null; this.q = ''; }
