@@ -298,11 +298,21 @@ export class UIScene extends Phaser.Scene {
     const ty = 48; // bilgi paneli kaldırıldığı için sabit üst boşluk
     this.taskText.setPosition(26, ty + 8);
     const fake = !!this.registry.get('fakeTasks');
-    const lines = tasks.length ? [i18n.t(fake ? 'tasks.fakeTitle' : 'tasks.title')].concat(tasks.map((t) => `${t.done ? '✔' : t.step ? '①' : '•'} ${i18n.t('tasks.' + t.type)} (${i18n.t('rooms.' + t.room)})`)) : [];
+    const sab = this.registry.get('sabBanner');
+    const sabFix = this.registry.get('sabFixRoom'); // oda adı (sabotaj tamir yeri)
+    const lines = [];
+    if (sab && sabFix) {
+      lines.push('⚠ ' + sab.text);
+      lines.push('→ ' + i18n.t('sabotage.fixHere', { room: i18n.t('rooms.' + sabFix) }));
+    }
+    if (tasks.length) {
+      lines.push(i18n.t(fake ? 'tasks.fakeTitle' : 'tasks.title'));
+      tasks.forEach((t) => lines.push(`${t.done ? '✔' : t.step ? '①' : '•'} ${i18n.t('tasks.' + t.type)} (${i18n.t('rooms.' + t.room)})`));
+    }
     const txt = lines.join('\n');
     if (txt !== this.lastTaskTxt || ty !== this.lastTaskY) {
       this.lastTaskTxt = txt; this.lastTaskY = ty; this.taskText.setText(txt);
-      this.taskText.setColor(fake ? '#ff8a80' : '#ffd23f');
+      this.taskText.setColor(sab && sabFix ? '#ff8a80' : fake ? '#ff8a80' : '#ffd23f');
       this.taskBg.clear();
       if (txt) this.taskBg.fillStyle(0x0e1219, 0.72).fillRoundedRect(16, ty, this.taskText.width + 22, this.taskText.height + 16, 10);
     }

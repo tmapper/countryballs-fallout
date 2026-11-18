@@ -170,6 +170,7 @@ export function installExtras(GameScene) {
     minimap.hide();
     this.balls.forEach((b) => { b.reportT = undefined; if (b.inTunnel) { b.inTunnel = null; if (b.isMe) { b.setAlpha(1); this.clearTunnelArrows(); } } });
     const room = body ? getRoomAt(body.x, body.y - 8) : null;   // ceset nerede bulundu (ışınlanmadan ÖNCE)
+    const bodyPos = body ? { x: body.x, y: body.y } : null;
     this.gatherInCafeteria();                                   // toplantı başlar başlamaz herkes kafeteryaya
     sfx(body ? 'body_found' : 'meeting');
     playMusic('music_meeting');
@@ -180,6 +181,7 @@ export function installExtras(GameScene) {
       sub: body ? i18n.t('meeting.reportedBy', { name: nameOf(caller), room: room ? i18n.t('rooms.' + room) : '' }) : i18n.t('meeting.calledBy', { name: nameOf(caller) }),
       reporterFlag: caller.flag,
       kind: body ? 'body' : 'button',
+      bodyPos,
       canVote: this.player.alive,
       ghost: !this.player.alive,
       onChat: (text) => this.sendChat(text),
@@ -626,6 +628,8 @@ export function installExtras(GameScene) {
     if (!def) return false;
     this.emitEv('sab', [type]);
     this.sabotage = { type, def, left: def.time };
+    const fixRoom = def.fix && getRoomAt(def.fix.x, def.fix.y);
+    this.registry.set('sabFixRoom', fixRoom || null);
     this.balls.forEach((b) => { if (b.alive) b.setMood('wide', 1.3); });
     // en yakın masum botlar tamire koşar
     const crew = this.balls.filter((b) => b.brain && b.alive && b.role !== 'impostor')
@@ -649,6 +653,7 @@ export function installExtras(GameScene) {
     stopLoop('alarm_loop', 400); stopLoop('oxygen_alert', 400);
     this.clearAlarm();
     this.registry.set('sabBanner', null);
+    this.registry.set('sabFixRoom', null);
     this.balls.forEach((b) => { if (b.fixing) { b.fixing = false; if (b.brain) b.brain.goal = null; } });
   };
 

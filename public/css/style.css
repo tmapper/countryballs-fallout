@@ -1846,3 +1846,42 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 #cfs-cookie { position: fixed; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 100000; width: min(94vw, 620px); box-sizing: border-box;
   display: flex; gap: 12px; align-items: center; padding: 10px 14px; border-radius: 12px; background: rgba(14,18,25,.96); border: 1px solid #3a4452; color: #d6dde6; font: 13px/1.4 system-ui; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
 #cfs-cookie a { color: #7dc4ff; } #cfs-cookie button { flex: none; padding: 8px 16px; border-radius: 8px; border: 0; background: #d9a400; color: #111; font: 900 13px system-ui; cursor: pointer; }
+
+/* ---- Toplantı haritası (ceset noktası) ---- */
+.mt-map-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 12px 8px; }
+.mt-map { width: min(100%, 420px); height: auto; border-radius: 10px; border: 1px solid #3a4452; background: #0a0d12; max-height: 22vh; object-fit: contain; }
+.mt-map-legend { font-size: 12px; font-weight: 800; color: #ff5a4f; letter-spacing: .04em; }
+.mt-map-legend.hidden { display: none; }
+
+/* ---- Mobil: ayarlar + toplantı sığsın ---- */
+@media (max-width: 760px) {
+  .mt-map { max-height: 16vh; }
+  .mt-panel { max-height: calc(100dvh - 16px); max-height: calc(100vh - 16px); }
+  .mt-body { overflow: auto; -webkit-overflow-scrolling: touch; flex: 1; min-height: 0; }
+  .mt-chat { max-height: min(140px, 22vh); min-height: 100px; }
+  .mt-head { padding: 8px 10px; gap: 8px; }
+  .mt-title { font-size: clamp(14px, 4vw, 18px); }
+  .mt-sub { font-size: 12px; }
+  .mt-where { font-size: 12px; padding: 4px 10px; }
+  .mt-foot { padding: 8px 10px; gap: 8px; }
+  .gs-card { max-height: calc(100dvh - 20px); max-height: calc(100vh - 20px); width: min(100%, 100vw - 16px); padding: 12px; }
+  .gs-row { padding: 6px 0; font-size: 14px; }
+  .mm-settings-card { max-height: calc(100dvh - 24px); max-height: calc(100vh - 24px); }
+}
+@media (max-height: 520px) {
+  .mt-map-wrap { display: none; } /* yatay küçük ekranda haritayı gizle, oyuncu listesi öncelikli */
+  .mt-chat { max-height: 100px; min-height: 80px; }
+  .gs-card { max-height: calc(100dvh - 12px); }
+}
+
+/* ---- Yeni görevler: termometre + batarya ---- */
+.tp-thermo, .tp-batt { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; color: #e6edf3; font-family: system-ui; }
+.tp-thermo-title, .tp-batt-title { font-weight: 900; font-size: 16px; letter-spacing: .06em; text-transform: uppercase; color: #ffd23f; }
+.tp-thermo-gauge { position: relative; width: 48px; height: 180px; border-radius: 24px; background: #1a1f28; border: 3px solid #3a4452; overflow: hidden; }
+.tp-thermo-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 20%; background: #1e88e5; transition: height .08s linear, background .15s; }
+.tp-thermo-mark { position: absolute; left: -6px; right: -6px; height: 4px; background: #4cd06a; box-shadow: 0 0 8px #4cd06a; }
+.tp-thermo-slider { width: min(260px, 80vw); }
+.tp-thermo-msg, .tp-batt-hint { font-size: 13px; color: #9fb0c0; text-align: center; max-width: 280px; }
+.tp-batt-row { display: flex; gap: 10px; }
+.tp-batt-cell { width: 56px; height: 72px; border-radius: 10px; border: 2px solid #8d97a4; background: #1a1f28; color: #c9d2dc; font-size: 22px; font-weight: 900; cursor: pointer; }
+.tp-batt-cell.on { background: #2f9e5a; border-color: #4cd06a; color: #fff; box-shadow: 0 0 12px rgba(76,208,106,.4); }

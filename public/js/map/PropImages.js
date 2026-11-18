@@ -14,7 +14,13 @@ export function loadPropImages() {
   return Promise.all(PROP_NAMES.map((n) => new Promise((res) => {
     const im = new Image();
     im.onload = () => { PROP_IMG[n] = im; res(); };
-    im.onerror = () => res();          // eksikse kodla çizilir
+    im.onerror = () => {
+      // webp yoksa png dene (yeni ağaç vb.)
+      const im2 = new Image();
+      im2.onload = () => { PROP_IMG[n] = im2; res(); };
+      im2.onerror = () => res();
+      im2.src = assetUrl('assets/props/' + n + '.png');
+    };
     im.src = assetUrl('assets/props/' + n + '.webp');
   })));
 }

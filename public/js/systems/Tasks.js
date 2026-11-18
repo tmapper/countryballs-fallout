@@ -34,7 +34,9 @@ export const TASK_ICON = {
   medicine: { img: null,             emoji: '💊' },
   crank:    { img: null,             emoji: '⚙' },
   plants:   { img: null,             emoji: '🪴' },
-  beds:     { img: null,             emoji: '🛏' }
+  beds:     { img: null,             emoji: '🛏' },
+  thermometer: { img: null,          emoji: '🌡' },
+  battery:  { img: null,             emoji: '🔋' }
 };
 
 // Odaya göre göreli konum (dx, dy saklanır: harita değişince yeniden hesaplanır)
@@ -90,7 +92,12 @@ export const STATIONS = [
   { id: 'crank_generator',   type: 'crank',    ...at('generator', 125, 290) },   // jeneratör
   { id: 'plants_o2',         type: 'plants',   ...at('o2', 138, 540) },          // saksı
   { id: 'plants_hall',       type: 'plants',   ...at('hall', 146, 720) },        // saksı
-  { id: 'beds_dorm',         type: 'beds',     ...at('dorm', 530, 180) }         // ranza
+  { id: 'beds_dorm',         type: 'beds',     ...at('dorm', 530, 180) },         // ranza
+  // ---- v0.9.30: termometre + batarya ----
+  { id: 'thermo_lab',        type: 'thermometer', ...at('lab', 400, 200) },
+  { id: 'thermo_reactor',    type: 'thermometer', ...at('reactor', 320, 280) },
+  { id: 'battery_electrical', type: 'battery',  ...at('electrical', 200, 300) },
+  { id: 'battery_generator', type: 'battery',   ...at('generator', 400, 400) }
 ];
 
 // En fazla 1 iki-aşamalı görev, aynı türden en fazla 2 görev

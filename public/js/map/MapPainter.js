@@ -304,7 +304,7 @@ const PROP = {
 // tile: uzun dikdörtgende yan yana tekrarla · tallOnly: sadece dikey/kare eşyada kullan
 // Çarpışma kutusu aynı kalır (BunkerMap); görsel kutunun ÜSTÜNE doğru taşar (3/4 görünüm).
 const IMG_SPEC = {
-  tree:        { img: 'agac',      mode: 'h', size: (p) => p.r * 6.2, dy: (p) => p.r * 0.8 },
+  tree:        { img: 'agac',      mode: 'h', size: (p) => p.r * 5.4, dy: (p) => p.r * 1.05 },
   bush:        { img: 'agac',      mode: 'w', size: (p) => p.r * 2.8, dy: (p) => p.r * 0.8 },
   rock:        { img: 'kaya',      mode: 'w', size: (p) => p.r * 3.0, dy: (p) => p.r * 0.7 },
   sandbag:     { img: 'kum',       mode: 'w', size: (p) => p.w * 1.1, dy: (p) => p.h + 6 },

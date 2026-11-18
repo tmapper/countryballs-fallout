@@ -257,7 +257,9 @@
       "medicine": "Tap a pill, then the bottle of the same color.",
       "crank": "Grab the handle and turn it clockwise 3 times.",
       "plants": "Hold on each pot to water it; release in the green zone, too much drowns it.",
-      "beds": "Drag each blanket to the right to straighten it."
+      "beds": "Drag each blanket to the right to straighten it.",
+      "thermometer": "Move the slider to the green mark.",
+      "battery": "Tap the cells from left to right in order."
     },
     "stepDone": "Data downloaded! Now upload it in Comms.",
     "fakeTitle": "Fake tasks (you cannot do them)",
@@ -300,7 +302,9 @@
     "coffeeHigh": "Too much! Emptying cup…",
     "coffeeSpill": "Spilled! Start over.",
     "crankHint": "Turn clockwise",
-    "plantsOver": "Too much water! Soil is mud."
+    "plantsOver": "Too much water! Soil is mud.",
+    "thermometer": "Set the temperature",
+    "battery": "Charge the batteries"
   },
   "meeting": {
     "bodyTitle": "DEAD BODY REPORTED!",
@@ -332,7 +336,8 @@
     "discussHint": "Discuss! Voting starts soon",
     "skipConfirm": "SURE? SKIP",
     "ejecting": "EJECTED",
-    "tieShort": "TIE"
+    "tieShort": "TIE",
+    "bodyOnMap": "Body was here"
   },
   "chat": {
     "sawKill": "I saw {target} kill!",
@@ -387,7 +392,8 @@
     "fixed": "Sabotage fixed!",
     "reactorFail": "The reactor melted down!",
     "o2Fail": "Oxygen ran out!",
-    "close": "Close"
+    "close": "Close",
+    "fixHere": "Fix at: {room}"
   },
   "menu": {
     "presents": "TURKONIC GAMES PRESENTS",
@@ -847,7 +853,9 @@
     "cinematics": "LOADING ANIMATIONS",
     "roles": "ASSIGNING ROLES",
     "kills": "SEALING THE BUNKER",
-    "ready": "READY"
+    "ready": "READY",
+    "props": "Loading props…",
+    "flags": "Loading flags…"
   },
   "controls": {
     "title": "Controls",

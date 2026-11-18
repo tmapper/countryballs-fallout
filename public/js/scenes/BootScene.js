@@ -24,17 +24,20 @@ export class BootScene extends Phaser.Scene {
         i18n.init({ tr, en, ru });
         const ver = document.querySelector('#cfs-loader .ld-ver');                 // sürüm tek yerden (dil dosyası)
         if (ver) ver.textContent = 'BUNKER-07 · ' + i18n.t('menu.version');
-        step(20, 'loader.chars');
-        // Kritik olanları bekle; prop/flag arka planda (menü hemen açılsın)
-        return Promise.all([track(loadCharacters(), 70, 'loader.cinematics'), track(loadRoleMeta(), 80, 'loader.roles'), track(loadKillMeta(), 90, 'loader.kills')]);
+        step(15, 'loader.chars');
+        // Tüm varlıklar girişte yüklensin — oyunda kasma/donma olmasın
+        return Promise.all([
+          track(loadCharacters(), 45, 'loader.cinematics'),
+          track(loadRoleMeta(), 55, 'loader.roles'),
+          track(loadKillMeta(), 65, 'loader.kills'),
+          track(loadPropImages().catch(() => {}), 80, 'loader.props'),
+          track(loadFlagImages().catch(() => {}), 92, 'loader.flags')
+        ]);
       })
       .then(() => {
         step(100, 'loader.ready');
         L.done();
         showMainMenu();
-        // Arka plan yükleme — menü açıldıktan sonra
-        loadPropImages().catch(() => {});
-        loadFlagImages().catch(() => {});
       })
       .catch((err) => {
         console.error(err);

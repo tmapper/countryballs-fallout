@@ -257,7 +257,9 @@
       "medicine": "Bir hapa dokun, sonra aynı renkteki şişeye.",
       "crank": "Kolu tut ve saat yönünde 3 tur çevir.",
       "plants": "Saksılara basılı tutarak sula; yeşil bölgede bırak, fazlası çürütür.",
-      "beds": "Battaniyeleri sağa doğru sürükleyip düzelt."
+      "beds": "Battaniyeleri sağa doğru sürükleyip düzelt.",
+      "thermometer": "Kaydırıcıyı yeşil işarete getir.",
+      "battery": "Hücrelere soldan sağa sırayla bas."
     },
     "stepDone": "Veri indirildi! Şimdi İletişim odasına yükle.",
     "fakeTitle": "Sahte görevler (yapamazsın)",
@@ -300,7 +302,9 @@
     "coffeeHigh": "Fazla! Fincanı boşalt…",
     "coffeeSpill": "Taştı! Baştan.",
     "crankHint": "Saat yönünde çevir",
-    "plantsOver": "Çok su! Toprak çamur oldu."
+    "plantsOver": "Çok su! Toprak çamur oldu.",
+    "thermometer": "Sıcaklığı ayarla",
+    "battery": "Bataryaları şarj et"
   },
   "meeting": {
     "bodyTitle": "CESET BULUNDU!",
@@ -332,7 +336,8 @@
     "discussHint": "Konuşun! Oylama birazdan başlıyor",
     "skipConfirm": "EMİN MİSİN? GEÇ",
     "ejecting": "ATILIYOR",
-    "tieShort": "BERABERE"
+    "tieShort": "BERABERE",
+    "bodyOnMap": "Ceset buradaydı"
   },
   "chat": {
     "sawKill": "{target} öldürürken gördüm!",
@@ -387,7 +392,8 @@
     "fixed": "Sabotaj onarıldı!",
     "reactorFail": "Reaktör eridi!",
     "o2Fail": "Oksijen tükendi!",
-    "close": "Kapat"
+    "close": "Kapat",
+    "fixHere": "Tamir et: {room}"
   },
   "menu": {
     "presents": "TURKONIC GAMES SUNAR",
@@ -847,7 +853,9 @@
     "cinematics": "ANİMASYONLAR YÜKLENİYOR",
     "roles": "ROLLER DAĞITILIYOR",
     "kills": "SIĞINAK MÜHÜRLENİYOR",
-    "ready": "HAZIR"
+    "ready": "HAZIR",
+    "props": "Eşyalar yükleniyor…",
+    "flags": "Bayraklar yükleniyor…"
   },
   "controls": {
     "title": "Kontroller",

@@ -9,6 +9,7 @@ import { i18n } from '../systems/I18n.js';
 import { getFlagThumb } from '../systems/Flags.js';
 import { wireChatInput, releaseGameKeys } from './Chat.js';
 import { icon } from './Icons.js';
+import { WORLD, ROOMS, CORRIDORS } from '../map/BunkerMap.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
@@ -28,6 +29,7 @@ export class MeetingScreen {
         </div>
         <div class="mt-bar"><i></i></div>
         <div class="mt-where">${icon('users')}<span></span></div>
+        <div class="mt-map-wrap"><canvas class="mt-map" width="360" height="200"></canvas><span class="mt-map-legend"></span></div>
         <div class="mt-body">
           <div class="mt-grid-wrap">
             <div class="mt-grid"></div>
@@ -133,6 +135,34 @@ export class MeetingScreen {
     }));
     this.setPhase('discuss', 0);
     this.renderCount();
+    this.drawBodyMap(opts.bodyPos || null);
+  }
+
+  // Tartışma paneline küçük harita + ceset kırmızı nokta
+  drawBodyMap(bodyPos) {
+    const cv = this.root && this.root.querySelector('.mt-map');
+    const leg = this.root && this.root.querySelector('.mt-map-legend');
+    const wrap = this.root && this.root.querySelector('.mt-map-wrap');
+    if (!cv || !wrap) return;
+    wrap.classList.remove('hidden');
+    const w = cv.width, h = cv.height;
+    const s = Math.min(w / WORLD.w, h / WORLD.h);
+    const ox = (w - WORLD.w * s) / 2, oy = (h - WORLD.h * s) / 2;
+    const c = cv.getContext('2d');
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = 'rgba(8,10,14,.9)'; c.fillRect(0, 0, w, h);
+    const rect = (r, fill) => { c.fillStyle = fill; c.fillRect(ox + r.x * s, oy + r.y * s, r.w * s, r.h * s); };
+    [...Object.values(ROOMS), ...CORRIDORS].forEach((r) => { c.fillStyle = '#6a7380'; c.fillRect(ox + r.x * s - 1, oy + r.y * s - 1, r.w * s + 2, r.h * s + 2); });
+    CORRIDORS.forEach((r) => rect(r, '#3a3f47'));
+    const cols = { entrance: '#2f5a2a', hall: '#4b5260', reactor: '#5a3a33', security: '#2f3b52', control: '#2b3444', o2: '#2c5157', comms: '#28324a', generator: '#454a50', cafeteria: '#3e5a57', medbay: '#5e6c6a', lab: '#58686f', electrical: '#55542f', dorm: '#5a4430', storage: '#554634' };
+    Object.entries(ROOMS).forEach(([id, r]) => rect(r, cols[id] || '#444'));
+    if (bodyPos) {
+      const bx = ox + bodyPos.x * s, by = oy + bodyPos.y * s;
+      c.beginPath(); c.arc(bx, by, 7, 0, Math.PI * 2); c.fillStyle = '#ff2a2a'; c.fill();
+      c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke();
+      c.beginPath(); c.arc(bx, by, 11, 0, Math.PI * 2); c.strokeStyle = 'rgba(255,40,40,.55)'; c.lineWidth = 2; c.stroke();
+      if (leg) { leg.textContent = '● ' + i18n.t('meeting.bodyOnMap'); leg.classList.remove('hidden'); }
+    } else if (leg) { leg.textContent = ''; leg.classList.add('hidden'); }
   }
 
   // "5 canlı · 2 oy verdi"

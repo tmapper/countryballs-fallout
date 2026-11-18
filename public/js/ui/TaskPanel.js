@@ -624,7 +624,51 @@ function beds(body, done) {
   }
 }
 
-const GAMES = { wires, levers, valve, geiger, filter, keypad, simon, swipe, align, fuel, order, pipes, waste, freq, scan, coffee, medicine, crank, plants, beds, download: data('download'), upload: data('upload') };
+// ---------------- Termometre: ibreyi yeşil aralığa getir ----------------
+function thermometer(body, done) {
+  const wrap = H('div', 'tp-thermo', body);
+  H('div', 'tp-thermo-title', wrap).textContent = i18n.t('tasks.thermometer');
+  const gauge = H('div', 'tp-thermo-gauge', wrap);
+  const fill = H('div', 'tp-thermo-fill', gauge);
+  const mark = H('div', 'tp-thermo-mark', gauge);
+  const msg = H('div', 'tp-thermo-msg', wrap);
+  msg.textContent = i18n.t('tasks.hint.thermometer');
+  const slider = H('input', 'tp-thermo-slider', wrap);
+  slider.type = 'range'; slider.min = 0; slider.max = 100; slider.value = Math.round(rnd(5, 35));
+  const target = rnd(55, 78);
+  mark.style.bottom = target + '%';
+  const tick = () => {
+    const v = +slider.value;
+    fill.style.height = v + '%';
+    fill.style.background = v >= target - 6 && v <= target + 6 ? '#4cd06a' : v > target + 6 ? '#e53935' : '#1e88e5';
+    if (v >= target - 6 && v <= target + 6) { msg.textContent = i18n.t('tasks.correct'); sfx('wire_connect'); setTimeout(done, 280); slider.disabled = true; }
+  };
+  slider.addEventListener('input', tick); tick();
+}
+
+// ---------------- Batarya: hücreleri sırayla şarj et ----------------
+function battery(body, done) {
+  const wrap = H('div', 'tp-batt', body);
+  H('div', 'tp-batt-title', wrap).textContent = i18n.t('tasks.battery');
+  const row = H('div', 'tp-batt-row', wrap);
+  const n = 4;
+  let next = 0;
+  const cells = [];
+  for (let i = 0; i < n; i++) {
+    const cell = H('button', 'tp-batt-cell', row);
+    cell.type = 'button'; cell.textContent = '□';
+    cell.addEventListener('click', () => {
+      if (i !== next) { cells.forEach((c) => { c.classList.remove('on'); c.textContent = '□'; }); next = 0; sfx('lever', 0.4); return; }
+      cell.classList.add('on'); cell.textContent = '■'; sfx('wire_connect', 0.5);
+      next++;
+      if (next === n) setTimeout(done, 250);
+    });
+    cells.push(cell);
+  }
+  H('div', 'tp-batt-hint', wrap).textContent = i18n.t('tasks.hint.battery');
+}
+
+const GAMES = { wires, levers, valve, geiger, filter, keypad, simon, swipe, align, fuel, order, pipes, waste, freq, scan, coffee, medicine, crank, plants, beds, thermometer, battery, download: data('download'), upload: data('upload') };
 
 export class TaskPanel {
   constructor() { this.root = null; this.cleanups = []; this.isOpen = false; this.handlers = null; }
