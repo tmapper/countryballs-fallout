@@ -175,6 +175,7 @@ class Net {
   kick(id) { this.send({ t: 'kick', id }); }
   giveHost(id) { this.send({ t: 'giveHost', id }); }
   roomSettings(o) { this.send({ t: 'roomSettings', ...o }); }
+  setReady(on) { this.send({ t: 'ready', on: !!on }); }
   start(setup) { this.send({ t: 'start', setup }); }
   end() { this.send({ t: 'end' }); }
   // Host: maç bitti. stats = [{ id, tasks, kills }] -> sunucu istatistik ve XP yazar, herkese 'matchReward' gönderir

@@ -527,7 +527,11 @@
     "suggestShort": "Write at least 3 characters",
     "suggestThanks": "Thanks, your suggestion was saved!",
     "passBtn": "Shelter Pass",
-    "err_banned": "This account is banned."
+    "err_banned": "This account is banned.",
+    "ready": "Ready",
+    "readyOn": "Ready ✓",
+    "notReady": "Not ready",
+    "needReady": "Everyone must be ready"
   },
   "levels": {
     "title": {
@@ -703,7 +707,10 @@
     "buyCrateHint": "Buy crate with tokens",
     "boughtCrate": "Bought {tier} ×{n} (−{cost} 🪙)",
     "tabMarket": "MARKET",
-    "here": "You are here"
+    "here": "You are here",
+    "inspectSub": "Inspect the crate, see possible drops, then open.",
+    "inspectHint": "Drag to rotate",
+    "inspectFlags": "Sample flags that can drop"
   },
   "market": {
     "title": "MARKETPLACE",

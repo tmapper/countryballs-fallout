@@ -164,7 +164,7 @@ export class RoomHud {
         <div class="rh-cfg"><button class="rh-cfg-toggle" type="button"></button><div class="rh-cfg-body hidden"></div></div>
 
       </div>
-      <div class="rh-bottom"><button class="rh-flagbtn hidden" type="button"><span>${icon('flag')}</span><b data-t="lobby.pickFlagBtn"></b></button><button class="rh-flagbtn rh-hatbtn hidden" type="button"><span>${icon('hat')}</span><b data-t="lobby.pickHatBtn"></b></button><button class="rh-passbtn" type="button"><span>🎟</span><b data-t="online.passBtn">Sığınak Bileti</b></button><div class="rh-note"></div><button class="rh-start" type="button" data-t="online.start"></button></div>`;
+      <div class="rh-bottom"><button class="rh-flagbtn hidden" type="button"><span>${icon('flag')}</span><b data-t="lobby.pickFlagBtn"></b></button><button class="rh-flagbtn rh-hatbtn hidden" type="button"><span>${icon('hat')}</span><b data-t="lobby.pickHatBtn"></b></button><button class="rh-passbtn" type="button"><span>🎟</span><b data-t="online.passBtn">Sığınak Bileti</b></button><div class="rh-note"></div><button class="rh-ready" type="button" data-t="online.ready">Hazır</button><button class="rh-start" type="button" data-t="online.start"></button></div>`;
     document.body.appendChild(r);
     r.querySelector('.rh-leave').addEventListener('click', () => this.onLeave && this.onLeave());
     r.querySelector('.rh-settings').addEventListener('click', () => {
@@ -172,6 +172,12 @@ export class RoomHud {
     });
     r.querySelector('.rh-invite').addEventListener('click', () => this.onInvite && this.onInvite());
     r.querySelector('.rh-start').addEventListener('click', () => this.onStart && this.onStart());
+    r.querySelector('.rh-ready').addEventListener('click', () => {
+      const room = net.room; if (!room) return;
+      const me = room.players.find((p) => p.id === net.id);
+      const on = !(me && me.ready);
+      net.setReady(on);
+    });
     r.querySelector('.rh-passbtn').addEventListener('click', () => {
       if (net.account) shelterPass.open();
       else this.root.querySelector('.rh-note').textContent = i18n.tf('shop.needLogin', 'Giriş gerekli');
@@ -233,8 +239,9 @@ export class RoomHud {
     const cb = r.querySelector('.rh-code');
     cb.textContent = cb.dataset.copied ? i18n.t('online.copied') : `${i18n.t('online.code')}: ${room.code} ⧉`;
     setHtml(r.querySelector('.rh-players'), room.players.map((p) => `
-      <div class="rh-p${p.id === net.id ? ' me' : ''}">
+      <div class="rh-p${p.id === net.id ? ' me' : ''}${p.ready ? ' ready' : ''}">
         <img alt="" src="${getFlagThumb(p.flag, 36, 24)}"><span>${esc(p.name)}${p.id === net.id ? ` <i>(${esc(i18n.t('online.you'))})</i>` : ''}</span>
+        ${p.ready ? `<em class="rh-rdy" title="${esc(i18n.t('online.ready'))}">✓</em>` : `<em class="rh-nrdy" title="${esc(i18n.t('online.notReady'))}">…</em>`}
         ${p.id === room.hostId ? `<b title="${esc(i18n.t('online.host'))}">${icon('crown', 'ic-crown')}</b>` : ''}
         ${net.isHost && p.id !== net.id ? `<span class="rh-pbtns"><button type="button" class="rh-pbtn${this.isSure('host:' + p.id) ? ' sure' : ''}" data-host="${esc(p.id)}" title="${esc(i18n.t('online.giveHost'))}">${this.isSure('host:' + p.id) ? '?' : '👑'}</button><button type="button" class="rh-pbtn kick${this.isSure('kick:' + p.id) ? ' sure' : ''}" data-kick="${esc(p.id)}" title="${esc(i18n.t('online.kick'))}">${this.isSure('kick:' + p.id) ? '?' : '✕'}</button></span>` : ''}
       </div>`).join('') + (room.bots ? `<div class="rh-p bot"><span>${icon('robot')} × ${this.botsToAdd()}</span></div>` : ''));
@@ -245,11 +252,23 @@ export class RoomHud {
     r.querySelector('.rh-step').classList.toggle('hidden', !room.bots);
     this.renderCfg(room, host);
     const total = room.players.length + this.botsToAdd();
-    const canStart = host && total >= 3;
+    const allReady = room.players.every((p) => p.ready);
+    const me = room.players.find((p) => p.id === net.id);
+    const meReady = !!(me && me.ready);
+    const canStart = host && total >= 3 && allReady;
     const st = r.querySelector('.rh-start');
     st.classList.toggle('hidden', !host);
     st.disabled = !canStart;
-    r.querySelector('.rh-note').textContent = !host ? i18n.t('online.waitHost') : (!canStart ? i18n.t('online.needPlayers') : '');
+    const rb = r.querySelector('.rh-ready');
+    if (rb) {
+      rb.classList.toggle('on', meReady);
+      rb.textContent = meReady ? i18n.t('online.readyOn') : i18n.t('online.ready');
+    }
+    let note = '';
+    if (!host) note = i18n.t('online.waitHost');
+    else if (total < 3) note = i18n.t('online.needPlayers');
+    else if (!allReady) note = i18n.t('online.needReady');
+    r.querySelector('.rh-note').textContent = note;
   }
 
   isSure(key) { return !!(this.confirm && this.confirm.key === key && this.confirm.until > Date.now()); }

@@ -398,21 +398,23 @@ export function installExtras(GameScene) {
         key = pick(['chat.wasTasks', 'chat.noIdea', 'chat.skipVote', 'chat.needProof', 'chat.quiet', 'chat.whereWas']);
       }
     } else {
-      // Masum / şerif: daha aktif konuşsun
-      if (b.brain && b.brain.lead && b.brain.lead.alive) {
-        key = pick(['chat.sawNear', 'chat.suspect', 'chat.lookAt']);
+      // Masum / şerif: rastgele "şüpheli" demeyi ciddi azalt (yanlış suçlama enflasyonu)
+      if (b.brain && b.brain.lead && b.brain.lead.alive && Math.random() < 0.7) {
+        // lead = cesedin yanında gördüğü; soft iddia, nadiren hard suspect
+        key = pick(['chat.sawNear', 'chat.lookAt', 'chat.weird', 'chat.suspect']);
         target = b.brain.lead;
       } else if (b === m.caller && m.body && room) {
         key = pick(['chat.bodyIn', 'chat.foundBody']);
       } else if (accuser) {
         key = pick(['chat.defend', 'chat.notMe', 'chat.whyMe']);
         target = accuser[0];
-      } else if (popular && popular !== b && Math.random() < 0.45) {
-        key = pick(['chat.agree', 'chat.suspect', 'chat.lookAt']);
+      } else if (popular && popular !== b && popN >= 2 && Math.random() < 0.4) {
+        // Sadece birden fazla kişi aynı kişiyi söylemişse sürüye uy
+        key = pick(['chat.agree', 'chat.lookAt', 'chat.needProof']);
         target = popular;
-      } else if (Math.random() < 0.35 && others.length) {
-        // Zayıf şüphe: rastgele birine (gerçek oyuncu gibi spekülasyon)
-        key = pick(['chat.suspect', 'chat.weird', 'chat.lookAt', 'chat.whereWas']);
+      } else if (Math.random() < 0.12 && others.length) {
+        // Nadir spekülasyon (eskiden %35 — sürekli yanlış şüpheli üretiyordu)
+        key = pick(['chat.weird', 'chat.lookAt', 'chat.whereWas']);
         target = pick(others);
       } else {
         key = pick(['chat.wasTasks', 'chat.noIdea', 'chat.whereBody', 'chat.skipVote', 'chat.needProof', 'chat.quiet', 'chat.stayTogether']);

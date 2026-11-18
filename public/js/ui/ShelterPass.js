@@ -11,6 +11,7 @@ import { sfx } from '../systems/Sound.js';
 import { assetUrl } from '../systems/Assets.js';
 import { getFlagThumb, HIST_FLAGS, HIST_RARITY } from '../systems/Flags.js';
 import { PASS, CRATE_TIERS, CRATE_ICON, CRATE_ODDS, CRATE_PRICE, RARITY_COLOR, RARITY_ORDER, passReward, passStatus } from '../systems/Pass.js';
+import { crateInspect } from './CrateInspect.js';
 import { market } from './Market.js';
 import { icon, COIN_IMG, coinHtml } from './Icons.js';
 
@@ -343,7 +344,10 @@ class ShelterPass {
         </div>`;
       const openBtn = d.querySelector('.sp-open');
       openBtn.disabled = !n;
-      openBtn.addEventListener('click', () => { sfx('crate_click', 1); net.send({ t: 'crateOpen', tier: t }); });
+      openBtn.addEventListener('click', () => {
+        sfx('crate_click', 1);
+        crateInspect.open(t, { onOpen: () => net.send({ t: 'crateOpen', tier: t }) });
+      });
       const buyBtn = d.querySelector('.sp-buy');
       buyBtn.disabled = !canBuy;
       buyBtn.addEventListener('click', () => net.send({ t: 'buyCrate', tier: t, n: 1 }));

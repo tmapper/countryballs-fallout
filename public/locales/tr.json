@@ -527,7 +527,11 @@
     "suggestShort": "En az 3 karakter yaz",
     "suggestThanks": "Teşekkürler, önerin kaydedildi!",
     "passBtn": "Sığınak Bileti",
-    "err_banned": "Bu hesap yasaklandı."
+    "err_banned": "Bu hesap yasaklandı.",
+    "ready": "Hazır",
+    "readyOn": "Hazır ✓",
+    "notReady": "Hazır değil",
+    "needReady": "Herkes hazır olmalı"
   },
   "levels": {
     "title": {
@@ -703,7 +707,10 @@
     "buyCrateHint": "Jetonla kasa satın al",
     "boughtCrate": "{tier} ×{n} alındı (−{cost} 🪙)",
     "tabMarket": "PAZAR",
-    "here": "Buradasın"
+    "here": "Buradasın",
+    "inspectSub": "Kasayı incele, içerikten ne çıkabileceğini gör, sonra aç.",
+    "inspectHint": "Sürükleyerek döndür",
+    "inspectFlags": "Çıkabilecek bayraklardan örnekler"
   },
   "market": {
     "title": "PAZAR YERİ",

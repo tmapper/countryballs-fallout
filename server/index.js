@@ -731,7 +731,7 @@ const clean = (s, n) => String(s || '').replace(/[<>]/g, '').trim().slice(0, n);
 function roomInfo(r) {
   return {
     code: r.code, name: r.name, public: r.public, max: r.max, state: r.state, hostId: r.hostId, bots: r.bots, cfg: r.cfg || defaultCfg(),
-    players: [...r.players.values()].map((p) => ({ id: p.id, name: p.name, flag: p.flag, hat: p.client.hat || 'none' }))
+    players: [...r.players.values()].map((p) => ({ id: p.id, name: p.name, flag: p.flag, hat: p.client.hat || 'none', ready: !!p.ready }))
   };
 }
 
@@ -869,7 +869,7 @@ function adminCommand(c, r, text) {
     case 'roles': say((r.force || []).length ? (r.force || []).map((e) => e.spec + ' → ' + ROLE_TR[e.role]).join(', ') : 'Ayarlı rol yok.'); break;
     case 'clearroles': r.force = []; say('✔ Rol ayarları silindi.'); break;
     case 'coins': case 'jeton': {
-      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
+      if (!isMod(c)) { say('Bu komut için moderatör veya admin yetkisi gerekli.'); break; }
       const k = findAccount(c, r, tok[0]); const n = num(tok[1]);
       if (!k || !n) { say('Kullanım: /coins <hedef> <±sayı>'); break; }
       const u = accounts.users[k]; ensureWallet(u); u.coins = Math.max(0, u.coins + n); saveAccounts(); pushAccount(k);
@@ -906,21 +906,21 @@ function adminCommand(c, r, text) {
       break;
     }
     case 'xp': {
-      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
+      if (!isMod(c)) { say('Bu komut için moderatör veya admin yetkisi gerekli.'); break; }
       const k = findAccount(c, r, tok[0]); const n = num(tok[1]);
       if (!k || !n) { say('Kullanım: /xp <hedef> <sayı>  (Sığınak Bileti XP)'); break; }
       const u = accounts.users[k]; ensureMeta(u); addPassXp(u, n); saveAccounts(); pushAccount(k);
       say('✔ ' + u.name + ': bilet XP ' + u.pass.xp + '/' + (PASS_LEVELS * PASS_BAR_XP)); break;
     }
     case 'crate': case 'kasa': {
-      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
+      if (!isMod(c)) { say('Bu komut için moderatör veya admin yetkisi gerekli.'); break; }
       const k = findAccount(c, r, tok[0]); const tier = String(tok[1] || '').toLowerCase(); const n = Math.max(1, Math.min(50, num(tok[2]) || 1));
       if (!k || !CRATE_ODDS[tier]) { say('Kullanım: /crate <hedef> <common|rare|grand> [adet]'); break; }
       const u = accounts.users[k]; ensureMeta(u); u.crates[tier] += n; saveAccounts(); pushAccount(k);
       say('✔ ' + u.name + ': +' + n + ' ' + tier + ' kasa'); break;
     }
     case 'flag': case 'bayrak': {
-      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
+      if (!isMod(c)) { say('Bu komut için moderatör veya admin yetkisi gerekli.'); break; }
       const k = findAccount(c, r, tok[0]); const what = tok.slice(1).join(' ');
       if (!k || !what) { say('Kullanım: /flag <hedef> <bayrak|all>'); break; }
       const u = accounts.users[k]; ensureMeta(u);
@@ -949,7 +949,7 @@ function adminCommand(c, r, text) {
     }
     case 'season': { const si = seasonInfo(); say('Sezon ' + si.id + ' · ' + si.daysLeft + ' gün kaldı'); break; }
     case 'hat': case 'sapka': case 'şapka': {
-      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
+      if (!isMod(c)) { say('Bu komut için moderatör veya admin yetkisi gerekli.'); break; }
       const k = findAccount(c, r, tok[0]); const what = String(tok[1] || '').toLowerCase();
       if (!k || !what) { say('Kullanım: /hat <hedef> <şapka_id|all>  (ör. /hat ben top_hat)'); break; }
       const u = accounts.users[k]; ensureMeta(u);
@@ -968,7 +968,7 @@ function adminCommand(c, r, text) {
       say('Moderatör kodu: ' + modCode() + (ENV_MOD_CODE.length === MOD_CODE_LEN ? ' (MOD_CODE ortam değişkeninden)' : '')); break;
     case 'mods': case 'moderatorler': say('Moderatörler: ' + (Object.entries(accounts.users).filter(([, u]) => isModUser(u)).map(([, u]) => u.name).join(', ') || '(yok)')); break;
     case 'unmod': {
-      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
+      if (!isMod(c)) { say('Bu komut için moderatör veya admin yetkisi gerekli.'); break; }
       const k = findAccount(c, r, tok.join(' '));
       if (!k) { say('Kullanım: /unmod <hedef>'); break; }
       accounts.users[k].mod = 0; saveAccounts(); pushAccount(k); say('✔ ' + accounts.users[k].name + ' artık moderatör değil'); break;
@@ -1370,7 +1370,7 @@ function handle(c, m) {
         bots: false, players: new Map(), created: Date.now(), cfg: defaultCfg()
       };
       rooms.set(code, r);
-      r.players.set(c.id, { id: c.id, name: c.name, flag: c.flag, client: c });
+      r.players.set(c.id, { id: c.id, name: c.name, flag: c.flag, client: c, ready: false });
       c.room = code;
       send(c, { t: 'joined', you: c.id, room: roomInfo(r) });
       break;
@@ -1388,7 +1388,7 @@ function handle(c, m) {
       if (r.state !== 'lobby') { send(c, { t: 'error', code: 'inGame' }); return; }
       leaveRoom(c);
       // Aynı bayrak varsa boşta bir bayrağı seçmesi için istemciye bırakılır
-      r.players.set(c.id, { id: c.id, name: c.name, flag: c.flag, client: c });
+      r.players.set(c.id, { id: c.id, name: c.name, flag: c.flag, client: c, ready: false });
       c.room = r.code;
       send(c, { t: 'joined', you: c.id, room: roomInfo(r) });
       roomUpdate(r);
@@ -1438,12 +1438,28 @@ function handle(c, m) {
       roomUpdate(r);
       break;
     }
+    case 'ready': {
+      const r = rooms.get(c.room);
+      if (!r || r.state !== 'lobby') return;
+      const pl = r.players.get(c.id);
+      if (!pl) return;
+      pl.ready = !!m.on;
+      roomUpdate(r);
+      break;
+    }
     case 'start': {                              // sadece host: oyunu başlat
       // HİLE KORUMASI: rolleri SUNUCU dağıtır (host kendini katil seçemez) ve herkese
       // sadece KENDİ rolü gider (tarayıcıdan katilin kim olduğu okunamaz). Host oyunu yönettiği
       // için tam listeyi alır (host yetkili model; tam koruma için kuralların sunucuda çalışması gerekir).
       const r = rooms.get(c.room);
       if (!r || r.hostId !== c.id || r.state !== 'lobby') return;
+      // Herkes hazır olmalı (botlar hariç — sadece gerçek oyuncular)
+      const notReady = [...r.players.values()].filter((p) => !p.ready);
+      if (notReady.length) {
+        send(c, { t: 'error', code: 'notReady', names: notReady.map((p) => p.name) });
+        sysMsg(c, 'Herkes hazır değil: ' + notReady.map((p) => p.name).join(', '));
+        return;
+      }
       const sent = (m.setup && Array.isArray(m.setup.players)) ? m.setup.players : [];
       const humans = [...r.players.values()].map((p) => ({ id: p.id, name: p.name, flag: p.flag, hat: p.client.hat || 'none' }));
       const seen = new Set(humans.map((p) => p.id));
@@ -1517,6 +1533,7 @@ function handle(c, m) {
           (meImp && p.role === 'impostor') ||
           (meSh && p.role === 'sheriff')
         ) ? p : { ...p, role: null });
+        if (r.players.get(pl.id)) r.players.get(pl.id).ready = false;
         send(pl.client, { t: 'start', setup: { players: view, cfg } });
       });
       roomUpdate(r);
