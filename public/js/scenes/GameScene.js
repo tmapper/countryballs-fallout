@@ -697,23 +697,16 @@ export class GameScene extends Phaser.Scene {
   update(time, delta) {
     // Gerçek geçen süre: telefon kasınca oyun AĞIR ÇEKİME girmesin.
     const dt = Math.min(delta, 250) / 1000;
-    this.netUpdate(dt);
-    this.updateFx(dt, time);
-    // Toplantıda herkes donar
+    // Toplantıda dünya donuk: net/fx/looks de çalışmaz (HTML panel + duvar saati yeterli)
     if (this.meeting) {
       if (!this._lastHud || this._lastHud.action !== null) {
         this._lastHud = { action: null };
         this.registry.set('hud', this._lastHud);
       }
-      // Toplantıda dünya donuk; görünüm güncellemesi seyrek yeter
-      this._meetLookT = (this._meetLookT || 0) + dt;
-      if (this._meetLookT > 0.2) {
-        this._meetLookT = 0;
-        const lookDt = 0.2;
-        for (let i = 0; i < this.balls.length; i++) this.balls[i].updateLooks(lookDt, time);
-      }
       return;
     }
+    this.netUpdate(dt);
+    this.updateFx(dt, time);
     const ui = this.scene.get('UIScene');
     this.controls.joystick = ui && ui.joystick ? ui.joystick : null;
     if (this.taskOpen && !this.taskPanel.isOpen) { this.taskOpen = false; this.releaseControls(); }

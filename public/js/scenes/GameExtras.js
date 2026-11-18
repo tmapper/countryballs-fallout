@@ -89,6 +89,8 @@ export function installExtras(GameScene) {
     const kb = this.input.keyboard;
     kb.on('keydown', (e) => { if (sabMenu.isOpen && /^[1-3]$/.test(e.key)) sabMenu.pickIndex(Number(e.key) - 1); });
     this.events.once('shutdown', () => {
+      this.stopMeetingClock(this.meeting);
+      this.resumeMeetingGfx();
       meetingUI.close(); sabMenu.close(); minimap.hide(); this.clearAlarm();
     });
   };
@@ -168,6 +170,7 @@ export function installExtras(GameScene) {
     if (this.closeEmoteMenu) this.closeEmoteMenu();
     this.balls.forEach((b) => b.clearEmote && b.clearEmote());
     minimap.hide();
+    this.pauseMeetingGfx();   // harita/toplar arkasında çizilmesin → mobil kasma azalır
     this.balls.forEach((b) => {
       b.reportT = undefined;
       if (b.inTunnel) {
@@ -220,6 +223,27 @@ export function installExtras(GameScene) {
   };
   P.stopMeetingClock = function (m) {
     if (m && m._wall) { clearInterval(m._wall); m._wall = null; }
+  };
+
+  // Toplantı açıkken Phaser dünyasını gizle (GPU + CPU); sadece HTML panel çalışır
+  P.pauseMeetingGfx = function () {
+    try {
+      if (this.cameras && this.cameras.main) this.cameras.main.setVisible(false);
+      if (this.fog && this.fog.image) this.fog.image.setVisible(false);
+      const ui = this.scene.get('UIScene');
+      if (ui && ui.cameras && ui.cameras.main) ui.cameras.main.setVisible(false);
+      // Arka plan tuvalini de dondurmak için düşük güç: güncelleme erken return (GameScene.update)
+      this._meetingGfxOff = true;
+    } catch (e) { /* yoksay */ }
+  };
+  P.resumeMeetingGfx = function () {
+    try {
+      this._meetingGfxOff = false;
+      if (this.cameras && this.cameras.main) this.cameras.main.setVisible(true);
+      if (this.fog && this.fog.image && this.fog.enabled) this.fog.image.setVisible(true);
+      const ui = this.scene.get('UIScene');
+      if (ui && ui.cameras && ui.cameras.main) ui.cameras.main.setVisible(true);
+    } catch (e) { /* yoksay */ }
   };
 
   // Oyuncu sohbeti (toplantıda). Ölülerin mesajlarını sadece ölüler görür.
@@ -621,6 +645,7 @@ export function installExtras(GameScene) {
       });
     }
     meetingUI.close();
+    this.resumeMeetingGfx();
     if (ejected) this.die(ejected, { noBody: true, noGun: true });   // atılan şerifin silahı da gider
     // cesetler kaldırılır, herkes masanın etrafına döner
     this.bodies.forEach((b) => b.destroy());

@@ -144,6 +144,11 @@ export class MeetingScreen {
     const leg = this.root && this.root.querySelector('.mt-map-legend');
     const wrap = this.root && this.root.querySelector('.mt-map-wrap');
     if (!cv || !wrap) return;
+    // Kısa ekran / landscape telefonda harita paneli boğuyor → gizle
+    if (window.innerHeight < 520 || (window.innerWidth < 760 && window.innerHeight < 600)) {
+      wrap.classList.add('hidden');
+      return;
+    }
     wrap.classList.remove('hidden');
     const w = cv.width, h = cv.height;
     const s = Math.min(w / WORLD.w, h / WORLD.h);
@@ -175,27 +180,45 @@ export class MeetingScreen {
 
   setPhase(phase, secs) {
     if (!this.root) return;
-    this.phase = phase;
     const r = this.root;
+    const sec = secs > 0 ? Math.ceil(secs) : 0;
+    const phaseChanged = phase !== this.phase || phase !== this.lastPhase;
+    // Sadece saniye/evre değişince DOM yaz (sürekli reflow mobilde kasıyordu)
+    if (!phaseChanged && sec === this._lastSec) {
+      if (phase !== 'results' && this.total > 0) {
+        const frac = Math.max(0, Math.min(1, (secs || 0) / this.total));
+        if (Math.abs(frac - (this._lastFrac || 0)) > 0.02) {
+          this._lastFrac = frac;
+          r.querySelector('.mt-bar i').style.transform = `scaleX(${frac})`;
+          r.querySelector('.mt-ring-fg').style.strokeDashoffset = String(100 - frac * 100);
+        }
+      }
+      return;
+    }
+    this._lastSec = sec;
+    this.phase = phase;
     r.dataset.phase = phase;
-    r.querySelector('.mt-phase').textContent = i18n.t(phase === 'vote' ? 'meeting.vote' : phase === 'results' ? 'meeting.results' : 'meeting.discuss');
-    r.querySelector('.mt-time').textContent = secs > 0 ? i18n.t('meeting.timeLeft', { s: Math.ceil(secs) }) : '';
-    // Süre çubuğu: her evrenin başındaki süre = tam çubuk
-    if (phase !== this.lastPhase) { this.lastPhase = phase; this.total = Math.max(1, secs || 1); }
-    else this.total = Math.max(this.total || 1, secs || 0);   // evre 0 sn ile açıldıysa ilk gerçek süre tam çubuk olur
+    if (phaseChanged) {
+      this.lastPhase = phase;
+      this.total = Math.max(1, secs || 1);
+      r.querySelector('.mt-phase').textContent = i18n.t(phase === 'vote' ? 'meeting.vote' : phase === 'results' ? 'meeting.results' : 'meeting.discuss');
+      const order = ['discuss', 'vote', 'results'], at = order.indexOf(phase);
+      r.querySelectorAll('.mt-steps i').forEach((x) => { const k = order.indexOf(x.dataset.s); x.classList.toggle('on', k === at); x.classList.toggle('done', k < at); });
+      if (this.opts && this.opts.canVote && !this.myVote) {
+        r.querySelector('.mt-note').textContent = phase === 'vote' ? i18n.t('meeting.pickHint') : phase === 'discuss' ? i18n.t('meeting.discussHint') : '';
+      }
+    } else {
+      this.total = Math.max(this.total || 1, secs || 0);
+    }
+    r.querySelector('.mt-time').textContent = sec > 0 ? i18n.t('meeting.timeLeft', { s: sec }) : '';
     const frac = phase === 'results' ? 0 : Math.max(0, Math.min(1, (secs || 0) / this.total));
+    this._lastFrac = frac;
     r.querySelector('.mt-bar i').style.transform = `scaleX(${frac})`;
     r.querySelector('.mt-ring-fg').style.strokeDashoffset = String(100 - frac * 100);
-    r.classList.toggle('urgent', secs > 0 && secs <= 5 && phase !== 'results');
-    const order = ['discuss', 'vote', 'results'], at = order.indexOf(phase);
-    r.querySelectorAll('.mt-steps i').forEach((x) => { const k = order.indexOf(x.dataset.s); x.classList.toggle('on', k === at); x.classList.toggle('done', k < at); });
+    r.classList.toggle('urgent', sec > 0 && sec <= 5 && phase !== 'results');
     const canVote = this.opts && this.opts.canVote && phase === 'vote' && !this.myVote;
     r.classList.toggle('can-vote', !!canVote);
     if (!canVote && this.pending) this.setPending(null);
-    // Ne yapmalıyım? (oy veremeyen hayaletin notu ve verilmiş oy notu korunur)
-    if (this.opts && this.opts.canVote && !this.myVote) {
-      r.querySelector('.mt-note').textContent = phase === 'vote' ? i18n.t('meeting.pickHint') : phase === 'discuss' ? i18n.t('meeting.discussHint') : '';
-    }
   }
 
   // Kurucu oylamada çıktı: oylama baştan (herkes yeniden oy verir)
