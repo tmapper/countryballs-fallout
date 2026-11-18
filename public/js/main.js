@@ -117,17 +117,9 @@ if (/[?&]debug=1/.test(location.search)) {
   setInterval(() => {
     const t = performance.now();
     trap();
-    if (performance.now() - t > 80) { if (++hits >= 3) lock(); } else hits = 0;
+    if (performance.now() - t > 120) { if (++hits >= 5) lock(); } else hits = 0;
   }, 700);
 }
 
-// Sekme arka plana düşünce döngüyü yavaşlat (pil + ısınma); geri gelince uyan
-document.addEventListener('visibilitychange', () => {
-  try {
-    if (document.hidden) {
-      if (game.loop && game.loop.running) game.loop.sleep();
-    } else {
-      if (game.loop && !game.loop.running) game.loop.wake(true);
-    }
-  } catch (e) { /* yoksay */ }
-});
+// NOT: Sekme değişince game.loop.sleep() YAPILMAZ — host'un toplantı/sabotaj sayaçları donuyordu.
+

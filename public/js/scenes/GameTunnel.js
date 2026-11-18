@@ -27,7 +27,9 @@ export function installTunnel(GameScene) {
     sfx('tunnel');
     this.fxTunnel(me.x, me.y);
     me.inTunnel = t.id;
-    me.setPosition(t.x, t.y); me.setDepth(me.y); me.setAlpha(0.3);
+    me.setPosition(t.x, t.y); me.setDepth(me.y);
+    // Kendine hafif görünür; başkaları updateSight ile tamamen gizlenir
+    me.setAlpha(0.22); me.setVisible(true);
     this.cameras.main.centerOn(me.x, me.y - 40);
     this.cameras.main.flash(180, 0, 0, 0);
     this.tunnelHints = (this.tunnelHints || 0) + 1;
@@ -38,7 +40,7 @@ export function installTunnel(GameScene) {
     const me = this.player;
     if (!me.inTunnel) return;
     this.tunnelLock = this.time.now + 500;
-    me.inTunnel = null; me.setAlpha(1);
+    me.inTunnel = null; me.setAlpha(1); me.setVisible(true); me.sightA = 1; me.seen = true;
     this.clearTunnelArrows();
     this.ventWitness(me);                 // çıkışı görenler
     sfx('tunnel');

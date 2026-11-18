@@ -168,7 +168,14 @@ export function installExtras(GameScene) {
     if (this.closeEmoteMenu) this.closeEmoteMenu();
     this.balls.forEach((b) => b.clearEmote && b.clearEmote());
     minimap.hide();
-    this.balls.forEach((b) => { b.reportT = undefined; if (b.inTunnel) { b.inTunnel = null; if (b.isMe) { b.setAlpha(1); this.clearTunnelArrows(); } } });
+    this.balls.forEach((b) => {
+      b.reportT = undefined;
+      if (b.inTunnel) {
+        b.inTunnel = null;
+        b.setAlpha(1); b.setVisible(true); b.sightA = 1; b.seen = true;
+        if (b.isMe) this.clearTunnelArrows();
+      }
+    });
     const room = body ? getRoomAt(body.x, body.y - 8) : null;   // ceset nerede bulundu (ışınlanmadan ÖNCE)
     const bodyPos = body ? { x: body.x, y: body.y } : null;
     this.gatherInCafeteria();                                   // toplantı başlar başlamaz herkes kafeteryaya
@@ -189,13 +196,30 @@ export function installExtras(GameScene) {
       onVote: (id) => this.castVote(this.player, id)
     });
     // Bot sohbeti (tartışma süresince) - sadece botlar konuşur, oyuncular sesli konuşur
-    if (this.isClient) { m.timers.push(this.time.addEvent({ delay: 250, loop: true, callback: () => this.tickMeeting(0.25) })); return; }
+    if (this.isClient) { this.startMeetingClock(m); return; }
     const alive = this.balls.filter((b) => b.alive && !b.isMe && (b.brain || !this.online));
     alive.forEach((b) => {
       const t = 0.8 + Math.random() * Math.max(1, (this.cfg.discuss || 10) - 2);
       m.timers.push(this.time.delayedCall(t * 1000, () => this.botChat(b, room)));
     });
-    m.timers.push(this.time.addEvent({ delay: 250, loop: true, callback: () => this.tickMeeting(0.25) }));
+    // Duvar saati: Phaser loop uyusa bile (sekme, kasma) toplantı süresi aksın
+    this.startMeetingClock(m);
+  };
+
+  // Toplantı süresini setInterval ile say (Phaser time'a bağlı değil)
+  P.startMeetingClock = function (m) {
+    this.stopMeetingClock(m);
+    m._wallLast = performance.now();
+    m._wall = setInterval(() => {
+      if (this.meeting !== m) { this.stopMeetingClock(m); return; }
+      const now = performance.now();
+      const dt = Math.min(0.5, Math.max(0, (now - m._wallLast) / 1000));
+      m._wallLast = now;
+      if (dt > 0) this.tickMeeting(dt);
+    }, 200);
+  };
+  P.stopMeetingClock = function (m) {
+    if (m && m._wall) { clearInterval(m._wall); m._wall = null; }
   };
 
   // Oyuncu sohbeti (toplantıda). Ölülerin mesajlarını sadece ölüler görür.
@@ -428,8 +452,9 @@ export function installExtras(GameScene) {
   P.restartVote = function () {
     const m = this.meeting;
     if (!m) return;
-    m.timers.forEach((t) => t.remove(false));
-    m.timers = [this.time.addEvent({ delay: 250, loop: true, callback: () => this.tickMeeting(0.25) })];   // süre sayacı yeniden
+    m.timers.forEach((t) => { try { t.remove(false); } catch (e) {} });
+    m.timers = [];
+    this.startMeetingClock(m);                            // süre sayacı yeniden (duvar saati)
     m.votes = new Map();
     m.phase = 'discuss';                                   // setMeetingPhase 'vote'a geçsin diye
     this.setMeetingPhase('vote');
@@ -570,7 +595,8 @@ export function installExtras(GameScene) {
     const m = this.meeting;
     if (!m) return;
     this.emitEv('endMeeting', [ejected ? ejected.id : null]);
-    m.timers.forEach((t) => t.remove(false));
+    this.stopMeetingClock(m);
+    m.timers.forEach((t) => { try { t.remove(false); } catch (e) {} });
     // Botlar toplantıdan bir "güvenmediğim kişi" çıkarır: atılmayan en çok suçlanan ya da cesedin yanında gördüğü
     if (!this.isClient) {
       const tally = new Map();
@@ -638,7 +664,27 @@ export function installExtras(GameScene) {
     if (type === 'lights') sfx('power_down');
     else { startLoop(type === 'reactor' ? 'alarm_loop' : 'oxygen_alert'); this.showAlarm(); }
     this.toast(i18n.t('sabotage.' + type + 'On', { s: def.time }), '#ff5a4f');
+    // Süreli sabotaj: sekme/arka plan kasma olsa bile geri sayım aksın
+    this.startSabotageClock();
     return true;
+  };
+
+  P.startSabotageClock = function () {
+    this.stopSabotageClock();
+    if (!this.sabotage || !this.sabotage.def.time || this.isClient) return;
+    this._sabWallLast = performance.now();
+    this._sabWall = setInterval(() => {
+      if (!this.sabotage || !this.sabotage.def.time) { this.stopSabotageClock(); return; }
+      const now = performance.now();
+      const dt = Math.min(0.5, Math.max(0, (now - this._sabWallLast) / 1000));
+      this._sabWallLast = now;
+      if (dt <= 0) return;
+      // updateSabotage zaten left azaltır; arka planda rAF yoksa burada da düşür
+      if (document.hidden) this.updateSabotage(dt);
+    }, 250);
+  };
+  P.stopSabotageClock = function () {
+    if (this._sabWall) { clearInterval(this._sabWall); this._sabWall = null; }
   };
 
   P.showAlarm = function () {
@@ -650,6 +696,7 @@ export function installExtras(GameScene) {
   P.clearAlarm = function () { if (this.alarmEl) { this.alarmEl.remove(); this.alarmEl = null; } };
 
   P.endSabotageFx = function () {
+    this.stopSabotageClock();
     stopLoop('alarm_loop', 400); stopLoop('oxygen_alert', 400);
     this.clearAlarm();
     this.registry.set('sabBanner', null);

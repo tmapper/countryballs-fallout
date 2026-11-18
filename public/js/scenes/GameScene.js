@@ -374,6 +374,10 @@ export class GameScene extends Phaser.Scene {
   die(ball, opts = {}) {
     if (!ball.alive) return;
     ball.alive = false;
+    if (ball.inTunnel) {
+      ball.inTunnel = null;
+      if (ball.isMe) this.clearTunnelArrows();
+    }
     // HAYALET BOT: ölen masum bot görevlerine devam eder (Among Us gibi). Sadece görev yapar: kimseyi görmez,
     // bildirmez, oy vermez, öldürülemez; yaşayanlar onu görmez, ölüler görür. Katil bot hayalet olunca durur.
     if (ball.brain && ball.role !== 'impostor' && ball.tasksLeft > 0) {
@@ -905,7 +909,8 @@ export class GameScene extends Phaser.Scene {
     if (this.sightT <= 0) {
       this.sightT = Math.max(perf().sight, getQuality() === 'low' ? 0.14 : 0.08);
       const r = this.visionRadius + 30;
-      const see = (o) => all || canSee(this.grid, me, o, r);
+      // Tüneldeki katil HİÇ görünmez (ölüler dahil — vent içi tam gizlilik)
+      const see = (o) => !o.inTunnel && (all || canSee(this.grid, me, o, r));
       this.balls.forEach((b) => { if (!b.isMe && b.alive) b.seen = see(b); });
       // Hayaletler birbirini görür (ölü gerçek oyuncular; ölü botlar dolaşmadığı için gizli kalır)
       // Hayalet botlar da (görev yapanlar) ölülere görünür
@@ -920,6 +925,12 @@ export class GameScene extends Phaser.Scene {
       o.setVisible(a > 0.02);
     };
     this.balls.forEach((b) => {
+      // Tünel: başkalarına tamamen görünmez; kendine hafif silüet (yön bulmak için)
+      if (b.inTunnel) {
+        if (b.isMe) { b.sightA = 0.22; b.setAlpha(0.22); b.setVisible(true); }
+        else { b.seen = false; b.sightA = 0; b.setAlpha(0); b.setVisible(false); }
+        return;
+      }
       if (!b.isMe && b.alive) fade(b);
       else if (!b.isMe && !b.alive && b.ghostSeen !== b.ghostShown) {
         b.ghostShown = b.ghostSeen;
