@@ -14,7 +14,8 @@ const KEY = 'cfs.perf';
 export const PERF_LEVELS = {
   high:     { botSkip: 2, visTtl: 0.12, fogSkip: 0, sight: 0.08, cull: 0.16, skinSlice: 6, fpsLimit: 0 },
   balanced: { botSkip: 3, visTtl: 0.25, fogSkip: 1, sight: 0.12, cull: 0.24, skinSlice: 4, fpsLimit: 0 },
-  saver:    { botSkip: 4, visTtl: 0.4,  fogSkip: 2, sight: 0.18, cull: 0.32, skinSlice: 3, fpsLimit: 0 }
+  // Pil tasarrufu: mobilde 45 FPS tavanı (ısınma + pil); masaüstünde sınırsız
+  saver:    { botSkip: 4, visTtl: 0.4,  fogSkip: 2, sight: 0.18, cull: 0.32, skinSlice: 3, fpsLimit: isMobile() ? 45 : 0 }
 };
 
 let level = null;

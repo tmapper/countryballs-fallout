@@ -10,6 +10,7 @@ import { showMainMenu } from '../systems/GameFlow.js';
 import { loadPropImages } from '../map/PropImages.js';
 import { loadFlagImages } from '../systems/Flags.js';
 import { RES } from '../systems/Resolution.js';
+import { preloadSfx } from '../systems/Sound.js';
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('BootScene'); }
@@ -19,6 +20,8 @@ export class BootScene extends Phaser.Scene {
     const L = window.cfsLoader || { set() {}, done() {}, error() {} };
     const step = (p, key) => L.set(p, i18n.t(key));
     const track = (pr, p, key) => pr.then((v) => { step(p, key); return v; });
+    // Sesleri arka planda decode et (ilk tıklamada gecikme olmasın)
+    try { preloadSfx(); } catch (e) { /* yoksay */ }
     Promise.all([loadJSON('locales/tr.json'), loadJSON('locales/en.json'), loadJSON('locales/ru.json')])
       .then(([tr, en, ru]) => {
         i18n.init({ tr, en, ru });

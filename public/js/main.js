@@ -120,3 +120,14 @@ if (/[?&]debug=1/.test(location.search)) {
     if (performance.now() - t > 80) { if (++hits >= 3) lock(); } else hits = 0;
   }, 700);
 }
+
+// Sekme arka plana düşünce döngüyü yavaşlat (pil + ısınma); geri gelince uyan
+document.addEventListener('visibilitychange', () => {
+  try {
+    if (document.hidden) {
+      if (game.loop && game.loop.running) game.loop.sleep();
+    } else {
+      if (game.loop && !game.loop.running) game.loop.wake(true);
+    }
+  } catch (e) { /* yoksay */ }
+});

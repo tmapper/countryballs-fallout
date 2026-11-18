@@ -278,6 +278,8 @@ export class MeetingScreen {
     d.className = 'mt-msg' + (opt.ghost ? ' ghost' : '') + (opt.mine ? ' mine' : '');
     d.innerHTML = `<img alt="" src="${getFlagThumb(flag, 30, 20)}"><div><b>${opt.ghost ? icon('ghost') + ' ' : ''}${esc(name)}</b><span>${esc(text)}</span></div>`;
     list.appendChild(d);
+    // Bellek: en fazla 40 mesaj tut (uzun toplantılarda DOM şişmesin)
+    while (list.children.length > 40) list.removeChild(list.firstChild);
     list.scrollTop = list.scrollHeight;
   }
 

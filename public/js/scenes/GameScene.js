@@ -701,8 +701,13 @@ export class GameScene extends Phaser.Scene {
         this._lastHud = { action: null };
         this.registry.set('hud', this._lastHud);
       }
-      const lookDt = Math.min(delta, 250) / 1000;
-      this.balls.forEach((b) => b.updateLooks(lookDt, time));
+      // Toplantıda dünya donuk; görünüm güncellemesi seyrek yeter
+      this._meetLookT = (this._meetLookT || 0) + dt;
+      if (this._meetLookT > 0.2) {
+        this._meetLookT = 0;
+        const lookDt = 0.2;
+        for (let i = 0; i < this.balls.length; i++) this.balls[i].updateLooks(lookDt, time);
+      }
       return;
     }
     const ui = this.scene.get('UIScene');
@@ -798,11 +803,23 @@ export class GameScene extends Phaser.Scene {
       this.registry.set('hud', hud);
     }
     this.updateMoods(hud);
-    this.registry.set('taskArrow', this.arrowTarget());
+    // Ok sadece açı/renk değişince registry'ye yaz (UIScene her event'te yeniden çizmesin)
+    const arr = this.arrowTarget();
+    const prev = this._lastArrow;
+    if (!prev && !arr) { /* aynı */ }
+    else if (!prev || !arr || Math.abs(prev.ang - arr.ang) > 0.04 || prev.color !== arr.color) {
+      this._lastArrow = arr;
+      this.registry.set('taskArrow', arr);
+    }
     this.updateMinimap();
-    // Göz/şapka güncellemesi: tek döngü (eski: her top kendi postupdate dinleyicisi)
+    // Göz/şapka: görünür toplar her kare; ekran dışı görünmezler ~6 Hz (CPU tasarrufu)
     const lookDt = Math.min(delta, 250) / 1000;
-    this.balls.forEach((b) => b.updateLooks(lookDt, time));
+    this._lookFrame = (this._lookFrame || 0) + 1;
+    const lookAll = (this._lookFrame % 6) === 0;
+    for (let i = 0; i < this.balls.length; i++) {
+      const b = this.balls[i];
+      if (b.isMe || b.visible || lookAll) b.updateLooks(lookDt, time);
+    }
   }
 
   // Görev/panel kapanınca: tüm sahnelerde basılı tuşları ve joystick'i bırak (takılı kalıp yürüyememe hatası)
@@ -863,13 +880,18 @@ export class GameScene extends Phaser.Scene {
       }
       if (c.o.visible !== on) c.o.setVisible(on);
     });
-    // Otomatik kalite: oyun sürekli yavaşsa (30 kare/sn altı) bir kez düşük grafiğe geç
+    // Otomatik kalite: sürekli düşük FPS'te kademeli düşür (oturumluk, kayıtlı ayar bozulmaz)
     const fps = this.game.loop.actualFps;
-    this.fpsLow = fps < 30 ? this.fpsLow + 0.16 : Math.max(0, this.fpsLow - 0.32);
-    if (this.fpsLow > 6 && getQuality() === 'high' && !this.autoLowDone) {
+    this.fpsLow = fps < 28 ? this.fpsLow + 0.16 : Math.max(0, this.fpsLow - 0.32);
+    if (this.fpsLow > 6 && !this.autoLowDone) {
       this.autoLowDone = true;
-      setQuality('low', false);                          // sadece bu oturum: kayıtlı ayarın değişmez
-      if (getPerf() === 'high') setPerf('balanced', false);   // işlemci yükünü de azalt (kaydedilmez)
+      const q = getQuality();
+      if (q === 'high') setQuality('med', false);
+      else if (q === 'med') setQuality('low', false);
+      else setQuality('low', false);
+      const p = getPerf();
+      if (p === 'high') setPerf('balanced', false);
+      else if (p === 'balanced') setPerf('saver', false);
       this.toast(i18n.t('ui.autoLow'), '#ffd23f');
     }
   }
@@ -918,11 +940,26 @@ export class GameScene extends Phaser.Scene {
   }
 
   // Ekranda olmayan en yakın hedefe ok: sabotaj tamiri (kırmızı) ya da görev (sarı)
+  // En yakın görev ~6 Hz yeniden seçilir (her karede sort + hypot pahalıydı).
   arrowTarget() {
     const me = this.player;
     let t = null, color = 0xffd23f;
-    if (this.sabotage && me.role !== 'impostor' && me.alive) { t = this.sabotage.def.fix; color = 0xff5a4f; }
-    else if (!this.fakeTasks) t = this.myTasks.filter((x) => !x.done).sort((a, b) => Math.hypot(a.x - me.x, a.y - me.y) - Math.hypot(b.x - me.x, b.y - me.y))[0];
+    if (this.sabotage && me.role !== 'impostor' && me.alive) {
+      t = this.sabotage.def.fix; color = 0xff5a4f;
+    } else if (!this.fakeTasks) {
+      const now = performance.now();
+      if (!this._nearTaskCache || now - this._nearTaskCache.t > 160 || this._nearTaskCache.doneN !== this.taskDone) {
+        let best = null, bd = 1e15;
+        for (let i = 0; i < this.myTasks.length; i++) {
+          const x = this.myTasks[i];
+          if (x.done) continue;
+          const d = (x.x - me.x) * (x.x - me.x) + (x.y - me.y) * (x.y - me.y);
+          if (d < bd) { bd = d; best = x; }
+        }
+        this._nearTaskCache = { t: now, task: best, doneN: this.taskDone };
+      }
+      t = this._nearTaskCache.task;
+    }
     if (!t) return null;
     const v = this.cameras.main.worldView;
     if (t.x > v.x + 40 && t.x < v.right - 40 && t.y > v.y + 60 && t.y < v.bottom - 40) return null;

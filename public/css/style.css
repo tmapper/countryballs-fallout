@@ -1885,3 +1885,12 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 .tp-batt-row { display: flex; gap: 10px; }
 .tp-batt-cell { width: 56px; height: 72px; border-radius: 10px; border: 2px solid #8d97a4; background: #1a1f28; color: #c9d2dc; font-size: 22px; font-weight: 900; cursor: pointer; }
 .tp-batt-cell.on { background: #2f9e5a; border-color: #4cd06a; color: #fff; box-shadow: 0 0 12px rgba(76,208,106,.4); }
+
+/* ---- Performans: büyük paneller kendi katmanında ---- */
+.meeting, .gs-card, .taskov, .minimap.big {
+  contain: layout style paint;
+  will-change: transform;
+}
+.mt-chat-list, .mt-grid {
+  content-visibility: auto;
+}
