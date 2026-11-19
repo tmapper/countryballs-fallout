@@ -164,7 +164,22 @@ export class RoomHud {
         <div class="rh-cfg"><button class="rh-cfg-toggle" type="button"></button><div class="rh-cfg-body hidden"></div></div>
 
       </div>
-      <div class="rh-bottom"><button class="rh-flagbtn hidden" type="button"><span>${icon('flag')}</span><b data-t="lobby.pickFlagBtn"></b></button><button class="rh-flagbtn rh-hatbtn hidden" type="button"><span>${icon('hat')}</span><b data-t="lobby.pickHatBtn"></b></button><button class="rh-passbtn" type="button"><span>🎟</span><b data-t="online.passBtn">Sığınak Bileti</b></button><div class="rh-note"></div><button class="rh-ready" type="button" data-t="online.ready">Hazır</button><button class="rh-start" type="button" data-t="online.start"></button></div>`;
+      <div class="rh-bottom">
+        <div class="rh-note"></div>
+        <div class="rh-actions">
+          <button class="rh-flagbtn hidden" type="button"><span>${icon('flag')}</span><b data-t="lobby.pickFlagBtn"></b></button>
+          <button class="rh-flagbtn rh-hatbtn hidden" type="button"><span>${icon('hat')}</span><b data-t="lobby.pickHatBtn"></b></button>
+          <button class="rh-passbtn" type="button"><span>🎟</span><b data-t="online.passBtn">Sığınak Bileti</b></button>
+          <button class="rh-ready" type="button" data-t="online.ready">Hazır</button>
+        </div>
+        <button class="rh-start" type="button" data-t="online.start"></button>
+      </div>
+      <div class="rh-cfg-sheet hidden" role="dialog">
+        <div class="rh-cfg-card">
+          <div class="rh-cfg-head"><h3 data-t="lobby.matchSettings"></h3><button class="rh-cfg-x" type="button" aria-label="x">✕</button></div>
+          <div class="rh-cfg-sheet-body"></div>
+        </div>
+      </div>`;
     document.body.appendChild(r);
     r.querySelector('.rh-leave').addEventListener('click', () => this.onLeave && this.onLeave());
     r.querySelector('.rh-settings').addEventListener('click', () => {
@@ -195,6 +210,8 @@ export class RoomHud {
     }));
     r.querySelector('.rh-flagbtn:not(.rh-hatbtn)').addEventListener('click', () => this.onFlag && this.onFlag());
     r.querySelector('.rh-cfg-toggle').addEventListener('click', () => { this.cfgOpen = !this.cfgOpen; this.render(); });
+    r.querySelector('.rh-cfg-x')?.addEventListener('click', () => { this.cfgOpen = false; this.render(); });
+    r.querySelector('.rh-cfg-sheet')?.addEventListener('pointerdown', (e) => { if (e.target.classList.contains('rh-cfg-sheet')) { this.cfgOpen = false; this.render(); } });
     // Ayar adımları ve oyuncu satırı butonları (kurucu)
     r.addEventListener('click', (e) => {
       const b = e.target.closest('button');
@@ -251,6 +268,29 @@ export class RoomHud {
     r.querySelector('.rh-botn').textContent = this.botCount;
     r.querySelector('.rh-step').classList.toggle('hidden', !room.bots);
     this.renderCfg(room, host);
+    const sheet = r.querySelector('.rh-cfg-sheet');
+    const sheetBody = r.querySelector('.rh-cfg-sheet-body');
+    const sideBody = r.querySelector('.rh-cfg-body');
+    if (sheet && sheetBody && sideBody) {
+      // Maç ayarları üstten sheet (singleplayer gibi); yan panelde tekrar etme
+      if (this.cfgOpen) {
+        sheetBody.innerHTML = sideBody.innerHTML;
+        sheet.classList.remove('hidden');
+        // sheet içi eventleri yeniden bağla (delegation on sheet)
+        sheetBody.querySelectorAll('[data-cfg]').forEach((b) => {
+          b.addEventListener('click', () => {
+            const key = b.dataset.cfg, dir = Number(b.dataset.dir || 0);
+            // trigger same as side: re-dispatch via existing panel listener by clicking side twin
+            const twin = sideBody.querySelector(`[data-cfg="${key}"][data-dir="${dir}"]`);
+            if (twin) twin.click();
+          });
+        });
+      } else sheet.classList.add('hidden');
+      sideBody.classList.add('hidden');
+      const tog = r.querySelector('.rh-cfg-toggle');
+      if (tog) tog.classList.toggle('on', !!this.cfgOpen);
+    }
+    
     const total = room.players.length + this.botsToAdd();
     const allReady = room.players.every((p) => p.ready);
     const me = room.players.find((p) => p.id === net.id);
