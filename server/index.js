@@ -1056,19 +1056,88 @@ function handle(c, m) {
       const say = (t) => sysMsg(c, t);
       if (!isAdmin(c)) { say('Yetki yok'); break; }
       const list = accounts.suggestions || [];
-      say('Öneri sayısı: ' + list.length);
-      list.slice(-15).forEach((s) => say((s.name || '?') + ': ' + String(s.text || '').slice(0, 120)));
+      const open = list.filter((s) => s.status !== 'resolved').length;
+      say('Öneri: ' + list.length + ' (açık: ' + open + ')');
+      list.slice(-12).forEach((s) => say((s.status === 'resolved' ? '✓ ' : '· ') + (s.name || '?') + ': ' + String(s.text || '').slice(0, 100)));
       break;
     }
     case 'suggest': {
       const u = c.account && accounts.users[c.account];
+      if (!u) { send(c, { t: 'shopError', code: 'needLogin' }); break; }
       const text = String(m.text || '').trim().slice(0, 280);
       if (!text || text.length < 3) return;
       if (!accounts.suggestions) accounts.suggestions = [];
-      accounts.suggestions.push({ name: u ? u.name : 'anon', account: c.account || null, text, at: Date.now() });
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      accounts.suggestions.push({
+        id, name: u.name, account: c.account, text, at: Date.now(),
+        status: 'open', replies: []
+      });
       if (accounts.suggestions.length > 500) accounts.suggestions = accounts.suggestions.slice(-400);
       saveAccounts();
       send(c, { t: 'suggestOk' });
+      break;
+    }
+    case 'suggestList': {
+      if (!accounts.suggestions) accounts.suggestions = [];
+      // Eski kayıtlara id ekle
+      accounts.suggestions.forEach((s) => {
+        if (!s.id) s.id = (s.at || Date.now()).toString(36) + Math.random().toString(36).slice(2, 5);
+        if (!s.replies) s.replies = [];
+        if (!s.status) s.status = 'open';
+      });
+      const admin = isAdmin(c);
+      const all = !!m.all && admin;
+      let list = accounts.suggestions;
+      if (!all) {
+        list = list.filter((s) => s.account && s.account === c.account);
+      }
+      // Yeni en üstte
+      list = list.slice().sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 80);
+      send(c, {
+        t: 'suggestList',
+        admin,
+        list: list.map((s) => ({
+          id: s.id,
+          name: s.name,
+          text: s.text,
+          at: s.at,
+          status: s.status || 'open',
+          replies: s.replies || [],
+          mine: !!(c.account && s.account === c.account)
+        }))
+      });
+      break;
+    }
+    case 'suggestReply': {
+      if (!c.account) { send(c, { t: 'shopError', code: 'needLogin' }); break; }
+      if (!accounts.suggestions) accounts.suggestions = [];
+      const id = String(m.id || '');
+      const text = String(m.text || '').trim().slice(0, 280);
+      if (!id || !text) break;
+      const s = accounts.suggestions.find((x) => x.id === id);
+      if (!s) break;
+      if (s.status === 'resolved') { send(c, { t: 'suggestUpdated' }); break; }
+      const admin = isAdmin(c);
+      const owner = s.account === c.account;
+      if (!admin && !owner) break;
+      if (!s.replies) s.replies = [];
+      const u = accounts.users[c.account];
+      s.replies.push({ by: u ? u.name : '?', text, at: Date.now(), admin: !!admin });
+      if (s.replies.length > 40) s.replies = s.replies.slice(-30);
+      saveAccounts();
+      send(c, { t: 'suggestUpdated' });
+      break;
+    }
+    case 'suggestResolve': {
+      if (!isAdmin(c)) break;
+      if (!accounts.suggestions) accounts.suggestions = [];
+      const id = String(m.id || '');
+      const s = accounts.suggestions.find((x) => x.id === id);
+      if (!s) break;
+      s.status = 'resolved';
+      s.resolvedAt = Date.now();
+      saveAccounts();
+      send(c, { t: 'suggestUpdated' });
       break;
     }
     // ---- OYUNCULAR ARASI PAZAR ----

@@ -14,7 +14,6 @@ import { InputController } from '../systems/InputController.js';
 import { FogOfWar } from '../systems/FogOfWar.js';
 import { CountryBall, SPEED } from '../entities/CountryBall.js';
 import { BotBrain, navFrameStart, warmNav } from '../systems/BotBrain.js';
-import { matchRecorder } from '../systems/MatchRecorder.js';
 import { ROLE_COLORS, impCount } from '../systems/Roles.js';
 import { RES, getQuality, setQuality } from '../systems/Resolution.js';
 import { perf, getPerf, setPerf } from '../systems/Perf.js';
@@ -129,14 +128,6 @@ export class GameScene extends Phaser.Scene {
       b.brain.buddyUntil = this.time.now + 40000 + Math.random() * 20000;   // oyun saati sayfa açılışından sayar: şimdiye göre
     });
     this.buildTaskMarkers();
-    try {
-      matchRecorder.start({
-        map: (this.cfg && this.cfg.map) || 'ring',
-        cfg: this.cfg || {},
-        mode: this.online ? 'online' : 'offline',
-        players: this.balls.map((b) => ({ id: b.id, name: b.name, flag: b.flag, role: b.role, isBot: !!b.isBot }))
-      });
-    } catch (e) {}
 
     this.events.once('shutdown', () => { this.taskPanel.close(true); gameSettings.close(); ghostChat.hide(); stopAllLoops(); });
 
@@ -319,7 +310,6 @@ export class GameScene extends Phaser.Scene {
     if (this.meeting || this.over) return;
     if (victim.clearEmote) victim.clearEmote();
     this.emitEv('kill', [killer.id, victim.id]);
-    try { matchRecorder.event('kill', { killer: killer.id, victim: victim.id }); } catch (e) {}
     // Işınlanma yok: katil menzilden vurduğu yerde kalsın (teleport belli etmesin)
     killer.setDepth(killer.y);
     if (killer.isMe) this.cameras.main.centerOn(killer.x, killer.y - 40);
@@ -789,7 +779,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.balls.forEach((b) => { if (b.cooldown > 0) b.cooldown = Math.max(0, b.cooldown - dt); });
-    try { if (!this.over) matchRecorder.sample(this.balls); } catch (e) {}
 
     // Botlar: kare atlatma — düşük kalite / kalabalık odada daha seyrek
     // HATA DÜZELTMESİ: eskiden botlar her karede çalışsa bile süre "dt x atlama" sayılıyordu

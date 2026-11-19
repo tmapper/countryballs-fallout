@@ -1,4 +1,3 @@
-import { matchRecorder } from './MatchRecorder.js';
 // ============================================================
 // GameFlow.js - Oyunun akışı:
 //   Ana menü -> (Tek başına: botlu lobi | Çevrimiçi: lobi tarayıcısı -> oda) -> Rol animasyonu -> Oyun
@@ -338,8 +337,6 @@ export function stopKillCutscene() { if (cutscene.busy) cutscene.stop(); }
 
 // Maç bitti: animasyon varsa bitmesini bekle, sonra sonuç ekranı
 export function gameOver(res) {
-  try { matchRecorder.finish(arguments[0] || {}); } catch (e) {}
-
   const m = match;
   setTimeout(() => cutscene.whenIdle(() => {
     if (match !== m) return;

@@ -469,8 +469,7 @@
     "redeemUsed": "Bu kod zaten kullanıldı",
     "privacy": "Gizlilik",
     "terms": "Kullanım Şartları",
-    "legalNote": "Kayıt olarak {terms} ve {privacy} metnini kabul etmiş olursun.",
-    "replays": "Kayıtlar"
+    "legalNote": "Kayıt olarak {terms} ve {privacy} metnini kabul etmiş olursun."
   },
   "online": {
     "title": "LOBİLER",
@@ -754,7 +753,18 @@
     "placeholder": "Önerini yaz...",
     "send": "GÖNDER",
     "short": "En az 3 karakter yaz",
-    "thanks": "Teşekkürler, önerin kaydedildi!"
+    "thanks": "Teşekkürler, önerin kaydedildi!",
+    "tabNew": "Yeni",
+    "tabMine": "Önerilerim",
+    "tabAdmin": "Yönet",
+    "empty": "Henüz öneri yok",
+    "resolved": "Çözüldü",
+    "hasReply": "Cevap var",
+    "waiting": "Bekliyor",
+    "reply": "Gönder",
+    "replyPh": "Mesaj yaz...",
+    "markResolved": "Çözüldü işaretle",
+    "sent": "Gönderildi"
   },
   "ach": {
     "title": "BAŞARIMLAR",

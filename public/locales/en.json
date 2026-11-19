@@ -469,8 +469,7 @@
     "redeemUsed": "Code already used",
     "privacy": "Privacy",
     "terms": "Terms of Use",
-    "legalNote": "By signing up you agree to the {terms} and the {privacy}.",
-    "replays": "Replays"
+    "legalNote": "By signing up you agree to the {terms} and the {privacy}."
   },
   "online": {
     "title": "LOBBIES",
@@ -754,7 +753,18 @@
     "placeholder": "Write your suggestion...",
     "send": "SEND",
     "short": "Write at least 3 characters",
-    "thanks": "Thanks, your suggestion was saved!"
+    "thanks": "Thanks, your suggestion was saved!",
+    "tabNew": "New",
+    "tabMine": "My suggestions",
+    "tabAdmin": "Manage",
+    "empty": "No suggestions yet",
+    "resolved": "Resolved",
+    "hasReply": "Replied",
+    "waiting": "Waiting",
+    "reply": "Send",
+    "replyPh": "Write a message...",
+    "markResolved": "Mark resolved",
+    "sent": "Sent"
   },
   "ach": {
     "title": "ACHIEVEMENTS",
