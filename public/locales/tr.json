@@ -710,7 +710,8 @@
     "here": "Buradasın",
     "inspectSub": "Kasayı incele, içerikten ne çıkabileceğini gör, sonra aç.",
     "inspectHint": "Sürükleyerek döndür",
-    "inspectFlags": "Çıkabilecek bayraklardan örnekler"
+    "inspectFlags": "Çıkabilecek bayraklardan örnekler",
+    "inspect2d": "Önizleme (2D)"
   },
   "market": {
     "title": "PAZAR YERİ",

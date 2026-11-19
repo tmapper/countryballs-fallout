@@ -710,7 +710,8 @@
     "here": "You are here",
     "inspectSub": "Inspect the crate, see possible drops, then open.",
     "inspectHint": "Drag to rotate",
-    "inspectFlags": "Sample flags that can drop"
+    "inspectFlags": "Sample flags that can drop",
+    "inspect2d": "Preview (2D)"
   },
   "market": {
     "title": "MARKETPLACE",
