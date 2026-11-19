@@ -63,9 +63,9 @@ export function buildProps(R) {
   decor('reactor', { type: 'stripes', x: 260, y: 800, w: 220, h: 20 });
 
   // ---------------- GÜVENLİK 700x600 ----------------
-  add('security', { type: 'monitorbank', shape: 'rect', x: 60, y: 24, w: 580, h: 70 });
-  // masa üstte; alt/yan kapı ağızları açık kalsın (geçiş bug'ı)
-  add('security', { type: 'desk', shape: 'rect', x: 200, y: 140, w: 280, h: 56 });
+  // Üst kapı (kuzey koridor local ~100-280) tamamen açık
+  add('security', { type: 'monitorbank', shape: 'rect', x: 360, y: 20, w: 300, h: 60 });
+  add('security', { type: 'desk', shape: 'rect', x: 220, y: 200, w: 260, h: 52 });
   add('security', { type: 'rack', shape: 'rect', x: 620, y: 480, w: 60, h: 90 });
   add('security', { type: 'rack', shape: 'rect', x: 20, y: 480, w: 60, h: 90 });
   decor('security', { type: 'cable', pts: [[350, 94], [350, 260]] });
@@ -93,9 +93,10 @@ export function buildProps(R) {
   decor('o2', { type: 'vent', x: 380, y: 560, w: 140, h: 90 });
 
   // ---------------- İLETİŞİM 650x600 ----------------
-  add('comms', { type: 'monitorbank', shape: 'rect', x: 40, y: 24, w: 380, h: 64 });
-  add('comms', { type: 'rack', shape: 'rect', x: 470, y: 20, w: 70, h: 120 });
-  add('comms', { type: 'rack', shape: 'rect', x: 555, y: 20, w: 70, h: 120 });
+  // Üst kapı boşluğu (o2 koridoru ~ local x 300)
+  add('comms', { type: 'monitorbank', shape: 'rect', x: 20, y: 20, w: 180, h: 56 });
+  add('comms', { type: 'monitorbank', shape: 'rect', x: 420, y: 20, w: 140, h: 56 });
+  add('comms', { type: 'rack', shape: 'rect', x: 560, y: 40, w: 60, h: 110 });
   add('comms', { type: 'dish', shape: 'circle', x: 500, y: 380, r: 72 });
   add('comms', { type: 'console', shape: 'rect', x: 40, y: 520, w: 200, h: 56 });
   decor('comms', { type: 'cable', pts: [[505, 140], [505, 300]] });

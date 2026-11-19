@@ -41,7 +41,8 @@ function loadThree() {
 
 function poolFor(tier) {
   const odds = CRATE_ODDS[tier] || {};
-  const flags = HIST_FLAGS && HIST_FLAGS.length ? HIST_FLAGS.slice(0, 12) : [];
+  // Osmanlı (OTT) mistik: sadece bilet 30. seviye, kasadan ÇIKMAZ — önizlemede gösterme
+  const flags = (HIST_FLAGS || []).filter((c) => c !== 'OTT').slice(0, 12);
   return { odds, flags };
 }
 
@@ -180,7 +181,8 @@ export class CrateInspect {
     const scene = this._scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0a120e);
     const cam = this._cam = new THREE.PerspectiveCamera(40, cssW / cssH, 0.05, 40);
-    cam.position.set(0, 0.25, 2.05);
+    cam.position.set(0, 0.08, 2.15);
+    cam.lookAt(0, 0.05, 0);
     const renderer = this._renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
     renderer.setPixelRatio(1);
     renderer.setSize(canvas.width, canvas.height, false);
@@ -208,7 +210,9 @@ export class CrateInspect {
           box.getCenter(center);
           root.position.sub(center);
           const maxDim = Math.max(size.x, size.y, size.z) || 1;
-          root.scale.setScalar(1.2 / maxDim);
+          root.scale.setScalar(1.15 / maxDim);
+          // Sahne ortasına al (altta kalmasın)
+          root.position.y += size.y * 0.05;
           scene.add(root);
           this._mesh = root;
           this.root.querySelector('.ci-fallback').style.display = 'none';

@@ -233,32 +233,48 @@ class Market {
 
     body.innerHTML = `
       <div class="mk-sell">
-        <p class="mk-hint">${esc(i18n.tf('market.sellHint', 'Sahip olduğun tarihi bayrak veya şapkayı sat. Mistik bayraklar satılamaz.'))}</p>
-        <div class="mk-kind">
-          <button type="button" class="mk-chip ${kind === 'flag' ? 'on' : ''}" data-kind="flag">${esc(i18n.tf('market.kindFlag', 'Bayrak'))}</button>
-          <button type="button" class="mk-chip ${kind === 'hat' ? 'on' : ''}" data-kind="hat">${esc(i18n.tf('market.kindHat', 'Şapka'))}</button>
+        <div class="mk-steps">
+          <div class="mk-step-n">1</div>
+          <div class="mk-step-body">
+            <b>${esc(i18n.tf('market.kindTitle', 'Ne satıyorsun?'))}</b>
+            <div class="mk-kind">
+              <button type="button" class="mk-chip ${kind === 'flag' ? 'on' : ''}" data-kind="flag">${esc(i18n.tf('market.kindFlag', 'Bayrak'))}</button>
+              <button type="button" class="mk-chip ${kind === 'hat' ? 'on' : ''}" data-kind="hat">${esc(i18n.tf('market.kindHat', 'Şapka'))}</button>
+            </div>
+          </div>
         </div>
         ${!items.length
           ? `<p class="mk-empty">${esc(i18n.tf('market.noItems', 'Satılacak eşyan yok'))}</p>`
           : `
-        <div class="mk-pick">
-          ${items.map((id) => {
-            const sel = id === this.sellItem ? ' on' : '';
-            if (kind === 'flag') {
-              return `<button type="button" class="mk-pick-item${sel}" data-item="${esc(id)}" style="--rc:${RARITY_COLOR[HIST_RARITY[id]] || '#9fb3c8'}">
-                <img alt="" src="${getFlagThumb(id, 64, 42)}"><span>${esc(this.itemLabel('flag', id))}</span>
-              </button>`;
-            }
-            return `<button type="button" class="mk-pick-item${sel}" data-item="${esc(id)}">
-              <img class="mk-hat-thumb" alt="" src="${getHatThumb(id)}"><span>${esc(this.itemLabel('hat', id))}</span>
-            </button>`;
-          }).join('')}
+        <div class="mk-steps">
+          <div class="mk-step-n">2</div>
+          <div class="mk-step-body">
+            <b>${esc(i18n.tf('market.pickItem', 'Eşya seç'))}</b>
+            <div class="mk-pick">
+              ${items.map((id) => {
+                const sel = id === this.sellItem ? ' on' : '';
+                if (kind === 'flag') {
+                  return `<button type="button" class="mk-pick-item${sel}" data-item="${esc(id)}" style="--rc:${RARITY_COLOR[HIST_RARITY[id]] || '#9fb3c8'}">
+                    <img alt="" src="${getFlagThumb(id, 56, 36)}"><span>${esc(this.itemLabel('flag', id))}</span>
+                  </button>`;
+                }
+                return `<button type="button" class="mk-pick-item${sel}" data-item="${esc(id)}">
+                  <img class="mk-hat-thumb" alt="" src="${getHatThumb(id)}"><span>${esc(this.itemLabel('hat', id))}</span>
+                </button>`;
+              }).join('')}
+            </div>
+          </div>
         </div>
-        <label class="mk-price-row">
-          <span>${esc(i18n.tf('market.price', 'Fiyat (jeton)'))}</span>
-          <input type="number" class="mk-price-in" min="50" max="50000" step="10" value="${this.sellPrice}">
-        </label>
-        <p class="mk-hint small">${esc(i18n.tf('market.priceHint', 'Min 50 · Max 50.000'))}</p>
+        <div class="mk-steps">
+          <div class="mk-step-n">3</div>
+          <div class="mk-step-body">
+            <b>${esc(i18n.tf('market.price', 'Fiyat (jeton)'))}</b>
+            <label class="mk-price-row">
+              <span>${esc(i18n.tf('market.priceHint', 'Min 50 · Max 50.000'))}</span>
+              <input type="number" class="mk-price-in" min="50" max="50000" step="10" value="${this.sellPrice}">
+            </label>
+          </div>
+        </div>
         <button type="button" class="mk-btn primary mk-list-btn" ${this.sellItem ? '' : 'disabled'}>${esc(i18n.tf('market.listBtn', 'İLANI YAYINLA'))}</button>
         `}
       </div>`;
