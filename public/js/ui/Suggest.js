@@ -178,7 +178,7 @@ class Suggest {
         </div>
         ${replies.map((rp) => `
           <div class="sg-bubble ${rp.admin ? 'admin' : 'me'}">
-            <div class="sg-bubble-h">${esc(rp.by || (rp.admin ? 'Admin' : ''))} · ${new Date(rp.at || 0).toLocaleString()}</div>
+            <div class="sg-bubble-h">${esc(rp.by || (rp.admin ? 'Mod' : ''))} · ${new Date(rp.at || 0).toLocaleString()}</div>
             <div>${esc(rp.text || '')}</div>
           </div>`).join('')}
       </div>

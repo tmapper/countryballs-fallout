@@ -20,7 +20,7 @@ const T = {
     ok: 'Moderatörlük açıldı!',
     done: { kick: '{n} odadan atıldı', ban: '{n} banlandı', unban: '{n} banı kaldırıldı', delete: '{n} hesabı silindi' },
     err: { needLogin: 'Önce giriş yapmalısın.', locked: 'Henüz kilitli.', tooMany: 'Çok fazla deneme. 10 dakika sonra tekrar dene.', wrong: 'Kod yanlış.', len: 'Kod 15 karakter olmalı.',
-      noPerm: 'Yetkin yok.', noUser: 'Oyuncu bulunamadı.', self: 'Kendine işlem yapamazsın.', protected: 'Bu kişi korumalı (admin / moderatör).', notInRoom: 'Oyuncu bir odada değil.', guest: 'Misafirin hesabı yok; sadece odadan atılabilir.', bad: 'Geçersiz işlem.', slow: 'Biraz yavaş: bir saniye bekle.' },
+      noPerm: 'Yetkin yok.', noUser: 'Oyuncu bulunamadı.', self: 'Kendine işlem yapamazsın.', protected: 'Bu kişi korumalı (moderatör).', notInRoom: 'Oyuncu bir odada değil.', guest: 'Misafirin hesabı yok; sadece odadan atılabilir.', bad: 'Geçersiz işlem.', slow: 'Biraz yavaş: bir saniye bekle.' },
     deleted: 'Hesabın bir moderatör tarafından silindi.',
   },
   en: {
@@ -31,7 +31,7 @@ const T = {
     ok: 'Moderator access granted!',
     done: { kick: '{n} was kicked', ban: '{n} was banned', unban: '{n} was unbanned', delete: '{n}\'s account was deleted' },
     err: { needLogin: 'Log in first.', locked: 'Still locked.', tooMany: 'Too many tries. Try again in 10 minutes.', wrong: 'Wrong code.', len: 'The code must be 15 characters.',
-      noPerm: 'No permission.', noUser: 'Player not found.', self: 'You cannot target yourself.', protected: 'This person is protected (admin / moderator).', notInRoom: 'Player is not in a room.', guest: 'Guests have no account; they can only be kicked.', bad: 'Invalid action.', slow: 'Slow down a little.' },
+      noPerm: 'No permission.', noUser: 'Player not found.', self: 'You cannot target yourself.', protected: 'This person is protected (moderator).', notInRoom: 'Player is not in a room.', guest: 'Guests have no account; they can only be kicked.', bad: 'Invalid action.', slow: 'Slow down a little.' },
     deleted: 'Your account was deleted by a moderator.',
   },
   ru: {
@@ -42,7 +42,7 @@ const T = {
     ok: 'Права модератора выданы!',
     done: { kick: '{n} выгнан из комнаты', ban: '{n} забанен', unban: '{n} разбанен', delete: 'Аккаунт {n} удалён' },
     err: { needLogin: 'Сначала войди.', locked: 'Ещё заблокировано.', tooMany: 'Слишком много попыток. Попробуй через 10 минут.', wrong: 'Неверный код.', len: 'Код должен быть 15 символов.',
-      noPerm: 'Нет прав.', noUser: 'Игрок не найден.', self: 'Нельзя применить к себе.', protected: 'Этот человек защищён (админ / модератор).', notInRoom: 'Игрок не в комнате.', guest: 'У гостя нет аккаунта; можно только выгнать.', bad: 'Неверное действие.', slow: 'Подожди секунду.' },
+      noPerm: 'Нет прав.', noUser: 'Игрок не найден.', self: 'Нельзя применить к себе.', protected: 'Этот человек защищён (модератор).', notInRoom: 'Игрок не в комнате.', guest: 'У гостя нет аккаунта; можно только выгнать.', bad: 'Неверное действие.', slow: 'Подожди секунду.' },
     deleted: 'Твой аккаунт удалён модератором.',
   },
 };
@@ -192,8 +192,8 @@ class ModPanel {
       if (p.room) tags.push(tag('room', `${p.inGame ? t.inGame : t.room} ${p.room}`));
       if (p.guest) tags.push(tag('off', t.guest));
       if (p.banned) tags.push(tag('ban', t.banned));
-      if (p.admin) tags.push(tag('adm', 'ADMIN')); else if (p.mod) tags.push(tag('mod', 'MOD'));
-      const prot = p.admin || (p.mod && !(net.account && net.account.admin));
+      if (p.mod || p.admin) tags.push(tag('mod', 'MOD'));
+      const prot = (p.mod || p.admin) && !this.isMod(); // yetkili yetkiliye işlem yapabilir
       const b = (a, ic, txt, cls = '') => {
         const sure = this.sure === a + ':' + (p.key || p.id);
         return `<button type="button" class="mod-act ${cls}${sure ? ' sure' : ''}" data-a="${a}"${k}>${icon(ic)}<span>${esc(sure ? t.sure : txt)}</span></button>`;
