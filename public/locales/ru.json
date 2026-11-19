@@ -134,7 +134,11 @@
     "emergencyMeetings": "Экстренные собрания",
     "visualTasks": "Визуальные задания",
     "anonymousVotes": "Анонимные голоса",
-    "confirmEjects": "Подтверждать изгнание"
+    "confirmEjects": "Подтверждать изгнание",
+    "botDiff": "Сложность ботов",
+    "diff_easy": "Лёгкий",
+    "diff_normal": "Нормальный",
+    "diff_hard": "Сложный"
   },
   "actions": {
     "kill": "Убить",
@@ -637,7 +641,8 @@
     "logoutBtn": "ВЫЙТИ",
     "guestPlay": "ИГРАТЬ КАК ГОСТЬ",
     "onlinePlay": "ОНЛАЙН",
-    "offlinePlay": "ОФФЛАЙН"
+    "offlinePlay": "ОФФЛАЙН",
+    "replays": "Записи"
   },
   "online": {
     "title": "Онлайн",
@@ -1308,5 +1313,10 @@
       "safe": "Здесь безопасно"
     },
     "send": "Отправить"
+  },
+  "replays": {
+    "title": "Записи",
+    "empty": "Пока нет записей. Матчи сохраняются после конца.",
+    "watch": "Смотреть"
   }
 }

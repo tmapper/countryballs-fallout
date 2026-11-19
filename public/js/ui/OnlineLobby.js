@@ -242,7 +242,7 @@ export class RoomHud {
       if (b.dataset.cfg) {
         if (!net.isHost) return;
         const key = b.dataset.cfg, room = net.room, cfg = { ...DEFAULT_CFG, ...(room.cfg || {}) };
-        if (key === 'map') { net.roomSettings({ cfg: { map: b.dataset.v } }); return; }
+        if (key === 'map' || key === 'botDiff') { net.roomSettings({ cfg: { [key]: b.dataset.v } }); return; }
         const R = CFG_RANGES[key], dir = Number(b.dataset.d);
         if (key === 'max') { net.roomSettings({ max: Math.max(Math.max(R.min, room.players.length), Math.min(R.max, room.max + dir)) }); return; }
         const v = Math.round((cfg[key] + dir * R.step) * 100) / 100;
@@ -333,6 +333,25 @@ export class RoomHud {
       mapSeg.innerHTML = MAP_IDS.map((id) =>
         `<button class="seg-btn ${cfg.map === id ? 'on' : ''}" type="button" data-cfg="map" data-v="${id}" ${dis}>${esc(i18n.t('maps.' + id))}</button>`
       ).join('');
+    }
+    // Bot zorluğu
+    let diffRow = r.querySelector('.rh-botdiff');
+    if (!diffRow) {
+      const mapCard = r.querySelector('.rh-map-seg')?.closest('section');
+      if (mapCard) {
+        const div = document.createElement('div');
+        div.className = 'rh-botdiff';
+        div.style.cssText = 'margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center';
+        mapCard.appendChild(div);
+        diffRow = div;
+      }
+    }
+    if (diffRow) {
+      const bd = cfg.botDiff || 'normal';
+      diffRow.innerHTML = `<span style="width:100%;font-weight:800;color:#c9d0d8">${esc(i18n.t('lobby.botDiff'))}</span>` +
+        ['easy','normal','hard'].map((d) =>
+          `<button class="seg-btn ${bd===d?'on':''}" type="button" data-cfg="botDiff" data-v="${d}" ${dis}>${esc(i18n.t('lobby.diff_'+d))}</button>`
+        ).join('');
     }
     // Max oyuncu
     const mc = r.querySelector('.rh-max-count');

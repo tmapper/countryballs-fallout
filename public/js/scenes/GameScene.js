@@ -14,6 +14,7 @@ import { InputController } from '../systems/InputController.js';
 import { FogOfWar } from '../systems/FogOfWar.js';
 import { CountryBall, SPEED } from '../entities/CountryBall.js';
 import { BotBrain, navFrameStart, warmNav } from '../systems/BotBrain.js';
+import { matchRecorder } from '../systems/MatchRecorder.js';
 import { ROLE_COLORS, impCount } from '../systems/Roles.js';
 import { RES, getQuality, setQuality } from '../systems/Resolution.js';
 import { perf, getPerf, setPerf } from '../systems/Perf.js';
@@ -128,6 +129,15 @@ export class GameScene extends Phaser.Scene {
       b.brain.buddyUntil = this.time.now + 40000 + Math.random() * 20000;   // oyun saati sayfa açılışından sayar: şimdiye göre
     });
     this.buildTaskMarkers();
+    try {
+      matchRecorder.start({
+        map: (this.cfg && this.cfg.map) || 'ring',
+        cfg: this.cfg || {},
+        mode: this.online ? 'online' : 'offline',
+        players: this.balls.map((b) => ({ id: b.id, name: b.name, flag: b.flag, role: b.role, isBot: !!b.isBot }))
+      });
+    } catch (e) {}
+
     this.events.once('shutdown', () => { this.taskPanel.close(true); gameSettings.close(); ghostChat.hide(); stopAllLoops(); });
 
     this.registry.set('flag', this.player.flag);
@@ -308,6 +318,7 @@ export class GameScene extends Phaser.Scene {
     if (this.meeting || this.over) return;
     if (victim.clearEmote) victim.clearEmote();
     this.emitEv('kill', [killer.id, victim.id]);
+    try { matchRecorder.event('kill', { killer: killer.id, victim: victim.id }); } catch (e) {}
     // Öldüren, ölenin tam üstüne ışınlanır (Among Us gibi); kamera kaymadan geçer
     killer.setPosition(victim.x, victim.y);
     killer.setDepth(killer.y);
@@ -437,6 +448,13 @@ export class GameScene extends Phaser.Scene {
     return list;
   }
 
+  botDiffProfile() {
+    const d = (this.cfg && this.cfg.botDiff) || 'normal';
+    if (d === 'easy') return { watch: [2.2, 3.5], aim: [1.0, 1.6], rest: [10, 16], chaseSp: 0.5, tunRate: 40, aloneApproach: 0.2 };
+    if (d === 'hard') return { watch: [0.25, 0.7], aim: [0.25, 0.5], rest: [3, 6], chaseSp: 0.9, tunRate: 12, aloneApproach: 0.85 };
+    return { watch: [1.1, 1.6], aim: [0.55, 0.9], rest: [6, 8], chaseSp: 0.68, tunRate: 22, aloneApproach: 0.5 };
+  }
+
   botThink(b, dt) {
     if (b.fixing && this.sabotage) return this.fixerThink(b, dt);   // sabotaj tamirine koşuyor
     const br = b.brain;
@@ -474,9 +492,10 @@ export class GameScene extends Phaser.Scene {
         br.prey = { o: t, x: t.x, y: t.y, t: this.time.now };
         const d = Math.hypot(t.x - b.x, t.y - b.y);
         // Yeni yalnız hedef: önce 1–2.5 sn “masum gibi” izle / dolaş
+        const dif = this.botDiffProfile();
         if (br._preyId !== t.id) {
           br._preyId = t.id;
-          br.watching = 1.1 + Math.random() * 1.6;
+          br.watching = dif.watch[0] + Math.random() * (dif.watch[1] - dif.watch[0]);
           br.aimT = 0;
         }
         if (br.watching > 0) {
@@ -486,7 +505,8 @@ export class GameScene extends Phaser.Scene {
         } else if (b.cooldown <= 0 && br.restT <= 0) {
           // Öldürme penceresi
           if (d <= KILL_RANGE && br.react <= 0 && !br.aimT) {
-            br.aimT = 0.55 + Math.random() * 0.9;
+            const dif2 = this.botDiffProfile();
+            br.aimT = dif2.aim[0] + Math.random() * (dif2.aim[1] - dif2.aim[0]);
           }
           if (br.aimT) {
             br.aimT -= dt;
@@ -495,7 +515,7 @@ export class GameScene extends Phaser.Scene {
               const still = this.botVisible(b, true).filter((o) => o.role !== 'impostor');
               if (still.length === 1 && still[0] === t && Math.hypot(t.x - b.x, t.y - b.y) <= KILL_RANGE) {
                 this.kill(b, t);
-                br.restT = 6 + Math.random() * 8;
+                { const dif3 = this.botDiffProfile(); br.restT = dif3.rest[0] + Math.random() * (dif3.rest[1] - dif3.rest[0]); }
                 br.watching = 0;
                 this.botEscape(b);
                 return { x: 0, y: 0 };
@@ -533,7 +553,7 @@ export class GameScene extends Phaser.Scene {
       if (br.tunGoal) {
         if (crew.length) br.tunGoal = null;
         else if (Math.hypot(br.tunGoal.x - b.x, br.tunGoal.y - b.y) < 70) { br.tunGoal = null; this.botTunnel(b); }
-      } else if (!chase && !br.preyGo && crew.length === 0 && Math.random() < dt / 22) {
+      } else if (!chase && !br.preyGo && crew.length === 0 && Math.random() < dt / this.botDiffProfile().tunRate) {
         let best = null, bd = 1400;
         TUNNELS.forEach((tn) => { const dd = Math.hypot(tn.x - b.x, tn.y - b.y); if (dd < bd) { bd = dd; best = tn; } });
         if (best) { br.tunGoal = best; br.goTo(best.x, best.y); }
@@ -769,6 +789,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.balls.forEach((b) => { if (b.cooldown > 0) b.cooldown = Math.max(0, b.cooldown - dt); });
+    try { if (!this.over) matchRecorder.sample(this.balls); } catch (e) {}
 
     // Botlar: kare atlatma — düşük kalite / kalabalık odada daha seyrek
     // HATA DÜZELTMESİ: eskiden botlar her karede çalışsa bile süre "dt x atlama" sayılıyordu

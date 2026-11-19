@@ -1,3 +1,4 @@
+import { matchRecorder } from './MatchRecorder.js';
 // ============================================================
 // GameFlow.js - Oyunun akışı:
 //   Ana menü -> (Tek başına: botlu lobi | Çevrimiçi: lobi tarayıcısı -> oda) -> Rol animasyonu -> Oyun
@@ -290,7 +291,7 @@ export function startMatch(settings) {
     { id: 'me', flag: settings.myFlag, role: roles[0], me: true, name: net.profile.name || '', hat: loadHat() },
     ...settings.botFlags.map((flag, i) => ({ id: 'b' + i, flag, role: roles[i + 1], me: false, hat: botHat(flag) }))
   ];
-  startWith(players, 'offline', { map: settings.map || 'ring' });   // tek kişilikte seçilen harita
+  startWith(players, 'offline', { map: settings.map || 'ring', botDiff: settings.botDiff || 'normal' });
 }
 
 // players: [{ id, flag, role, me, name, bot }]   netMode: 'offline' | 'host' | 'client'
@@ -337,6 +338,8 @@ export function stopKillCutscene() { if (cutscene.busy) cutscene.stop(); }
 
 // Maç bitti: animasyon varsa bitmesini bekle, sonra sonuç ekranı
 export function gameOver(res) {
+  try { matchRecorder.finish(arguments[0] || {}); } catch (e) {}
+
   const m = match;
   setTimeout(() => cutscene.whenIdle(() => {
     if (match !== m) return;

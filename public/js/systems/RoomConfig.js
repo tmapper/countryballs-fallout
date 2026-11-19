@@ -4,7 +4,7 @@
 // Sunucu (server/index.js defaultCfg/sanitizeCfg) aynı sınırları uygular; kurucu uç değer giremez.
 //   map: harita, speed: oyuncu hızı (x), discuss/vote: toplantı süreleri (sn), killCd: öldürme bekleme (sn)
 //   imps / sheriffs: 0 = otomatik (oyuncu sayısına göre)
-export const DEFAULT_CFG = { map: 'ring', speed: 1, discuss: 15, vote: 25, killCd: 15, imps: 0, sheriffs: 0 };
+export const DEFAULT_CFG = { map: 'ring', speed: 1, discuss: 15, vote: 25, killCd: 15, imps: 0, sheriffs: 0, botDiff: 'normal' };
 export const CFG_RANGES = {
   speed:    { min: 0.5, max: 2,   step: 0.25 },
   discuss:  { min: 0,   max: 180, step: 5 },

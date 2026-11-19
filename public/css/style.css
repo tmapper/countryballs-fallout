@@ -2168,3 +2168,30 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
   .rh-matchbtn span { display: none; }
   .rh-matchbtn { width: 40px; height: 40px; justify-content: center; padding: 0; }
 }
+
+.replays-panel {
+  position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.65); padding: 16px;
+}
+.replays-panel.hidden { display: none; }
+.rp-card {
+  width: min(720px, 96vw); max-height: 90vh; overflow: auto;
+  background: linear-gradient(180deg,#1a222c,#0e1218); border: 2px solid #3a4452;
+  border-radius: 16px; padding: 16px; color: #eef1f5;
+}
+.rp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.rp-head h2 { flex: 1; margin: 0; color: #7dff9a; }
+.rp-x { width: 36px; height: 36px; border-radius: 8px; border: 1px solid #3a4452; background: #161b23; color: #fff; cursor: pointer; }
+.rp-item { display: flex; gap: 12px; align-items: center; padding: 10px; border: 1px solid #2a323d; border-radius: 10px; margin-bottom: 8px; background: rgba(0,0,0,.25); }
+.rp-meta { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.rp-flags { display: flex; gap: 4px; flex-wrap: wrap; }
+.rp-flags img { border-radius: 2px; border: 1px solid #000; }
+.rp-acts { display: flex; gap: 6px; }
+.rp-watch { padding: 8px 12px; border-radius: 8px; border: 1px solid #2f8f4a; background: #1a3a22; color: #7dff9a; font-weight: 800; cursor: pointer; }
+.rp-del { width: 36px; border-radius: 8px; border: 1px solid #6e1216; background: #3a1012; color: #fff; cursor: pointer; }
+.rp-empty { color: #9fb0c0; text-align: center; padding: 24px; }
+.rp-canvas { width: 100%; max-height: 50vh; background: #0b120e; border-radius: 10px; border: 1px solid #2a323d; }
+.rp-bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.rp-seek { flex: 1; min-width: 120px; }
+.rp-log { margin-top: 8px; font: 12px/1.4 monospace; color: #9fb0c0; max-height: 80px; overflow: auto; }
+.rp-play, .rp-stop { padding: 8px 12px; border-radius: 8px; border: 1px solid #3a4452; background: #161b23; color: #fff; cursor: pointer; }

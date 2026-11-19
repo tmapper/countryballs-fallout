@@ -18,7 +18,7 @@ const SETTINGS_KEY = 'cfs_lobby';
 
 // Tek kişilik maç ayarları (MAÇ AYARLARI butonu): oyuncu sayısı = sen + botlar, harita. Kaydedilir.
 function loadSettings() {
-  const def = { playerCount: 6, forcedRole: 'random', bots: true, map: DEFAULT_MAP };
+  const def = { playerCount: 6, forcedRole: 'random', bots: true, map: DEFAULT_MAP, botDiff: 'normal' };
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
     if (s && typeof s === 'object') {
@@ -26,7 +26,8 @@ function loadSettings() {
         playerCount: Math.max(MIN_PLAYERS, Math.min(MAX_PLAYERS, Number(s.playerCount) || def.playerCount)),
         forcedRole: 'random',                       // rol testi her açılışta rastgeleye döner
         bots: s.bots !== false,
-        map: MAP_IDS.includes(s.map) ? s.map : def.map
+        map: MAP_IDS.includes(s.map) ? s.map : def.map,
+        botDiff: ['easy','normal','hard'].includes(s.botDiff) ? s.botDiff : def.botDiff
       };
     }
   } catch (e) { /* yoksay */ }
@@ -51,12 +52,12 @@ export class Lobby {
 
   save() {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots, map: this.map }));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots, map: this.map, botDiff: this.botDiff }));
     } catch (e) { /* yoksay */ }
   }
 
   state() {
-    return { myFlag: this.myFlag, botFlags: this.bots ? [...this.botFlags] : [], playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots, map: this.map };
+    return { myFlag: this.myFlag, botFlags: this.bots ? [...this.botFlags] : [], playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots, map: this.map, botDiff: this.botDiff || 'normal' };
   }
 
   // Botlar için benimkinden farklı, birbirinden farklı rastgele bayraklar
@@ -101,6 +102,12 @@ export class Lobby {
           <section class="card">
             <h2 data-t="lobby.map"></h2>
             <div class="seg map-seg">${MAP_IDS.map((id) => `<button class="seg-btn" type="button" data-map="${id}"></button>`).join('')}</div>
+            <h2 class="mt" data-t="lobby.botDiff">Bot Zorluğu</h2>
+            <div class="seg botdiff-seg">
+              <button class="seg-btn" type="button" data-diff="easy"></button>
+              <button class="seg-btn" type="button" data-diff="normal"></button>
+              <button class="seg-btn" type="button" data-diff="hard"></button>
+            </div>
           </section>
           <section class="card">
             <h2 data-t="lobby.players"></h2>
@@ -140,6 +147,7 @@ export class Lobby {
       this.changed();
     }));
     r.querySelectorAll('.map-seg [data-map]').forEach((b) => b.addEventListener('click', () => { this.map = b.dataset.map; this.changed(); }));
+    r.querySelectorAll('.botdiff-seg [data-diff]').forEach((b) => b.addEventListener('click', () => { this.botDiff = b.dataset.diff; this.changed(); }));
     r.querySelector('.match-btn').addEventListener('click', () => this.openSheet('.settings-sheet'));
     r.querySelector('.bots-toggle').addEventListener('change', (e) => { this.bots = e.target.checked; this.changed(); });
     r.querySelector('.lang-btn').addEventListener('click', () => i18n.toggle());
@@ -175,6 +183,7 @@ export class Lobby {
     r.querySelector('.lh-hint').textContent = i18n.t('lobby.walkHint');
     r.querySelector('.count').textContent = this.playerCount;
     r.querySelectorAll('.map-seg [data-map]').forEach((b) => { b.textContent = i18n.t('maps.' + b.dataset.map); b.classList.toggle('on', b.dataset.map === this.map); b.style.setProperty('--c', '#7dff9a'); });
+    r.querySelectorAll('.botdiff-seg [data-diff]').forEach((b) => { b.textContent = i18n.t('lobby.diff_' + b.dataset.diff); b.classList.toggle('on', b.dataset.diff === (this.botDiff || 'normal')); b.style.setProperty('--c', '#ffd23f'); });
     r.querySelector('[data-step="-1"]').disabled = this.playerCount <= MIN_PLAYERS;
     r.querySelector('[data-step="1"]').disabled = this.playerCount >= MAX_PLAYERS;
     r.querySelector('.bots-toggle').checked = this.bots;

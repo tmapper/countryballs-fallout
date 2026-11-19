@@ -38,6 +38,7 @@ const ITEMS = [
   { act: 'ach', key: 'menu.ach', icon: 'trophy' },
   { act: 'suggest', key: 'menu.suggest', icon: 'mail' },
   { act: 'solo', key: 'menu.solo', icon: 'robot' },
+  { act: 'replays', key: 'menu.replays', icon: 'trophy' },
   { act: 'settings', key: 'menu.settings', icon: 'gear' },
   { act: 'exit', key: 'menu.exit', icon: 'power' }
 ];
@@ -281,6 +282,10 @@ export class MainMenu {
       this.openModal('howto');
       const how = this.root.querySelector('.mm-howto');
       if (how) how.innerHTML = i18n.tf('menu.tutorialText', i18n.tf('menu.howtoText', '')).replace(/\n/g, '<br>');
+      return;
+    }
+    if (a === 'replays') {
+      import('./ReplaysPanel.js').then((m) => m.replaysPanel.show());
       return;
     }
     const fn = { online: this.handlers.onOnline, create: this.handlers.onCreate, solo: this.handlers.onSolo }[a];
