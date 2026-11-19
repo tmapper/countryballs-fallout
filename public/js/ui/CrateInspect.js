@@ -7,6 +7,7 @@ import { assetUrl } from '../systems/Assets.js';
 import { sfx } from '../systems/Sound.js';
 import { CRATE_ODDS, RARITY_COLOR, RARITY_ORDER } from '../systems/Pass.js';
 import { HIST_FLAGS, getFlagThumb } from '../systems/Flags.js';
+import { isMemSave } from '../systems/MemSaver.js';
 
 const MODEL = {
   common: 'assets/crates/common.glb',
@@ -238,8 +239,22 @@ export class CrateInspect {
   stop3d() {
     cancelAnimationFrame(this._raf);
     this._raf = 0;
+    // 3D modelin geometri/malzeme/dokularını GPU'dan sil (renderer.dispose bunları silmez)
+    if (this._mesh) {
+      try {
+        this._mesh.traverse((o) => {
+          if (o.geometry) o.geometry.dispose();
+          (Array.isArray(o.material) ? o.material : o.material ? [o.material] : []).forEach((m) => {
+            Object.values(m).forEach((v) => { if (v && v.isTexture) v.dispose(); });
+            m.dispose();
+          });
+        });
+      } catch (e) { /* yoksay */ }
+    }
     if (this._renderer) {
       try { this._renderer.dispose(); } catch (e) {}
+      // Belleği küçült: WebGL alanını tamamen bırak (sonraki açılışta yeniden kurulur)
+      if (isMemSave()) { try { this._renderer.forceContextLoss(); } catch (e) {} }
       this._renderer = null;
     }
     this._scene = null;
@@ -251,6 +266,10 @@ export class CrateInspect {
     this.root.classList.add('hidden');
     this.stop3d();
     this.onOpen = null;
+    if (isMemSave()) {   // kasa ekranı tamamen silinsin; yeni açılışta yeniden kurulur
+      const c = this.root.querySelector('.ci-canvas'); if (c) { c.width = 1; c.height = 1; }
+      this.root.remove(); this.root = null;
+    }
   }
 }
 

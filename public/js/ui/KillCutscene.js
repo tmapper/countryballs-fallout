@@ -8,6 +8,7 @@
 // gövdelere öldürenin ve ölenin bayrağını giydirir.
 // Sadece bu cihazdaki oyuncu olayın içindeyse (öldüren/ölen/vuran) oynatılır.
 import { loadJSON, loadImage, assetUrl, prefetchAssets } from '../systems/Assets.js';
+import { isMemSave, dropGL } from '../systems/MemSaver.js';
 import { getFlagCanvas } from '../systems/Flags.js';
 import { RES } from '../systems/Resolution.js';
 
@@ -207,6 +208,11 @@ export class KillCutscene {
       if (this.gl) a.textures.forEach((t) => this.gl.deleteTexture(t)); // GPU belleğini hemen boşalt
     }
     if (this.root) this.root.classList.add('hidden');
+    // Belleği küçült: tam ekran WebGL çizim alanını da bırak (sonraki öldürmede yeniden kurulur)
+    if (isMemSave() && this.root && !this.active) {
+      if (this.gl) dropGL(this.gl, this.canvas);
+      this.root.remove(); this.root = null; this.canvas = null; this.gl = null; this.u = null;
+    }
     const cbs = this.idleCallbacks.splice(0);
     cbs.forEach((fn) => fn());
   }

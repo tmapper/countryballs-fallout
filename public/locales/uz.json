@@ -54,16 +54,20 @@
     "perfHigh": "Yuqori",
     "perfBal": "Muvozanatli",
     "perfSaver": "Batareya tejash",
-    "perfNote": "Oʻyin qotsa Muvozanatli yoki Batareya tejashni tanla. FPS hech qachon cheklanmaydi.",
+    "perfNote": "Oʻyin qotib qolsa, Grafikani pasaytiring: past grafika FPSni ham cheklaydi, qurilma kamroq qiziydi. Avto qurilmangizga qarab tanlaydi.",
     "showFps": "FPS koʻrsatish",
     "fullscreen": "Toʻliq ekran",
     "resume": "DAVOM ETISH",
     "autoLow": "Sekin qurilma: grafika avtomatik Past qilindi (Sozlamalardan oʻzgartir)",
-    "device": "Qurilma (keyingi oʻyin)",
+    "device": "Boshqaruv turi",
     "tunnelHint": "Tunneldasan: boshqa tunnelga oʻtish uchun strelkalar / joystik, chiqish uchun CHIQISH",
     "specialThanks": "Alohida rahmat",
     "credits": "Yaratuvchi- doors4131 va Turk Mapper\nNashriyotchi- Turk Mapper\nAlohida rahmat- Fiex, Turan123, Alexander, Teknonistan\nRassom- Deniz Memmedova",
-    "achCompleted": "Yutuq ochildi"
+    "achCompleted": "Yutuq ochildi",
+    "qAuto": "Avto",
+    "devAuto": "Avto",
+    "memSave": "Xotirani kamaytirish",
+    "memSaveNote": "Xotirasi kam qurilmalar va efir uchun: faqat ochiq boʻlim fayllari xotirada qoladi (3D quti, boshqa xaritalar, rol animatsiyasi oʻchiriladi)."
   },
   "lobby": {
     "kicker": "Bunker lobbisi",

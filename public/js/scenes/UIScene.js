@@ -5,7 +5,7 @@
 // tüm konumlar/boyutlar ekranın CSS pikseliyle yazılır (16px = telefonda 16px).
 // Yazılar resolution: RES.k ile çizilir ki bulanık olmasın.
 // GameScene her karede registry 'hud' = { action, ready, cooldown, tunnel } yazar.
-import { isMobile } from '../systems/Device.js';
+import { isMobile, isMobileHw, onInputMode } from '../systems/Device.js';
 import { gameSettings } from '../ui/GameSettings.js';
 import { i18n } from '../systems/I18n.js';
 import { Joystick } from '../systems/Joystick.js';
@@ -60,14 +60,16 @@ export class UIScene extends Phaser.Scene {
     this.emoBtn.on('pointerdown', (pointer, lx, ly, event) => event.stopPropagation());
     this.emoBtn.on('pointerup', () => { const g = this.gameScene(); if (g && g.toggleEmoteMenu) g.toggleEmoteMenu(); });
 
-    // Joystick sadece dokunmatik cihazda (veya adres sonuna ?joystick=1 yazılırsa)
-    const touch = isMobile() || /[?&]joystick=1/.test(location.search);   // oyuncunun seçtiği cihaz
+    // Joystick HER cihazda hazır: parmakla dokunulunca açılır, klavye/fare de aynı anda çalışır.
+    // Ekran düzeni (tam ekran / joystik resetle butonları, yardım yazısı) son kullanılan girdiye göre
+    // kendiliğinden değişir: dokunuş = mobil, WASD/fare = PC (systems/Device.js)
+    const touch = isMobile() || /[?&]joystick=1/.test(location.search);
     this.isTouch = touch;
-    this.joystick = new Joystick(this, { enabled: touch });
+    this.joystick = new Joystick(this, { enabled: true });
     this.input.addPointer(2); // en fazla 3 parmak (joystick + aksiyon)
 
     this.fsBtn = null;
-    if (touch && this.sys.game.device.fullscreen.available) {
+    if (this.sys.game.device.fullscreen.available) {
       this.fsBtn = this.add.text(0, small ? 88 : 104, ' ', { ...style, fontSize: '22px', backgroundColor: 'rgba(29,58,29,0.9)', padding: { left: 30, right: 6, top: 4, bottom: 4 } })
         .setOrigin(1, 0).setInteractive();
       this.fsBtn.on('pointerdown', (pointer, lx, ly, event) => event.stopPropagation());
@@ -78,7 +80,7 @@ export class UIScene extends Phaser.Scene {
 
     // Mobil: küçük "Joystik resetle" butonu (joystick takılırsa basılır)
     this.joyResetBtn = null;
-    if (touch) {
+    {
       this.joyResetBtn = this.add.text(0, small ? 126 : 146, '', { ...style, fontSize: '12px', strokeThickness: 0, backgroundColor: 'rgba(40,60,90,0.85)', padding: { left: 28, right: 8, top: 5, bottom: 5 } })
         .setOrigin(1, 0).setInteractive().setDepth(600);
       this.joyResetBtn.on('pointerdown', (pointer, lx, ly, event) => event.stopPropagation());
@@ -86,7 +88,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     // Sağ alt: aksiyon butonları (Öldür / Vur) ve Tünel
-    const R = (small ? 46 : 54) * (isMobile() ? 1.2 : 1) * getButtonScale();   // mobilde büyük butonlar; Ayarlar > Buton yerleri'nden boyut
+    const R = (small ? 46 : 54) * (isMobileHw() ? 1.2 : 1) * getButtonScale();   // mobilde büyük butonlar; Ayarlar > Buton yerleri'nden boyut
     this.actionBtn = this.makeRoundButton(R, () => this.gameScene().doAction());
     this.tunnelBtn = this.makeRoundButton(R * 0.78, () => this.gameScene().useTunnel());
     this.useBtn = this.makeRoundButton(R * 0.78, () => this.gameScene().interact());
@@ -130,18 +132,31 @@ export class UIScene extends Phaser.Scene {
         .map(([t, name, sz]) => ({ t, sz, img: this.add.image(0, 0, 'ic_' + name).setDisplaySize(sz, sz).setDepth((t.depth || 0) + 1) }));
       this.placeHudIcons();
     });
+    this.applyInputMode(touch);
+    this.offMode = onInputMode((m) => { if (this.sys && this.sys.isActive()) this.applyInputMode(m === 'mobile'); });
     this.layout();
     this.scale.on('resize', this.layout, this);
     this.refreshTexts();
     i18n.onChange(this.refreshTexts = this.refreshTexts.bind(this));
     this.events.once('shutdown', () => {
       i18n.offChange(this.refreshTexts);
+      if (this.offMode) this.offMode();
       this.scale.off('resize', this.layout, this);
       this.game.events.off('toast', this.onToast);
     });
   }
 
   gameScene() { return this.scene.get('GameScene'); }
+
+  // Kontrol düzeni: mobilde tam ekran + joystik resetle butonları ve dokunmatik yardım yazısı
+  applyInputMode(touch) {
+    this.isTouch = touch;
+    if (this.fsBtn) this.fsBtn.setVisible(touch);
+    if (this.joyResetBtn) this.joyResetBtn.setVisible(touch);
+    if (!touch && this.joystick) this.joystick.reset();
+    if (this.help) this.help.setText(touch ? i18n.t('ui.controlsMobile') : i18n.t('ui.controlsPc'));
+    if (this.lobbyBtn) { this.layout(); this.placeHudIcons(); }
+  }
 
   // Joystik resetle: joystick, basılı tuşlar ve hareket kilidi sıfırlanır
   resetControls() {
@@ -352,8 +367,8 @@ export class UIScene extends Phaser.Scene {
     this.lobbyBtn.setPosition(W - 16, topY);
     this.emoBtn.setPosition(W - 16 - this.lobbyBtn.width - 8, topY);
     topY += this.lobbyBtn.height + 8;
-    if (this.fsBtn) { this.fsBtn.setPosition(W - 16, topY); topY += this.fsBtn.height + 6; }
-    if (this.joyResetBtn) { this.joyResetBtn.setPosition(W - 16, topY); }
+    if (this.fsBtn && this.fsBtn.visible) { this.fsBtn.setPosition(W - 16, topY); topY += this.fsBtn.height + 6; }
+    if (this.joyResetBtn && this.joyResetBtn.visible) { this.joyResetBtn.setPosition(W - 16, topY); }
     const a = this.actionBtn, t = this.tunnelBtn;
     a.setPosition(W - 24 - a.r, H - 24 - a.r);
     t.setPosition(a.x - a.r - 18 - t.r, H - 24 - t.r);

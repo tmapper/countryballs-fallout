@@ -2046,3 +2046,12 @@ body.dev-mobile .mm-item { padding-top: 9px; padding-bottom: 9px; }
 /* Arapça: sayfa düzeni aynı, metinler kendi yönünde (sağdan sola) akar */
 html[data-dir="rtl"] body :is(p, span, b, small, em, label, h1, h2, h3, li, a, div, button, input, textarea) { unicode-bidi: plaintext; }
 html[data-dir="rtl"] body :is(input, textarea) { direction: rtl; }
+
+/* Grafik: her seviyenin FPS sınırı butonun altında küçük yazı */
+.gs-seg button small { display: block; font-size: 10px; font-weight: 700; opacity: .72; margin-top: 1px; letter-spacing: .2px; }
+.gs-seg.gs-q button { padding: 6px 9px; line-height: 1.15; }
+
+/* Belleği küçült: lobiye girerken oyun dosyaları yüklenirken */
+.ga-loading { position: fixed; inset: 0; z-index: 9000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: rgba(5,10,7,.82); color: #d8f5df; font: 800 16px system-ui; }
+.ga-spin { width: 42px; height: 42px; border: 4px solid #2a4a34; border-top-color: #6be38a; border-radius: 50%; animation: gaspin .8s linear infinite; }
+@keyframes gaspin { to { transform: rotate(360deg); } }

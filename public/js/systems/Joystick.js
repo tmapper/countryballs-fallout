@@ -10,8 +10,11 @@ import { RES } from './Resolution.js';
 
 export class Joystick {
   // camera: koordinatların okunacağı kamera (varsayılan: sahnenin ana kamerası)
-  constructor(scene, { radius = 70, enabled = true, camera = null } = {}) {
+  // touchOnly: sadece parmakla açılır (fare tıklaması joystick açmaz). Joystick her cihazda hazır bekler:
+  // dokunmatik ekranlı bilgisayarda da, klavye takılı telefonda da iki kontrol birlikte çalışır.
+  constructor(scene, { radius = 70, enabled = true, camera = null, touchOnly = !/[?&]joystick=1/.test(location.search) } = {}) {
     this.scene = scene;
+    this.touchOnly = touchOnly;
     this.camera = camera;
     this.radius = radius;
     this.enabled = enabled;
@@ -37,6 +40,7 @@ export class Joystick {
 
   onDown(pointer) {
     if (!this.enabled) return;
+    if (this.touchOnly && !pointer.wasTouch && !(pointer.event && /touch|pen/.test(pointer.event.pointerType || pointer.event.type || ''))) return;
     const p = this.pos(pointer);
     // Sadece ekranın sol yarısı joystick alanı
     if (p.x > RES.cssW * 0.5) return;

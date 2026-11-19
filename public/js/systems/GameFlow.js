@@ -15,7 +15,10 @@ import { RoleReveal } from '../ui/RoleReveal.js';
 import { KillCutscene, preloadKills } from '../ui/KillCutscene.js';
 import { ResultScreen } from '../ui/ResultScreen.js';
 import { assignRoles } from './Roles.js';
-import { initSkins, requestSkins, flushSkins, wantSkin } from './CharacterAtlas.js';
+import { initSkins, requestSkins, flushSkins, wantSkin, pruneSkins } from './CharacterAtlas.js';
+import { enterPhase, whenLeaving } from './MemSaver.js';
+import { gameAssetsReady, withGameAssets, unloadGameAssets } from './GameAssets.js';
+import { dropMapTextures } from '../map/MapRenderer.js';
 import { playMusic, stopMusic, stopAllLoops, sfx } from './Sound.js';
 import { teamOf } from './Combat.js';
 import { MainMenu } from '../ui/MainMenu.js';
@@ -47,6 +50,12 @@ const isRunning = (key) => game.scene.isActive(key) || game.scene.isSleeping(key
 export function initFlow(phaserGame) {
   game = phaserGame;
   initSkins(game);
+  // Belleği küçült (MemSaver.js): bir bölümden çıkınca o bölümün dosyaları bellekten atılır
+  const T = () => game.textures;
+  whenLeaving('skins', ['lobby', 'game'], () => pruneSkins({ textures: T(), anims: game.anims }, []));
+  whenLeaving('gameAssets', ['lobby', 'game'], () => unloadGameAssets());
+  whenLeaving('mapTex', ['lobby', 'game'], () => dropMapTextures(T(), null));
+  whenLeaving('lobbyTex', ['lobby'], () => ['lobbygrass', 'lobbydoor', 'lobbypad', 'lobbytree'].forEach((k) => { if (T().exists(k)) T().remove(k); }));
   game.events.on('lobby-zone', (z) => lobby.setStartReady(z));
   game.events.on('lobby-flag-zone', (z) => { lobby.setFlagReady(z); roomHud.setFlagReady(z); });
   game.events.on('lobby-hat-zone', (z) => { lobby.setHatReady(z); roomHud.setHatReady(z); });
@@ -160,9 +169,11 @@ export function showMainMenu() {
     onCreate: () => showBrowser(true),
     onSolo: () => { mode = 'offline'; menu.hide(); showLobby(); }
   });
+  enterPhase('menu');
 }
 
 function showBrowser(create) {
+  enterPhase('menu');
   menu.hide();
   roomHud.hide(); lobbyChat.hide();
   browser.show({ onBack: () => { browser.hide(); showMainMenu(); }, createFocus: create });
@@ -171,6 +182,7 @@ function showBrowser(create) {
 // ---------------- Çevrimiçi oda (yürünen lobi + oda arayüzü) ----------------
 function enterRoom() {
   if (!net.room) return;
+  if (!gameAssetsReady()) { withGameAssets(enterRoom); return; }   // belleği küçült: oyun dosyaları şimdi yüklenir
   mode = 'online';
   match = null;
   menu.hide(); browser.hide(); lobby.hide(); result.hide();
@@ -184,6 +196,7 @@ function enterRoom() {
   roomHud.show({ onLeave: leaveRoom, onStart: hostStart, onFlag: openLobbyFlagPicker, onHat: openLobbyHatPicker, onInvite: () => social.openInvite() });
   lobbyChat.show();
   ensureFreeFlag();
+  enterPhase('lobby');
 }
 
 function leaveRoom() {
@@ -229,6 +242,7 @@ function startOnline(setup) {
 
 // Yürünen lobi odası (LobbyScene) + üstündeki HTML butonlar
 export function showLobby() {
+  if (!gameAssetsReady()) { withGameAssets(showLobby); return; }   // belleği küçült: oyun dosyaları şimdi yüklenir
   mode = 'offline';
   menu.hide();
   if (isRunning('BootScene')) game.scene.stop('BootScene');
@@ -238,6 +252,7 @@ export function showLobby() {
   stopAllLoops();
   playMusic('music_lobby');
   game.scene.start('LobbyScene', lobby.state());
+  enterPhase('lobby');
 }
 
 // Lobi sahnesinde başlat bölgesindeyken E / buton: ayarlarla maçı başlat
@@ -295,6 +310,7 @@ export function startMatch(settings) {
 
 // players: [{ id, flag, role, me, name, bot }]   netMode: 'offline' | 'host' | 'client'
 function startWith(players, netMode, cfg = null) {
+  if (!gameAssetsReady()) { withGameAssets(() => startWith(players, netMode, cfg)); return; }
   net.lastReward = null;
   result.hide();
   cutscene.stop();
@@ -312,6 +328,7 @@ function startWith(players, netMode, cfg = null) {
   reveal.play(me.role, me.flag, () => enterGame(m));   // sesler videoya senkron (RoleReveal.js)
   // Video yüklenirken (ilk siyah kısım) oyunu arkada kur
   setTimeout(() => buildGame(m), 120);
+  enterPhase('game');
 }
 
 export function backToLobby() {

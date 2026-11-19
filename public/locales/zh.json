@@ -54,16 +54,20 @@
     "perfHigh": "高",
     "perfBal": "平衡",
     "perfSaver": "省电",
-    "perfNote": "如果游戏卡顿，请选择平衡或省电。帧率永远不受限制。",
+    "perfNote": "如果游戏卡顿，请降低画质：低画质也会限制帧率，设备发热更少。“自动”会根据你的设备选择。",
     "showFps": "显示 FPS",
     "fullscreen": "全屏",
     "resume": "继续",
     "autoLow": "设备较慢：画质已自动调为低（可在设置中修改）",
-    "device": "设备（下一局）",
+    "device": "操作方式",
     "tunnelHint": "在隧道中：用方向键 / 摇杆跳到另一个隧道，按退出离开",
     "specialThanks": "特别感谢",
     "credits": "制作- doors4131 和 Turk Mapper\n发行- Turk Mapper\n特别感谢- Fiex, Turan123, Alexander, Teknonistan\n美术- Deniz Memmedova",
-    "achCompleted": "成就解锁"
+    "achCompleted": "成就解锁",
+    "qAuto": "自动",
+    "devAuto": "自动",
+    "memSave": "减少内存",
+    "memSaveNote": "适用于内存较小的设备和直播：只保留当前界面的文件（3D箱子、其他地图、角色动画会被释放）。"
   },
   "lobby": {
     "kicker": "避难所大厅",

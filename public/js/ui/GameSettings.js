@@ -6,9 +6,10 @@
 import { exitGame } from '../systems/ExitGame.js';
 import { i18n, LANGS } from '../systems/I18n.js';
 import { getVolumes, setMusicVolume, setSfxVolume, isMuted, toggleMute, sfx } from '../systems/Sound.js';
-import { getQuality, setQuality } from '../systems/Resolution.js';
+import { getQuality, setQuality, getQualityPref, fpsCap } from '../systems/Resolution.js';
 import { releaseGameKeys } from './Chat.js';
-import { setDevice, isMobile } from '../systems/Device.js';
+import { setDevice, getDevicePref } from '../systems/Device.js';
+import { isMemSave, setMemSave } from '../systems/MemSaver.js';
 import { perfHud } from '../systems/PerfHud.js';
 import { getPerf, setPerf } from '../systems/Perf.js';
 import { keyBindPanel, buttonEditor } from './Controls.js';
@@ -26,11 +27,13 @@ class GameSettings {
       <label class="gs-row"><span data-t="ui.sfxVol"></span><input class="gs-sfx" type="range" min="0" max="100"><b class="gs-sv"></b></label>
       <div class="gs-row"><span data-t="ui.mute"></span><button class="gs-tog gs-mute" type="button"></button></div>
       <div class="gs-row"><span data-t="ui.language"></span><div class="gs-seg gs-lang">${LANGS.map(([c, n]) => `<button type="button" data-v="${c}" dir="auto">${n}</button>`).join('')}</div></div>
-      <div class="gs-row"><span data-t="ui.quality"></span><div class="gs-seg gs-q"><button type="button" data-v="high" data-t="ui.qHigh"></button><button type="button" data-v="med" data-t="ui.qMed"></button><button type="button" data-v="low" data-t="ui.qLow"></button></div></div>
+      <div class="gs-row"><span data-t="ui.quality"></span><div class="gs-seg gs-q"><button type="button" data-v="auto"></button><button type="button" data-v="high"></button><button type="button" data-v="med"></button><button type="button" data-v="low"></button></div></div>
       <div class="gs-row"><span data-t="ui.perf"></span><div class="gs-seg gs-perf"><button type="button" data-v="high" data-t="ui.perfHigh"></button><button type="button" data-v="balanced" data-t="ui.perfBal"></button><button type="button" data-v="saver" data-t="ui.perfSaver"></button></div></div>
       <div class="gs-row gs-perfnote"><small data-t="ui.perfNote"></small></div>
+      <div class="gs-row"><span data-t="ui.memSave"></span><button class="gs-tog gs-mem" type="button"></button></div>
+      <div class="gs-row gs-perfnote"><small data-t="ui.memSaveNote"></small></div>
       <div class="gs-row"><span data-t="ui.showFps"></span><button class="gs-tog gs-fps" type="button"></button></div>
-      <div class="gs-row"><span data-t="ui.device"></span><div class="gs-seg gs-dev"><button type="button" data-v="mobile">Mobil</button><button type="button" data-v="pc">PC</button></div></div>
+      <div class="gs-row"><span data-t="ui.device"></span><div class="gs-seg gs-dev"><button type="button" data-v="auto" data-t="ui.devAuto"></button><button type="button" data-v="mobile">Mobil</button><button type="button" data-v="pc">PC</button></div></div>
       <div class="gs-row"><span data-t="controls.title"></span><div class="gs-seg gs-ctl"><button type="button" class="gs-keys" data-t="controls.keysBtn"></button><button type="button" class="gs-layout" data-t="controls.layoutBtn"></button></div></div>
       <div class="gs-row gs-redeemrow"><span data-t="menu.redeem"></span><div class="gs-redeem"><input class="gs-code" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done"><button type="button" class="gs-tog gs-code-go" data-t="menu.redeemGo"></button></div></div>
       <div class="gs-row gs-codemsg hidden"><small></small></div>
@@ -49,6 +52,7 @@ class GameSettings {
     q('.gs-sfx').addEventListener('input', (e) => { setSfxVolume(e.target.value / 100); this.render(); });
     q('.gs-sfx').addEventListener('change', () => sfx('ui_click'));
     q('.gs-mute').addEventListener('click', () => { toggleMute(); this.render(); });
+    q('.gs-mem').addEventListener('click', () => { setMemSave(!isMemSave()); this.render(); });
     q('.gs-fps').addEventListener('click', () => { perfHud.setEnabled(!perfHud.enabled); this.render(); });
     r.querySelectorAll('.gs-lang button').forEach((b) => b.addEventListener('click', () => { i18n.setLanguage(b.dataset.v).then(() => this.render()); }));
     r.querySelectorAll('.gs-q button').forEach((b) => b.addEventListener('click', () => { setQuality(b.dataset.v); this.render(); }));
@@ -129,10 +133,20 @@ class GameSettings {
     const m = isMuted();
     q('.gs-mute').textContent = i18n.t(m ? 'ui.on' : 'ui.off'); q('.gs-mute').classList.toggle('on', m);
     r.querySelectorAll('.gs-lang button').forEach((b) => b.classList.toggle('on', b.dataset.v === i18n.lang));
-    r.querySelectorAll('.gs-q button').forEach((b) => b.classList.toggle('on', b.dataset.v === getQuality()));
+    // Grafik: Otomatik (cihaza göre) + her seviyenin FPS sınırı butonun altında
+    const QK = { high: 'ui.qHigh', med: 'ui.qMed', low: 'ui.qLow' };
+    const qp = getQualityPref(), cur = getQuality();
+    r.querySelectorAll('.gs-q button').forEach((b) => {
+      const v = b.dataset.v;
+      b.innerHTML = v === 'auto'
+        ? `${i18n.t('ui.qAuto')}<small>${i18n.t(QK[cur]).replace(/\s*\(.*\)$/, '')} · ${fpsCap(cur)} FPS</small>`
+        : `${i18n.t(QK[v])}<small>${fpsCap(v)} FPS</small>`;
+      b.classList.toggle('on', v === qp);
+    });
     r.querySelectorAll('.gs-perf button').forEach((b) => b.classList.toggle('on', b.dataset.v === getPerf()));
+    q('.gs-mem').textContent = i18n.t(isMemSave() ? 'ui.on' : 'ui.off'); q('.gs-mem').classList.toggle('on', isMemSave());
     q('.gs-fps').textContent = i18n.t(perfHud.enabled ? 'ui.on' : 'ui.off'); q('.gs-fps').classList.toggle('on', perfHud.enabled);
-    r.querySelectorAll('.gs-dev button').forEach((b) => b.classList.toggle('on', b.dataset.v === (isMobile() ? 'mobile' : 'pc')));
+    r.querySelectorAll('.gs-dev button').forEach((b) => b.classList.toggle('on', b.dataset.v === getDevicePref()));
     q('.gs-dev [data-v="mobile"]').textContent = i18n.lang === 'en' ? 'Mobile' : 'Mobil';
     const fs = !!document.fullscreenElement;
     q('.gs-fsrow').classList.toggle('hidden', !document.fullscreenEnabled);

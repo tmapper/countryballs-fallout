@@ -5,7 +5,7 @@ import { i18n } from '../systems/I18n.js';
 import { ACTIONS, getBinds, setBind, resetBinds, captureNext, cancelCapture, keyLabel } from '../systems/Keys.js';
 import { BUTTON_IDS, getButtonPos, getButtonScale, saveLayout, resetLayout, defaultPositions } from '../systems/ButtonLayout.js';
 import { RES } from '../systems/Resolution.js';
-import { isMobile } from '../systems/Device.js';
+import { isMobileHw } from '../systems/Device.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -73,7 +73,7 @@ class ButtonEditor {
     if (!this.escWired) { this.escWired = true; window.addEventListener('keydown', (e) => { if (this.isOpen && e.key === 'Escape') { e.stopPropagation(); this.close(); } }, true); }
     const W = window.innerWidth, H = window.innerHeight;
     const small = Math.min(RES.cssW || W, RES.cssH || H) < 520;
-    const R = (small ? 46 : 54) * (isMobile() ? 1.2 : 1) * this.scale;
+    const R = (small ? 46 : 54) * (isMobileHw() ? 1.2 : 1) * this.scale;
     const def = defaultPositions(W, H, R);
     const ICON = { action: '🔪', tunnel: '🕳', use: '✋', report: '📢', sabotage: '☢' };
     this.root.innerHTML = `<div class="btned-bar">

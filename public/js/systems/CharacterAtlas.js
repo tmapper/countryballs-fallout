@@ -39,6 +39,17 @@ export async function loadCharacters() {
   }));
 }
 
+// Belleği küçült: menüdeyken karakter kare resimlerini bırak (lobiye girerken yeniden yüklenir)
+export function unloadCharacters() {
+  queue.length = 0;
+  Object.keys(baked).forEach((k) => {
+    const L = baked[k].layers || {};
+    Object.values(L).forEach((im) => { try { im.src = ''; } catch (e) { /* yoksay */ } });
+    delete baked[k];
+  });
+}
+export const charactersLoaded = () => Object.keys(baked).length > 0;
+
 // Doku/animasyon anahtarı: "walk_r:TR" gibi
 export const skinKey = (skin, flag) => `${skin}:${flag}`;
 

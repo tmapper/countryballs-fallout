@@ -11,6 +11,7 @@ import { loadPropImages } from '../map/PropImages.js';
 import { loadFlagImages } from '../systems/Flags.js';
 import { RES } from '../systems/Resolution.js';
 import { preloadSfx } from '../systems/Sound.js';
+import { isMemSave } from '../systems/MemSaver.js';
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('BootScene'); }
@@ -33,6 +34,8 @@ export class BootScene extends Phaser.Scene {
         const ver = document.querySelector('#cfs-loader .ld-ver');                 // sürüm tek yerden (dil dosyası)
         if (ver) ver.textContent = 'BUNKER-07 · ' + i18n.t('menu.version');
         step(15, 'loader.chars');
+        // Belleği küçült: menüde sadece menünün dosyaları; lobi/maç dosyaları lobiye girerken (GameAssets.js)
+        if (isMemSave()) return track(loadFlagImages().catch(() => {}), 92, 'loader.flags');
         // Tüm varlıklar girişte yüklensin — oyunda kasma/donma olmasın
         return Promise.all([
           track(loadCharacters(), 45, 'loader.cinematics'),

@@ -54,16 +54,20 @@
     "perfHigh": "Yüksek",
     "perfBal": "Dengeli",
     "perfSaver": "Pil tasarrufu",
-    "perfNote": "Kasma olursa Dengeli ya da Pil tasarrufu seç. FPS hiçbir modda sınırlanmaz.",
+    "perfNote": "Kasma olursa Grafik'i düşür: düşük grafik FPS'i de sınırlar, cihaz daha az ısınır. Otomatik, cihazına göre seçer.",
     "showFps": "FPS göster",
     "fullscreen": "Tam ekran",
     "resume": "DEVAM ET",
     "autoLow": "Cihaz yavaş: grafik otomatik olarak Düşük yapıldı (Ayarlar'dan değiştirilebilir)",
-    "device": "Cihaz (sonraki maçta)",
+    "device": "Kontrol düzeni",
     "tunnelHint": "Tünelde: yön tuşları / joystick ile başka tünele geç, ÇIK ile dışarı çık",
     "specialThanks": "Özel Teşekkürler",
     "credits": "Yapımcı- doors4131 ve Turk Mapper\nYayıncı- Turk Mapper\nÖzel Teşekkürler- Fiex, Turan123, Alexander, Teknonistan\nÇizer- Deniz Memmedova",
-    "achCompleted": "Başarım Tamamlandı"
+    "achCompleted": "Başarım Tamamlandı",
+    "qAuto": "Otomatik",
+    "devAuto": "Otomatik",
+    "memSave": "Belleği küçült",
+    "memSaveNote": "Az bellekli cihazlar ve yayın için: sadece açık olan bölümün dosyaları bellekte tutulur (kasa 3D, eski haritalar, rol animasyonu silinir)."
   },
   "lobby": {
     "kicker": "Sığınak Lobisi",

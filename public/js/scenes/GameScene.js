@@ -15,7 +15,7 @@ import { FogOfWar } from '../systems/FogOfWar.js';
 import { CountryBall, SPEED } from '../entities/CountryBall.js';
 import { BotBrain, navFrameStart, warmNav } from '../systems/BotBrain.js';
 import { ROLE_COLORS, impCount } from '../systems/Roles.js';
-import { RES, getQuality, setQuality } from '../systems/Resolution.js';
+import { RES, getQuality, setQuality, fpsCap } from '../systems/Resolution.js';
 import { perf, getPerf, setPerf } from '../systems/Perf.js';
 import { onAction } from '../systems/Keys.js';
 import { backToLobby, playKillCutscene, gameOver } from '../systems/GameFlow.js';
@@ -880,7 +880,8 @@ export class GameScene extends Phaser.Scene {
     });
     // Otomatik kalite: sürekli düşük FPS'te kademeli düşür (oturumluk, kayıtlı ayar bozulmaz)
     const fps = this.game.loop.actualFps;
-    this.fpsLow = fps < 28 ? this.fpsLow + 0.16 : Math.max(0, this.fpsLow - 0.32);
+    const lowAt = Math.min(28, fpsCap() * 0.7);   // 30 FPS sınırında 21 altı yavaş sayılır
+    this.fpsLow = fps < lowAt ? this.fpsLow + 0.16 : Math.max(0, this.fpsLow - 0.32);
     if (this.fpsLow > 6 && !this.autoLowDone) {
       this.autoLowDone = true;
       const q = getQuality();

@@ -5,13 +5,13 @@ import { BootScene } from './scenes/BootScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { UIScene } from './scenes/UIScene.js';
 import { LobbyScene } from './scenes/LobbyScene.js';
-import { RES, measure, gameSize, attachResolution, getQuality } from './systems/Resolution.js';
+import { RES, measure, gameSize, attachResolution, getQuality, fpsCap } from './systems/Resolution.js';
 import { initFlow } from './systems/GameFlow.js';
 import { setChatGame } from './ui/Chat.js';
 import { runStartPrompts } from './ui/StartPrompts.js';
 import { net } from './systems/Net.js';
 import { initFit } from './systems/FitScreen.js';
-import { isMobile } from './systems/Device.js';
+import { isMobileHw } from './systems/Device.js';
 import { attachPerf } from './systems/Perf.js';
 
 // iOS: iki parmakla yakınlaştırmayı engelle
@@ -19,7 +19,7 @@ document.addEventListener('gesturestart', (e) => e.preventDefault());
 
 measure();
 const size = gameSize();
-const lowGfx = getQuality() === 'low' || isMobile();
+const lowGfx = getQuality() === 'low' || isMobileHw();
 
 const config = {
   type: Phaser.AUTO,            // WebGL varsa onu, yoksa Canvas kullan
@@ -39,16 +39,16 @@ const config = {
     powerPreference: lowGfx ? 'low-power' : 'high-performance',
     batchSize: lowGfx ? 2048 : 4096
   },
-  // Gerçek kare süresi; mobilde hedef 30 FPS (pil + akıcılık dengesi)
-  // Kare hızı SINIRLANMAZ: ekran ne kadar verirse (60/120 Hz). Düşük grafik çözünürlüğü düşürür, akıcılığı değil.
-  fps: { smoothStep: false, target: 60 },
+  // Kare hızı sınırı grafik kalitesine bağlı (Resolution.js FPS_CAPS; Perf.js değişince uygular)
+  // Telefon/tablet: Yüksek 120 · Orta 60 · Düşük 30 — Bilgisayar: Yüksek 240 · Orta 120 · Düşük 60
+  fps: { smoothStep: false, target: 60, limit: fpsCap() },
   input: { activePointers: 3 },
   scene: [BootScene, LobbyScene, GameScene, UIScene]
 };
 
 const game = new Phaser.Game(config);
 attachResolution(game);
-attachPerf(game);   // performans modu (Ayarlar > Performans); FPS sınırı yok
+attachPerf(game);   // performans modu + grafik kalitesine göre FPS sınırı
 initFlow(game);
 
 setChatGame(game);

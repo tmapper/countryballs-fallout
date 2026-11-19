@@ -10,7 +10,7 @@
 // RES.cssW / RES.cssH : ekranın CSS boyutu (arayüz yerleşimi bununla yapılır)
 // RES.k               : CSS pikseli başına çizilen piksel
 
-import { isMobile } from './Device.js';
+import { isMobileHw, detectTier } from './Device.js';
 import { isTyping, onTypingEnd } from './Typing.js';
 export const MIN_LONG_SIDE = 1920;
 export const MAX_LONG_SIDE = 1920;   // 1080p: net ve akıcı (2K çok kasıyordu)
@@ -18,19 +18,36 @@ export const MAX_K = 3;
 
 export const RES = { k: 1, cssW: 800, cssH: 600 };
 // Grafik kalitesi: 'high' = 1080p, 'med' = 900p, 'low' = 720p (zayıf cihazlar). Ana menü ve oyun içi Ayarlar'dan.
+// Oyuncu seçmediyse ("Otomatik") cihazın gücüne göre seçilir (Device.js detectTier).
+// Her kalitenin bir FPS sınırı vardır (cihaz türüne göre):
+//   Telefon/tablet : Yüksek 120 · Orta 60  · Düşük 30
+//   Bilgisayar     : Yüksek 240 · Orta 120 · Düşük 60
 const Q_KEY = 'cfs.quality';
-let quality = 'high';
-try {
-  const q = localStorage.getItem(Q_KEY);
-  // Telefonda (ayar yapılmadıysa) Düşük ile başla: daha az kasar, pil daha az ısınır
-  if (q === 'low' || q === 'med') quality = q;
-  else if (!q && isMobile()) quality = 'low';
-} catch (e) { /* yoksay */ }
-export const getQuality = () => quality;
+export const FPS_CAPS = { mobile: { high: 120, med: 60, low: 30 }, pc: { high: 240, med: 120, low: 60 } };
+export const fpsCap = (q) => FPS_CAPS[isMobileHw() ? 'mobile' : 'pc'][q || getQuality()] || 60;
+let saved = null;
+try { const q = localStorage.getItem(Q_KEY); if (q === 'high' || q === 'med' || q === 'low') saved = q; } catch (e) { /* yoksay */ }
+let quality = saved || 'high';
+let tierDone = !!saved;
+export const getQuality = () => {
+  // Otomatik: güç ölçümü (WebGL bilgisi) ilk sorulduğunda bir kez yapılır
+  if (!tierDone) { tierDone = true; quality = detectTier(); }
+  return quality;
+};
+export const getQualityPref = () => saved || 'auto';
+const qListeners = new Set();
+export const onQualityChange = (fn) => { qListeners.add(fn); return () => qListeners.delete(fn); };
 // persist = false: sadece bu oturum (otomatik düşürme oyuncunun kayıtlı seçimini ezmesin)
+// q = 'auto': kayıtlı seçimi sil, cihaza göre seç
 export function setQuality(q, persist = true) {
-  quality = q === 'low' || q === 'med' ? q : 'high';
-  if (persist) try { localStorage.setItem(Q_KEY, quality); } catch (e) { /* yoksay */ }
+  if (q === 'auto') {
+    saved = null; tierDone = true; quality = detectTier();
+    try { localStorage.removeItem(Q_KEY); } catch (e) { /* yoksay */ }
+  } else {
+    quality = q === 'low' || q === 'med' ? q : 'high';
+    if (persist) { saved = quality; try { localStorage.setItem(Q_KEY, quality); } catch (e) { /* yoksay */ } }
+  }
+  qListeners.forEach((fn) => { try { fn(quality); } catch (e) { /* yoksay */ } });
   window.dispatchEvent(new Event('resize'));
 }
 
@@ -52,9 +69,9 @@ export function measure() {
   const long = Math.max(RES.cssW, RES.cssH);
   const phys = long * Math.min(3, window.devicePixelRatio || 1);
   // Telefon/tablette 1080p yeter (pil ve ısınma)
-  const mobile = isMobile();
+  const mobile = isMobileHw();
   let target = Math.max(MIN_LONG_SIDE, Math.min(mobile ? MIN_LONG_SIDE : MAX_LONG_SIDE, phys));
-  if (quality === 'low') target = 1280;
+  if (getQuality() === 'low') target = 1280;
   else if (quality === 'med') target = Math.min(target, 1600);
   RES.k = Math.min(MAX_K, target / long);
   return RES;

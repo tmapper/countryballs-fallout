@@ -7,7 +7,6 @@
 // Ayar/bayrak/başlat butonları HTML'de (ui/Lobby.js). Lobi değişince
 // GameFlow -> applyState(state) çağırır.
 // Kamera: dünya kamerası + arayüz kamerası (joystick için, CSS pikseli koordinat).
-import { isMobile } from '../systems/Device.js';
 import { tiled } from '../systems/Tiled.js';
 import { i18n } from '../systems/I18n.js';
 import { InputController } from '../systems/InputController.js';
@@ -112,8 +111,8 @@ export class LobbyScene extends Phaser.Scene {
 
     // Arayüz kamerası (joystick): CSS pikseli koordinat
     this.uiCam = this.cameras.add(0, 0, this.scale.width, this.scale.height).setOrigin(0, 0).setZoom(RES.k);
-    const touch = isMobile() || /[?&]joystick=1/.test(location.search);   // oyuncunun seçtiği cihaz
-    this.joystick = new Joystick(this, { enabled: touch, camera: this.uiCam });
+    // Joystick hep hazır: ekrana dokunulunca açılır (fare tıklaması açmaz), klavye de aynı anda çalışır
+    this.joystick = new Joystick(this, { enabled: true, camera: this.uiCam });
     this.uiObjects.push(this.joystick.base, this.joystick.thumb);
     this.input.addPointer(2);
     this.controls.joystick = this.joystick;

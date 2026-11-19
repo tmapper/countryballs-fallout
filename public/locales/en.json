@@ -54,16 +54,20 @@
     "perfHigh": "High",
     "perfBal": "Balanced",
     "perfSaver": "Battery saver",
-    "perfNote": "If the game stutters pick Balanced or Battery saver. FPS is never capped.",
+    "perfNote": "If the game stutters, lower Graphics: lower settings also cap FPS so the device runs cooler. Auto picks based on your device.",
     "showFps": "Show FPS",
     "fullscreen": "Fullscreen",
     "resume": "RESUME",
     "autoLow": "Slow device: graphics set to Low automatically (change in Settings)",
-    "device": "Device (next match)",
+    "device": "Control layout",
     "tunnelHint": "In tunnel: use arrows / joystick to hop to another tunnel, EXIT to leave",
     "specialThanks": "Special Thanks",
     "credits": "Creator- doors4131 and Turk Mapper\nPublisher- Turk Mapper\nSpecial Thanks- Fiex, Turan123, Alexander, Teknonistan\nArtist- Deniz Memmedova",
-    "achCompleted": "Achievement Unlocked"
+    "achCompleted": "Achievement Unlocked",
+    "qAuto": "Auto",
+    "devAuto": "Auto",
+    "memSave": "Reduce memory",
+    "memSaveNote": "For low-memory devices and streaming: only the open section's files stay in memory (3D crates, other maps, role animation are freed)."
   },
   "lobby": {
     "kicker": "Bunker Lobby",

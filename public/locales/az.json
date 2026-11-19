@@ -54,16 +54,20 @@
     "perfHigh": "Yüksək",
     "perfBal": "Balanslı",
     "perfSaver": "Batareya qənaəti",
-    "perfNote": "Oyun ilişirsə Balanslı və ya Batareya qənaətini seç. FPS heç vaxt məhdudlaşdırılmır.",
+    "perfNote": "Oyun donursa Qrafikanı azalt: aşağı qrafika FPS-i də məhdudlaşdırır, cihaz az qızır. Avtomatik cihazına görə seçir.",
     "showFps": "FPS göstər",
     "fullscreen": "Tam ekran",
     "resume": "DAVAM ET",
     "autoLow": "Zəif cihaz: qrafika avtomatik Aşağı edildi (Ayarlardan dəyiş)",
-    "device": "Cihaz (növbəti oyun)",
+    "device": "İdarəetmə düzümü",
     "tunnelHint": "Tuneldəsən: başqa tunelə keçmək üçün oxlar / coystik, çıxmaq üçün ÇIXIŞ",
     "specialThanks": "Xüsusi təşəkkürlər",
     "credits": "Yaradıcı- doors4131 və Turk Mapper\nNaşir- Turk Mapper\nXüsusi təşəkkürlər- Fiex, Turan123, Alexander, Teknonistan\nRəssam- Deniz Memmedova",
-    "achCompleted": "Nailiyyət açıldı"
+    "achCompleted": "Nailiyyət açıldı",
+    "qAuto": "Avtomatik",
+    "devAuto": "Avtomatik",
+    "memSave": "Yaddaşı azalt",
+    "memSaveNote": "Az yaddaşlı cihazlar və yayım üçün: yalnız açıq bölmənin faylları yaddaşda qalır (3D qutu, digər xəritələr, rol animasiyası silinir)."
   },
   "lobby": {
     "kicker": "Sığınacaq Lobbisi",

@@ -20,7 +20,8 @@ import { openLangPicker } from './LangPicker.js';
 import { net, Net } from '../systems/Net.js';
 import { isMuted, toggleMute, sfx, setSfxVolume, setMusicVolume, getVolumes } from '../systems/Sound.js';
 import { assetUrl } from '../systems/Assets.js';
-import { getQuality, setQuality } from '../systems/Resolution.js';
+import { getQuality, setQuality, getQualityPref, fpsCap } from '../systems/Resolution.js';
+import { isMemSave } from '../systems/MemSaver.js';
 import { perfHud } from '../systems/PerfHud.js';
 import { icon, coinHtml } from './Icons.js';
 import { modPanel } from './ModPanel.js';
@@ -103,7 +104,7 @@ export class MainMenu {
         <div class="mm-row"><span data-t="menu.sfxVol">Ses efektleri</span><input type="range" class="mm-slider mm-sfx-vol" min="0" max="100" value="80"></div>
         <div class="mm-row"><span data-t="menu.musicVol">Müzik</span><input type="range" class="mm-slider mm-music-vol" min="0" max="100" value="70"></div>
         <div class="mm-row"><span data-t="menu.graphics">Grafik</span>
-          <select class="mm-select mm-graphics"><option value="high">Yüksek</option><option value="med">Orta</option><option value="low">Düşük</option></select>
+          <select class="mm-select mm-graphics"><option value="auto"></option><option value="high"></option><option value="med"></option><option value="low"></option></select>
         </div>
         <label class="mm-row"><span data-t="ui.showFps">FPS göster</span><input type="checkbox" class="mm-check mm-fps"></label>
         <label class="mm-field"><span data-t="menu.redeem">Kod</span>
@@ -138,7 +139,8 @@ export class MainMenu {
         const v = getVolumes();
         r.querySelector('.mm-sfx-vol').value = Math.round((v.sfx ?? 1) * 100);
         r.querySelector('.mm-music-vol').value = Math.round((v.music ?? 1) * 100);
-        r.querySelector('.mm-graphics').value = getQuality();
+        this.renderGraphicsOpts();
+        r.querySelector('.mm-graphics').value = getQualityPref();
         r.querySelector('.mm-fps').checked = perfHud.enabled;
       } catch (e) {}
     };
@@ -154,6 +156,7 @@ export class MainMenu {
     r.querySelector('.mm-fps').addEventListener('change', (e) => perfHud.setEnabled(e.target.checked));
     r.querySelector('.mm-graphics').addEventListener('change', () => {
       setQuality(r.querySelector('.mm-graphics').value);   // HATA DÜZELTMESİ: eskiden sadece kaydediliyor, hiçbir şeyi değiştirmiyordu
+      this.renderGraphicsOpts();
     });
     const doRedeem = () => {
       const inp = r.querySelector('.mm-redeem');
@@ -409,6 +412,20 @@ export class MainMenu {
   openModal(m) { this.closeModal(); this.root.querySelector(`.mm-modal[data-m="${m}"]`).classList.remove('hidden'); if (m === 'profile') this.renderProfile(); this.render(); }
   closeModal() { this.root.querySelectorAll('.mm-modal').forEach((x) => x.classList.add('hidden')); }
 
+  // Grafik seçenekleri: Otomatik (cihaza göre) + her seviyenin FPS sınırı
+  renderGraphicsOpts() {
+    const sel = this.root && this.root.querySelector('.mm-graphics');
+    if (!sel) return;
+    const QK = { high: 'ui.qHigh', med: 'ui.qMed', low: 'ui.qLow' };
+    const name = (q) => i18n.t(QK[q]).replace(/\s*\(.*\)$/, '');
+    const cur = getQuality();
+    sel.querySelectorAll('option').forEach((o) => {
+      const v = o.value;
+      o.textContent = v === 'auto' ? `${i18n.t('ui.qAuto')} (${name(cur)} · ${fpsCap(cur)} FPS)` : `${name(v)} · ${fpsCap(v)} FPS`;
+    });
+    sel.value = getQualityPref();
+  }
+
   render() {
     const r = this.root;
     if (!r) return;
@@ -417,6 +434,7 @@ export class MainMenu {
     r.querySelector('.mm-lang').textContent = i18n.t('ui.languageName');
     r.querySelector('.mm-set-lang').textContent = i18n.t('ui.languageName');
     r.querySelector('.mm-set-sound').textContent = i18n.t(isMuted() ? 'menu.soundOff' : 'menu.soundOn');
+    this.renderGraphicsOpts();
     r.querySelector('.mm-howto').textContent = i18n.t('menu.howtoText');
     if (!r.querySelector('[data-m="auth"]').classList.contains('hidden')) this.renderAuth();
     this.renderAccount();
@@ -466,7 +484,8 @@ export class MainMenu {
     if (!this.root || this.root.classList.contains('hidden')) return;
     clearInterval(this.pollT); clearInterval(this.tickT);
     this.root.classList.add('leaving');
-    setTimeout(() => { this.root.classList.add('hidden'); this.root.classList.remove('leaving'); cancelAnimationFrame(this.raf); this.raf = 0; }, 450);
+    setTimeout(() => { this.root.classList.add('hidden'); this.root.classList.remove('leaving'); cancelAnimationFrame(this.raf); this.raf = 0;
+      if (isMemSave() && this.canvas) { this.canvas.width = 1; this.canvas.height = 1; } }, 450);   // belleği küçült: menü arka planı boşalsın
   }
 
 

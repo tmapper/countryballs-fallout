@@ -54,16 +54,20 @@
     "perfHigh": "Ýokary",
     "perfBal": "Deňagramly",
     "perfSaver": "Batareýa tygşytlamak",
-    "perfNote": "Oýun togtaýan bolsa Deňagramly ýa-da Batareýa tygşytlamagy saýla. FPS hiç haçan çäklendirilmeýär.",
+    "perfNote": "Oýun togtap galsa, Grafikany peselt: pes grafika FPS-i hem çäklendirýär, enjam az gyzýar. Awtomatik enjamyňa görä saýlaýar.",
     "showFps": "FPS görkez",
     "fullscreen": "Doly ekran",
     "resume": "DOWAM ET",
     "autoLow": "Haýal enjam: grafika awtomatik Pes edildi (Sazlamalardan üýtget)",
-    "device": "Enjam (indiki oýun)",
+    "device": "Dolandyryş görnüşi",
     "tunnelHint": "Tuneldesiň: başga tunele geçmek üçin peýkamlar / joýstik, çykmak üçin ÇYKYŞ",
     "specialThanks": "Aýratyn sag bolsun",
     "credits": "Döredijiler- doors4131 we Turk Mapper\nNeşirçi- Turk Mapper\nAýratyn sag bolsun- Fiex, Turan123, Alexander, Teknonistan\nSuratkeş- Deniz Memmedova",
-    "achCompleted": "Üstünlik açyldy"
+    "achCompleted": "Üstünlik açyldy",
+    "qAuto": "Awtomatik",
+    "devAuto": "Awtomatik",
+    "memSave": "Ýady azalt",
+    "memSaveNote": "Ýady az enjamlar we göni ýaýlym üçin: diňe açyk bölümiň faýllary ýatda galýar (3D sandyk, beýleki kartalar, rol animasiýasy pozulýar)."
   },
   "lobby": {
     "kicker": "Gaçybatalga lobbisi",

@@ -10,6 +10,9 @@ export const PROP_NAMES = ['agac', 'kaya', 'kum', 'varil', 'oksijen', 'masa', 'r
 
 export const PROP_IMG = {};
 
+// Belleği küçült: menüdeyken eşya resimlerini bırak (lobiye girerken yeniden yüklenir)
+export function unloadPropImages() { Object.keys(PROP_IMG).forEach((k) => { PROP_IMG[k].src = ''; delete PROP_IMG[k]; }); }
+
 export function loadPropImages() {
   return Promise.all(PROP_NAMES.map((n) => new Promise((res) => {
     const im = new Image();

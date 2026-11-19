@@ -19,6 +19,7 @@ import { assetUrl, loadJSON, prefetchAssets } from '../systems/Assets.js';
 import { getFlagCanvas } from '../systems/Flags.js';
 import { i18n } from '../systems/I18n.js';
 import { ROLE_COLORS } from '../systems/Roles.js';
+import { isMemSave, dropGL } from '../systems/MemSaver.js';
 
 let META = null;
 export async function loadRoleMeta() {
@@ -244,7 +245,21 @@ export class RoleReveal {
     this.fadeTimer = setTimeout(() => {
       if (!this.active) this.root.classList.add('hidden');
       this.root.classList.remove('fade');
+      if (!this.active) this.purge();
     }, 320);
+  }
+
+  // Belleği küçült: rol (katil/şerif/masum) animasyonu bitince her şeyi bellekten sil.
+  // Bir sonraki maçta yeniden kurulur.
+  purge() {
+    if (!isMemSave() || this.active || !this.root) return;
+    setTimeout(() => {
+      if (this.active || !this.root) return;
+      if (this.gl) dropGL(this.gl, this.canvas); else if (this.canvas) { this.canvas.width = 1; this.canvas.height = 1; }
+      this.root.remove();
+      this.root = null; this.canvas = null; this.gl = undefined; this.u = null; this.texVid = null; this.texFlag = null;
+      this.ctx2d = null; this.sampler = null; this.sctx = null;
+    }, 600);
   }
 
   // Geri çağırmadan hemen kapat (ör. lobiye dönülürken)
@@ -252,6 +267,7 @@ export class RoleReveal {
     if (this.active) this.release(this.active);
     clearTimeout(this.fadeTimer);
     if (this.root) this.root.classList.add('hidden');
+    this.purge();
   }
 
   release(a) {

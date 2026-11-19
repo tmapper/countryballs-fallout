@@ -4,7 +4,7 @@
 // Asıl çizimi MapPainter.js yapar (Canvas). Burada o canvas'ları doku (texture)
 // yapıp doğru yerlere koyuyoruz. Katman sırası (depth): toprak -20 < duvar -19 <
 // zemin -8 < eşyalar -7 < kapı/kapaklar -6 < oyuncular (depth = y) < sis.
-import { isMobile } from '../systems/Device.js';
+import { isMobileHw } from '../systems/Device.js';
 import { tiled } from '../systems/Tiled.js';
 import { getQuality } from '../systems/Resolution.js';
 import { i18n } from '../systems/I18n.js';
@@ -18,7 +18,19 @@ import {
 
 function wantTexScale() {
   const base = Phaser.Math.Clamp(RES.cssH / 1000, 0.5, 1.2) * RES.k;
-  return isMobile() || getQuality() === 'low' ? 1 : Math.max(1, Math.min(1.5, Math.round(base * 2) / 2));
+  return isMobileHw() || getQuality() === 'low' ? 1 : Math.max(1, Math.min(1.5, Math.round(base * 2) / 2));
+}
+
+// Harita dokularını bellekten at. keepMapId verilirse sadece BAŞKA haritaların oda/koridor dokuları gider
+// (aynı anda 3 harita bellekte durmasın); null ise hepsi (zemin karoları dahil) gider.
+const SHARED_MAP_TEX = ['grass', 'soil', 'wallface', 'startpad', 'bunkerdoor', 'sealeddoor', 'hatch'];
+export function dropMapTextures(T, keepMapId) {
+  if (!T) return;
+  T.getTextureKeys().forEach((k) => {
+    const own = /^(decor|cor)_/.test(k);
+    if (own && keepMapId && k.startsWith(k.split('_')[0] + '_' + keepMapId + '_')) return;
+    if (own || (!keepMapId && (k.startsWith('floor_') || SHARED_MAP_TEX.includes(k)))) T.remove(k);
+  });
 }
 
 // Lobide boş zamanda harita dokularını önceden çiz: maç başlarken ~0.5 sn'lik donma (rol videosu takılıyordu) olmasın.
@@ -30,6 +42,7 @@ export function prewarmMapTextures(game) {
   if (!game) return;
   const job = ++warmJob;
   const T = game.textures;
+  dropMapTextures(T, MAP.id);   // önceki seçilen haritaların dokuları gitsin: sadece bu harita
   setTexScale(wantTexScale());
   const todo = [];
   const add = (key, fn) => todo.push([key, fn]);
@@ -86,6 +99,7 @@ export class MapRenderer {
     const s = this.scene;
     // Ekranda dünyanın 1 pikseli kaç piksel görünecek -> dokuları ona göre net üret
     setTexScale(wantTexScale());   // Düşük grafik: harita dokuları 1x (bellek)
+    dropMapTextures(s.textures, MAP.id);   // sadece oynanan haritanın dokuları bellekte
 
     // 1) Binanın dışı: koyu boşluk (Among Us tarzı)
     // Duvarların arkası: TOPRAK (sığınak yerin altında). Bellek dostu büyük karolar (Tiled.js).

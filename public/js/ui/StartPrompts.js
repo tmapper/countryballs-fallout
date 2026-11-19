@@ -3,7 +3,7 @@
 // ============================================================
 // YENİ GÜNCELLEME NOTU: her sürümde sadece UPDATE nesnesini değiştir (id değişince herkese bir kez gösterilir).
 import { i18n } from '../systems/I18n.js';
-import { getDevice, setDevice, applyDeviceClass } from '../systems/Device.js';
+import { applyDeviceClass } from '../systems/Device.js';
 import { icon } from './Icons.js';
 
 export const UPDATE = {
@@ -61,17 +61,6 @@ function modal(html) {
 
 const TURKISH_UI = new Set(['tr', 'az', 'tk']);   // Türkçeye yakın Latin harfli diller
 
-function askDevice() {
-  return new Promise((done) => {
-    const tr = TURKISH_UI.has(i18n.lang);   // Türk dilleri Türkçe metni, diğerleri İngilizceyi görür
-    const d = modal(`<h2>${tr ? 'Nerede oynuyorsun?' : 'Where do you play?'}</h2>
-      <p>${tr ? 'Kontroller ve ekran boyutu buna göre ayarlanır. Sonra Ayarlar\'dan değiştirebilirsin.' : 'Controls and screen layout adapt to this. You can change it later in Settings.'}</p>
-      <div class="sp-choices"><button type="button" data-d="mobile"><b>${icon('gamepad')}</b>${tr ? 'Mobil' : 'Mobile'}<small>${tr ? 'Dokunmatik joystick' : 'Touch joystick'}</small></button>
-      <button type="button" data-d="pc"><b>${icon('expand')}</b>PC<small>${tr ? 'Klavye + fare' : 'Keyboard + mouse'}</small></button></div>`);
-    d.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => { setDevice(b.dataset.d); d.remove(); done(); }));
-  });
-}
-
 function showUpdate() {
   let seen = '';
   try { seen = localStorage.getItem(SEEN_KEY) || ''; } catch (e) { /* yoksay */ }
@@ -88,6 +77,7 @@ export async function runStartPrompts() {
   for (let i = 0; i < 100 && !Object.keys(i18n.data || {}).length; i++) await new Promise((r) => setTimeout(r, 100));
   // Yükleme ekranı kapanmadan pencere açılmasın (üst üste binmesin)
   for (let i = 0; i < 300 && document.getElementById('cfs-loader'); i++) await new Promise((r) => setTimeout(r, 100));
-  if (!getDevice()) await askDevice();
+  // Cihaz artık sorulmuyor: oyun telefon/bilgisayar olduğunu kendisi anlar, kontrol düzeni de
+  // dokunulunca mobil, klavye/fare kullanılınca PC olur (systems/Device.js)
   showUpdate();
 }
