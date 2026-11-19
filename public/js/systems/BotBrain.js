@@ -334,15 +334,19 @@ export class BotBrain {
       this.path.shift();
       if (!this.path.length && this.goal) {                                         // hedefe vardı
         this.goal = null; this.fails = 0;
-        if (this.doing) { this.finishing = this.doing; this.doing = null; this.wait = 3 + Math.random() * 4; }  // görevi "yapıyor"
+        if (this.doing) { this.finishing = this.doing; this.doing = null; this.wait = 2.5 + Math.random() * 5; this._wx = null; this._wy = null; }
         return this.dir;
       }
-      if (!this.path.length) { this.wait = 1 + Math.random() * 3; this.fails = 0; }
+      if (!this.path.length) { this.wait = 0.8 + Math.random() * 3.5; this.fails = 0; this._wx = null; this._wy = null; }
       return this.dir;
     }
-    const speed = 0.75;
-    this.dir.x = (dx / d) * speed; this.dir.y = (dy / d) * speed;
-    this.dir.t = t;          // GameScene her karede bu ara noktayı geçmemek için adımı kırpar (düşük FPS'de ileri-geri sallanma olmasın)
+    // Normal yürüyüş: biraz yavaş + yumuşak (sağa-sola titreme azalır)
+    const speed = this.ball.role === 'impostor' ? 0.72 : 0.75;
+    let tx = (dx / d) * speed, ty = (dy / d) * speed;
+    this._wx = (this._wx == null ? tx : this._wx * 0.55 + tx * 0.45);
+    this._wy = (this._wy == null ? ty : this._wy * 0.55 + ty * 0.45);
+    this.dir.x = this._wx; this.dir.y = this._wy;
+    this.dir.t = t;
     return this.dir;
   }
 

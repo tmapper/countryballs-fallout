@@ -458,10 +458,14 @@ export class GameScene extends Phaser.Scene {
         if (!br.path.length && !br.goal) br.flee = 0;
         return br.update(dt);
       }
-      // Çok kişi varken masum gibi davran (görev / gezinme) — belli etme
+      // Çok kişi varken masum gibi davran; ara sıra gruba karış (ama yapışma)
       if (crew.length >= 2) {
-        br.aimT = 0; br.stalkT = 0; br.preyGo = false; br.tunGoal = null;
-        br.chasePrefer = 140;
+        br.aimT = 0; br.watching = 0; br.preyGo = false; br.tunGoal = null; br._preyId = null;
+        // %12: gruba doğru yavaş yürü (sosyal maske)
+        if (Math.random() < 0.12 && !br.path.length) {
+          const mid = crew[Math.floor(Math.random() * crew.length)];
+          br.goTo(mid.x + (Math.random() - 0.5) * 120, mid.y + (Math.random() - 0.5) * 120);
+        }
         return br.update(dt, null);
       }
       // Tek masum: av adayı

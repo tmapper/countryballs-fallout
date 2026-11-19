@@ -153,7 +153,7 @@ export class RoomHud {
     r.innerHTML = `
       <div class="rh-top">
         <div class="rh-namebox"><div class="rh-name"></div><button class="rh-code" type="button"></button></div>
-        <div class="rh-topbtns"><button class="rh-settings" type="button" title="Ayarlar">${icon('gear')}</button><button class="rh-invite" type="button" data-t="social.inviteBtn"></button><button class="rh-leave" type="button" data-t="online.leave"></button></div>
+        <div class="rh-topbtns"><button class="rh-matchbtn" type="button">${icon('robot')}<span data-t="lobby.matchSettings"></span></button><button class="rh-settings" type="button" title="Ayarlar">${icon('gear')}</button><button class="rh-invite" type="button" data-t="social.inviteBtn"></button><button class="rh-leave" type="button" data-t="online.leave"></button></div>
       </div>
       <div class="rh-panel">
         <div class="rh-players"></div>
@@ -174,10 +174,31 @@ export class RoomHud {
         </div>
         <button class="rh-start" type="button" data-t="online.start"></button>
       </div>
-      <div class="rh-cfg-sheet hidden" role="dialog">
-        <div class="rh-cfg-card">
-          <div class="rh-cfg-head"><h3 data-t="lobby.matchSettings"></h3><button class="rh-cfg-x" type="button" aria-label="x">✕</button></div>
-          <div class="rh-cfg-sheet-body"></div>
+      <div class="rh-match-sheet sheet settings-sheet hidden" role="dialog">
+        <div class="sheet-panel">
+          <div class="sheet-head"><h2 data-t="lobby.matchSettings"></h2><button class="btn sheet-close rh-cfg-x" type="button" aria-label="x">✕</button></div>
+          <section class="card">
+            <h2 data-t="lobby.map"></h2>
+            <div class="seg map-seg rh-map-seg"></div>
+          </section>
+          <section class="card">
+            <h2 data-t="online.cfg_max"></h2>
+            <div class="stepper rh-max-step">
+              <button class="btn btn-step" type="button" data-cfg="max" data-d="-1">−</button>
+              <div class="count rh-max-count"></div>
+              <button class="btn btn-step" type="button" data-cfg="max" data-d="1">+</button>
+              <label class="toggle"><input type="checkbox" class="rh-bots-sheet"><span data-t="lobby.bots"></span></label>
+            </div>
+            <p class="hint" data-t="lobby.botsHint"></p>
+          </section>
+          <section class="card">
+            <h2 data-t="online.roomSettings"></h2>
+            <div class="rh-match-steps"></div>
+          </section>
+          <section class="card">
+            <h2 data-t="lobby.chances"></h2>
+            <div class="chances rh-chances"></div>
+          </section>
         </div>
       </div>`;
     document.body.appendChild(r);
@@ -209,9 +230,11 @@ export class RoomHud {
       this.render();
     }));
     r.querySelector('.rh-flagbtn:not(.rh-hatbtn)').addEventListener('click', () => this.onFlag && this.onFlag());
-    r.querySelector('.rh-cfg-toggle').addEventListener('click', () => { this.cfgOpen = !this.cfgOpen; this.render(); });
+    r.querySelector('.rh-cfg-toggle')?.addEventListener('click', () => { this.cfgOpen = !this.cfgOpen; this.render(); });
+    r.querySelector('.rh-matchbtn')?.addEventListener('click', () => { this.cfgOpen = true; this.render(); });
+    r.querySelector('.rh-bots-sheet')?.addEventListener('change', (e) => { if (net.isHost) net.roomSettings({ bots: e.target.checked }); });
     r.querySelector('.rh-cfg-x')?.addEventListener('click', () => { this.cfgOpen = false; this.render(); });
-    r.querySelector('.rh-cfg-sheet')?.addEventListener('pointerdown', (e) => { if (e.target.classList.contains('rh-cfg-sheet')) { this.cfgOpen = false; this.render(); } });
+    r.querySelector('.rh-match-sheet')?.addEventListener('pointerdown', (e) => { if (e.target.classList.contains('rh-match-sheet')) { this.cfgOpen = false; this.render(); } });
     // Ayar adımları ve oyuncu satırı butonları (kurucu)
     r.addEventListener('click', (e) => {
       const b = e.target.closest('button');
@@ -268,28 +291,6 @@ export class RoomHud {
     r.querySelector('.rh-botn').textContent = this.botCount;
     r.querySelector('.rh-step').classList.toggle('hidden', !room.bots);
     this.renderCfg(room, host);
-    const sheet = r.querySelector('.rh-cfg-sheet');
-    const sheetBody = r.querySelector('.rh-cfg-sheet-body');
-    const sideBody = r.querySelector('.rh-cfg-body');
-    if (sheet && sheetBody && sideBody) {
-      // Maç ayarları üstten sheet (singleplayer gibi); yan panelde tekrar etme
-      if (this.cfgOpen) {
-        sheetBody.innerHTML = sideBody.innerHTML;
-        sheet.classList.remove('hidden');
-        // sheet içi eventleri yeniden bağla (delegation on sheet)
-        sheetBody.querySelectorAll('[data-cfg]').forEach((b) => {
-          b.addEventListener('click', () => {
-            const key = b.dataset.cfg, dir = Number(b.dataset.dir || 0);
-            // trigger same as side: re-dispatch via existing panel listener by clicking side twin
-            const twin = sideBody.querySelector(`[data-cfg="${key}"][data-dir="${dir}"]`);
-            if (twin) twin.click();
-          });
-        });
-      } else sheet.classList.add('hidden');
-      sideBody.classList.add('hidden');
-      const tog = r.querySelector('.rh-cfg-toggle');
-      if (tog) tog.classList.toggle('on', !!this.cfgOpen);
-    }
     
     const total = room.players.length + this.botsToAdd();
     const allReady = room.players.every((p) => p.ready);
@@ -313,21 +314,71 @@ export class RoomHud {
 
   isSure(key) { return !!(this.confirm && this.confirm.key === key && this.confirm.until > Date.now()); }
 
-  // Oda ayarları: kurucu değiştirir, diğerleri sadece görür
+  // Oda ayarları: singleplayer Maç Ayarları menüsü ile aynı deneyim (üstten sheet)
   renderCfg(room, host) {
     const cfg = { ...DEFAULT_CFG, ...(room.cfg || {}) };
     const r = this.root;
-    r.querySelector('.rh-cfg-toggle').innerHTML = `${icon('gear')} ${esc(i18n.t('online.roomSettings'))} ${this.cfgOpen ? '▲' : '▼'}`;
-    const body = r.querySelector('.rh-cfg-body');
-    body.classList.toggle('hidden', !this.cfgOpen);
-    if (!this.cfgOpen) return;
+    const sheet = r.querySelector('.rh-match-sheet');
     const dis = host ? '' : 'disabled';
+    if (sheet) sheet.classList.toggle('hidden', !this.cfgOpen);
+    // Yan panel eski toggle metni
+    const tog = r.querySelector('.rh-cfg-toggle');
+    if (tog) {
+      tog.innerHTML = `${icon('gear')} ${esc(i18n.t('online.roomSettings'))}`;
+      tog.classList.toggle('on', !!this.cfgOpen);
+    }
+    // Harita
+    const mapSeg = r.querySelector('.rh-map-seg');
+    if (mapSeg) {
+      mapSeg.innerHTML = MAP_IDS.map((id) =>
+        `<button class="seg-btn ${cfg.map === id ? 'on' : ''}" type="button" data-cfg="map" data-v="${id}" ${dis}>${esc(i18n.t('maps.' + id))}</button>`
+      ).join('');
+    }
+    // Max oyuncu
+    const mc = r.querySelector('.rh-max-count');
+    if (mc) mc.textContent = String(room.max);
+    r.querySelectorAll('.rh-max-step [data-cfg="max"]').forEach((b) => { b.disabled = !host; });
+    const botsSheet = r.querySelector('.rh-bots-sheet');
+    if (botsSheet) { botsSheet.checked = !!room.bots; botsSheet.disabled = !host; }
+    // Adımlar: speed, discuss, vote, killCd, imps, sheriffs
     const auto = (v) => (v ? String(v) : i18n.t('online.auto'));
-    const fmt = { speed: (v) => v + 'x', discuss: (v) => v + ' sn', vote: (v) => v + ' sn', killCd: (v) => v + ' sn', imps: auto, sheriffs: auto, max: (v) => String(v) };
-    const step = (key, val) => `<div class="rh-crow"><span>${esc(i18n.t('online.cfg_' + key))}</span><button type="button" data-cfg="${key}" data-d="-1" ${dis}>−</button><b>${esc(fmt[key](val))}</b><button type="button" data-cfg="${key}" data-d="1" ${dis}>+</button></div>`;
-    setHtml(body, `
-      <div class="rh-crow map"><span>${esc(i18n.t('online.cfg_map'))}</span><div class="rh-seg">${MAP_IDS.map((id) => `<button type="button" data-cfg="map" data-v="${id}" class="${cfg.map === id ? 'on' : ''}" ${dis}>${esc(i18n.t('maps.' + id))}</button>`).join('')}</div></div>
-      ${step('max', room.max)}${step('speed', cfg.speed)}${step('discuss', cfg.discuss)}${step('vote', cfg.vote)}${step('killCd', cfg.killCd)}${step('imps', cfg.imps)}${step('sheriffs', cfg.sheriffs)}`);
+    const fmt = {
+      speed: (v) => v + 'x', discuss: (v) => v + ' sn', vote: (v) => v + ' sn',
+      killCd: (v) => v + ' sn', imps: auto, sheriffs: auto
+    };
+    const keys = ['speed', 'discuss', 'vote', 'killCd', 'imps', 'sheriffs'];
+    const steps = r.querySelector('.rh-match-steps');
+    if (steps) {
+      steps.innerHTML = keys.map((key) =>
+        `<div class="rh-crow"><span>${esc(i18n.t('online.cfg_' + key))}</span>` +
+        `<button type="button" data-cfg="${key}" data-d="-1" ${dis}>−</button>` +
+        `<b>${esc(fmt[key](cfg[key]))}</b>` +
+        `<button type="button" data-cfg="${key}" data-d="1" ${dis}>+</button></div>`
+      ).join('');
+    }
+    // Rol şansları (gösterim)
+    const n = room.max || 6;
+    const nImp = cfg.imps ? Math.min(cfg.imps, Math.max(1, Math.floor(n / 2))) : Math.max(1, Math.floor(n / 5));
+    const nSh = cfg.sheriffs ? Math.min(cfg.sheriffs, n - nImp) : (n >= 6 ? 1 : 0);
+    const nCrew = Math.max(0, n - nImp - nSh);
+    const chances = r.querySelector('.rh-chances');
+    if (chances) {
+      const rows = [
+        ['impostor', nImp, '#c0392b'],
+        ['sheriff', nSh, '#3498db'],
+        ['crewmate', nCrew, '#27ae60']
+      ];
+      chances.innerHTML = rows.map(([role, count, col]) => {
+        const pct = Math.round((count / n) * 100);
+        return `<div class="chance"><div class="chance-top"><span class="dot" style="background:${col}"></span>` +
+          `<span class="chance-name">${esc(i18n.t('roles.' + role))}</span>` +
+          `<span class="chance-val">${count}/${n} · %${pct}</span></div>` +
+          `<div class="bar"><i style="width:${pct}%;background:${col}"></i></div></div>`;
+      }).join('');
+    }
+    // Yan panel body'yi boş tut (sheet kullanıyoruz)
+    const sideBody = r.querySelector('.rh-cfg-body');
+    if (sideBody) { sideBody.innerHTML = ''; sideBody.classList.add('hidden'); }
   }
 
   setFlagReady(on) { if (this.root) this.root.querySelector('.rh-flagbtn:not(.rh-hatbtn)').classList.toggle('hidden', !on); }
