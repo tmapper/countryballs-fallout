@@ -9,9 +9,9 @@ import { CRATE_ODDS, RARITY_COLOR, RARITY_ORDER } from '../systems/Pass.js';
 import { HIST_FLAGS, getFlagThumb } from '../systems/Flags.js';
 
 const MODEL = {
-  common: 'assets/crates/common.glb',  // sığınak — yeşil
-  rare: 'assets/crates/rare.glb',      // ender — mavi
-  grand: 'assets/crates/grand.glb'     // büyük — altın
+  common: 'assets/crates/common.glb',
+  rare: 'assets/crates/rare.glb',
+  grand: 'assets/crates/grand.glb'
 };
 const PREVIEW = {
   common: 'assets/menu/crate_common.png',
@@ -158,9 +158,10 @@ export class CrateInspect {
     const canvas = r.querySelector('.ci-canvas');
     canvas.style.opacity = '0';
 
-    this.start3d(tier).catch(() => {
+    this.start3d(tier).catch((err) => {
+      console.warn('[CrateInspect] 3D yüklenemedi', err);
       loadEl.textContent = i18n.tf('pass.inspect2d', 'Önizleme (2D)');
-      setTimeout(() => { loadEl.style.display = 'none'; }, 900);
+      setTimeout(() => { loadEl.style.display = 'none'; }, 1200);
     });
   }
 
@@ -192,7 +193,9 @@ export class CrateInspect {
     fill.position.set(-2, 1.2, -1.5);
     scene.add(key, fill);
 
-    const url = assetUrl(MODEL[tier] || MODEL.common);
+    const raw = MODEL[tier] || MODEL.common;
+    const url = assetUrl(raw);
+    console.log('[CrateInspect] loading', tier, url);
     await new Promise((resolve, reject) => {
       const loader = new GLTFLoader();
       loader.load(url, (gltf) => {

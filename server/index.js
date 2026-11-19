@@ -532,7 +532,7 @@ function tooMany(c) {
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.txt': 'text/plain; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp4': 'video/mp4',
-  '.mp3': 'audio/mpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webp': 'image/webp'
+  '.mp3': 'audio/mpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webp': 'image/webp', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json'
 };
 
 const server = http.createServer((req, res) => {
@@ -977,6 +977,7 @@ function adminCommand(c, r, text) {
       say('Adminler: ' + ([...adminSet].join(', ') || '(yok)')); break;
     }
     case 'reloadadmins': case 'adminyenile': {
+      if (!isAdmin(c)) { say('Bu komut sadece admin için.'); break; }
       loadAdmins().then(() => say('✔ Admin listesi yenilendi (' + adminSet.size + ' kişi)')).catch((e) => say('Hata: ' + e.message));
       break;
     }

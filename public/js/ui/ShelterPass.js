@@ -344,10 +344,21 @@ class ShelterPass {
         </div>`;
       const openBtn = d.querySelector('.sp-open');
       openBtn.disabled = !n;
-      openBtn.addEventListener('click', () => {
+      const openInspect = () => {
         sfx('crate_click', 1);
-        crateInspect.open(t, { onOpen: () => net.send({ t: 'crateOpen', tier: t }) });
-      });
+        crateInspect.open(t, {
+          onOpen: () => {
+            if (!((net.account && net.account.crates && net.account.crates[t]) || 0)) return;
+            net.send({ t: 'crateOpen', tier: t });
+          }
+        });
+      };
+      openBtn.addEventListener('click', openInspect);
+      // İkon / kart tıklanınca da 3D inceleme açılsın (0 kasada bile bakılabilir)
+      d.querySelector('.sp-cico').style.cursor = 'pointer';
+      d.querySelector('.sp-cico').addEventListener('click', openInspect);
+      d.querySelector('b').style.cursor = 'pointer';
+      d.querySelector('b').addEventListener('click', openInspect);
       const buyBtn = d.querySelector('.sp-buy');
       buyBtn.disabled = !canBuy;
       buyBtn.addEventListener('click', () => net.send({ t: 'buyCrate', tier: t, n: 1 }));
