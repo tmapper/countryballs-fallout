@@ -160,9 +160,35 @@ export function installExtras(GameScene) {
     stopKillCutscene();
     ghostChat.suspend(true);
     this.emitEv('meeting', [caller.id, body ? body.ball.id : null]);
-    const m = this.meeting = { caller, body, votes: new Map(), accuse: new Map(), phase: 'discuss', left: this.cfg.discuss, timers: [], sheriffMisfire: !!this._sheriffMisfire, sheriffSuccess: !!this._sheriffSuccess };
+    const m = this.meeting = {
+      caller, body, votes: new Map(), accuse: new Map(), phase: 'discuss', left: this.cfg.discuss, timers: [],
+      sheriffMisfire: !!this._sheriffMisfire, sheriffSuccess: !!this._sheriffSuccess,
+      misfireTarget: this._misfireTarget || null
+    };
     this._sheriffMisfire = false;
     this._sheriffSuccess = false;
+    this._misfireTarget = null;
+    if (m.sheriffSuccess) {
+      const sh = this.balls.find((o) => o.alive && o.role === 'sheriff');
+      if (sh) this.balls.forEach((w) => {
+        if (!w.brain) return;
+        if (!w.brain.alibi) w.brain.alibi = new Set();
+        w.brain.alibi.add(sh);
+        if (w.brain.suspect === sh) w.brain.suspect = null;
+        if (w.brain.lead === sh) w.brain.lead = null;
+        if (w.brain.distrust === sh) w.brain.distrust = null;
+      });
+    }
+    if (m.misfireTarget) {
+      const pt = m.misfireTarget;
+      this.balls.forEach((w) => {
+        if (!w.brain) return;
+        if (!w.brain.alibi) w.brain.alibi = new Set();
+        w.brain.alibi.add(pt);
+        if (w.brain.suspect === pt) w.brain.suspect = null;
+        if (w.brain.lead === pt) w.brain.lead = null;
+      });
+    }
     this.cancelSabotage();
     if (this.taskPanel) this.taskPanel.close(true);
     this.taskOpen = false;
@@ -497,27 +523,41 @@ export function installExtras(GameScene) {
     const alive = this.balls.filter((o) => o.alive);
     const imps = alive.filter((o) => o.role === 'impostor').length;
     const crisis = imps > 0 && imps + 1 >= alive.length - imps;
-    // Şerif masum vurup öldüyse → kanıt karışık, skip eğilimi (kriz hariç)
-    if (m.sheriffMisfire && !crisis) {
-      if (b.role !== 'impostor' && Math.random() < 0.75) return 'skip';
-    }
-    // Şerif katili başarıyla vurduysa → o şerife asla oy verme (alibi + ekstra koruma)
-    if (m.sheriffSuccess && b.role !== 'impostor') {
-      const goodSheriff = this.balls.find((o) => o.alive && o.role === 'sheriff');
-      if (goodSheriff) {
+    // Şerif katili vurduysa: şerif KORUNUR — asla oy verme
+    let goodSheriff = null;
+    if (m.sheriffSuccess) {
+      goodSheriff = this.balls.find((o) => o.alive && o.role === 'sheriff') || null;
+      if (goodSheriff && b.role !== 'impostor') {
         if (!br.alibi) br.alibi = new Set();
         br.alibi.add(goodSheriff);
         if (br.suspect === goodSheriff) br.suspect = null;
+        if (br.lead === goodSheriff) br.lead = null;
+        if (br.distrust === goodSheriff) br.distrust = null;
       }
     }
-    if (b.role !== 'impostor' && br.suspect && br.suspect.alive) return idOf(br.suspect);   // kendi gözüyle gördü
+    // Şerif masumu vurup öldüyse: yanlış hedef (hayatta) da korunur — %100 masum
+    let protectedCrew = null;
+    if (m.sheriffMisfire && m.misfireTarget && m.misfireTarget.alive) {
+      protectedCrew = m.misfireTarget;
+      if (b.role !== 'impostor') {
+        if (!br.alibi) br.alibi = new Set();
+        br.alibi.add(protectedCrew);
+        if (br.suspect === protectedCrew) br.suspect = null;
+        if (br.lead === protectedCrew) br.lead = null;
+      }
+      if (b.role !== 'impostor' && Math.random() < 0.7) return 'skip';
+    } else if (m.sheriffMisfire && !crisis) {
+      if (b.role !== 'impostor' && Math.random() < 0.75) return 'skip';
+    }
+    if (b.role !== 'impostor' && br.suspect && br.suspect.alive && br.suspect !== goodSheriff && br.suspect !== protectedCrew) {
+      return idOf(br.suspect);
+    }
     const score = new Map();
     m.accuse.forEach((t, who) => {
       if (!t || !t.alive || t === b || who === b || !who.alive) return;
+      if (t === goodSheriff || t === protectedCrew) return; // korunanlara oy yok
       let w = (m.weight && m.weight.get(who)) || 1;
-      // Temize çıkarıldıysa skor düşür
       if (m.clear && m.clear.get(t)) w = Math.max(0, w - m.clear.get(t));
-      // Suçlayanın kendisi bu botun gözünde şüpheliyse (cesedin yanında gördüğü) suçlamasına güvenme
       if (b.role !== 'impostor' && who === br.lead) w = Math.max(0, w - 2);
       if (w > 0) score.set(t, (score.get(t) || 0) + w);
     });

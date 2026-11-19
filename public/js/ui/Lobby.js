@@ -121,17 +121,15 @@ export class Lobby {
             <div class="chips"></div>
           </section>
           <section class="card">
-            <h2 data-t="lobby.chances"></h2>
-            <div class="chances"></div>
-            <h2 class="mt" data-t="lobby.roleTest"></h2>
-            <div class="seg"></div>
+            <h2 data-t="lobby.roleTest"></h2>
+            <div class="seg role-seg"></div>
             <p class="hint" data-t="lobby.roleTestHint"></p>
           </section>
         </div>
       </div>`;
     document.body.appendChild(r);
 
-    const seg = r.querySelector('.seg:not(.map-seg)');   // rol testi (harita seçimi ayrı)
+    const seg = r.querySelector('.role-seg');   // rol testi
     ['random', ...ROLES].forEach((role) => {
       const b = document.createElement('button');
       b.className = 'seg-btn';
@@ -198,19 +196,7 @@ export class Lobby {
       chips.appendChild(c);
     });
 
-    const ch = roleChances(this.playerCount);
-    const n = this.playerCount;
-    r.querySelector('.chances').innerHTML = ROLES.map((role) => {
-      const count = Math.round(ch[role] * n);
-      return `<div class="chance">
-        <div class="chance-top"><span class="dot" style="background:${ROLE_COLORS[role]}"></span>
-          <span class="chance-name">${i18n.t('roles.' + role)}</span>
-          <span class="chance-val">${count}/${n} · ${pct(ch[role])}</span></div>
-        <div class="bar"><i style="width:${ch[role] * 100}%;background:${ROLE_COLORS[role]}"></i></div>
-      </div>`;
-    }).join('');
-
-    r.querySelectorAll('.seg:not(.map-seg) .seg-btn').forEach((b) => {
+    r.querySelectorAll('.role-seg .seg-btn').forEach((b) => {
       const role = b.dataset.role;
       b.textContent = role === 'random' ? i18n.t('lobby.random') : i18n.t('roles.' + role);
       b.classList.toggle('on', role === this.forcedRole);
