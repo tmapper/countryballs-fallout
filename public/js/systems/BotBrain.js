@@ -254,7 +254,9 @@ export class BotBrain {
     if (this.goal) { this.goTo(this.goal.x, this.goal.y); return; }
     // Görev listesi varsa çoğunlukla sıradaki göreve yürü (Katil bot da sahte görev yapar)
     const todo = (this.ball.botTasks || []).filter((t) => !t.done);
-    if (todo.length && Math.random() < 0.7) {
+    // Katil bot da masum gibi sık görev gezer (0.82); belli olmasın
+    const taskBias = this.ball.role === 'impostor' ? 0.82 : 0.7;
+    if (todo.length && Math.random() < taskBias) {
       const t = todo[Math.floor(Math.random() * todo.length)];
       this.doing = t;
       this.goTo(t.x, t.y);
@@ -271,24 +273,51 @@ export class BotBrain {
   }
 
   // Her karede çağrılır; yön vektörü döndürür.
-  // chase: görünen bir hedef verilirse (Katil avı / Şerif şüpheliyi kovalar) doğrudan ona yürür.
+  // chase: hedefe yaklaşır ama yapışmaz / sağ-sol sallanmaz (yumuşak, insan gibi).
   update(dt, chase = null) {
     this.dir.x = 0; this.dir.y = 0; this.dir.t = null;
-    // Düz çizgide kovalarken bir eşyaya takıldıysa: bir süre yol bularak (A*) hedefin olduğu yere git
     if (this.noChase > 0) { this.noChase -= dt; chase = null; }
-    if (chase && this.chaseStuck > 0.5) {
-      this.chaseStuck = 0; this.noChase = 1.5; this.doing = null;
-      this.goTo(chase.x, chase.y);
+    if (chase && this.chaseStuck > 0.7) {
+      this.chaseStuck = 0; this.noChase = 1.2 + Math.random() * 0.8; this.doing = null;
+      // Direkt vektör yerine yol bul — engelde titreme olmasın
+      this.goTo(chase.x + (Math.random() - 0.5) * 40, chase.y + (Math.random() - 0.5) * 40);
       chase = null;
     }
     this.chasing = !!chase;
     if (chase) {
-      this.path = []; this.wait = 0;
+      this.path = [];
+      // Kısa tereddüt (oyuncu gibi)
+      if (this.chasePause > 0) {
+        this.chasePause -= dt;
+        return this.dir;
+      }
       const dx = chase.x - this.ball.x, dy = chase.y - this.ball.y;
-      const d = Math.hypot(dx, dy);
-      if (d > 40) { this.dir.x = (dx / d) * 0.9; this.dir.y = (dy / d) * 0.9; }
+      const d = Math.hypot(dx, dy) || 1;
+      // Tercih mesafesi: yapışma / sağ-sol dönme olmasın
+      const prefer = this.chasePrefer || 100;
+      let tx = 0, ty = 0;
+      if (d > prefer + 30) {
+        // Uzaktan: orta hız, sprint yok
+        const sp = d > 420 ? 0.82 : (d > 220 ? 0.68 : 0.55);
+        tx = (dx / d) * sp; ty = (dy / d) * sp;
+      } else if (d < prefer * 0.55) {
+        // Çok yakın: dur veya hafif geri (sallanma yok)
+        tx = 0; ty = 0;
+      } else {
+        // İdeal bant: neredeyse dur, hafif ayarla
+        tx = (dx / d) * 0.18; ty = (dy / d) * 0.18;
+      }
+      // Yön yumuşatma — ani 180° dönüşleri kes
+      this._sx = (this._sx == null ? tx : this._sx * 0.72 + tx * 0.28);
+      this._sy = (this._sy == null ? ty : this._sy * 0.72 + ty * 0.28);
+      // Çok küçük vektörleri sıfırla (titreme / flip)
+      if (Math.abs(this._sx) < 0.04 && Math.abs(this._sy) < 0.04) { this._sx = 0; this._sy = 0; }
+      this.dir.x = this._sx; this.dir.y = this._sy;
+      // Ara sıra kısa durak (gerçek oyuncu gibi)
+      if (Math.random() < dt * 0.15) this.chasePause = 0.15 + Math.random() * 0.35;
       return this.dir;
     }
+    this._sx = null; this._sy = null; this.chasePause = 0;
     if (this.wait > 0) {
       this.wait -= dt;
       if (this.wait <= 0 && this.finishing) { const t = this.finishing; this.finishing = null; if (this.ball.onBotTask) this.ball.onBotTask(t); }

@@ -445,65 +445,97 @@ export class GameScene extends Phaser.Scene {
 
     if (b.role === 'impostor') {
       if (br.restT > 0) br.restT -= dt;
-      const seen = this.botVisible(b, b.cooldown <= 0);               // öldürmeye hazırsa görüş bilgisi hep taze
-      const crew = seen.filter((o) => o.role !== 'impostor');      // katil ortaklarını tanır (insan katil de görür)
-      // KAÇIŞ: az önce öldürdü -> cesetten uzaklaş. Yakın tünel varsa ona yürür ve girer; yoksa uzak bir odaya gider.
+      if (br.stalkT > 0) br.stalkT -= dt;
+      const seen = this.botVisible(b, b.cooldown <= 0);
+      const crew = seen.filter((o) => o.role !== 'impostor');
+      // KAÇIŞ: öldürdükten sonra doğal uzaklaş
       if (br.flee > 0) {
         br.flee -= dt;
         if (br.fleeTunnel && Math.hypot(br.fleeTunnel.x - b.x, br.fleeTunnel.y - b.y) < 70) {
           if (this.botTunnel(b)) { br.flee = 0; br.fleeTunnel = null; return { x: 0, y: 0 }; }
           br.fleeTunnel = null;
         }
-        if (!br.path.length && !br.goal) br.flee = 0;              // hedefe vardı
+        if (!br.path.length && !br.goal) br.flee = 0;
         return br.update(dt);
       }
-      // AV: görüş alanında TEK masum varsa (başka tanık yok) saldır
-      if (crew.length === 1) br.prey = { o: crew[0], x: crew[0].x, y: crew[0].y, t: this.time.now };
-      if (b.cooldown <= 0 && crew.length === 1) {
+      // Çok kişi varken masum gibi davran (görev / gezinme) — belli etme
+      if (crew.length >= 2) {
+        br.aimT = 0; br.stalkT = 0; br.preyGo = false; br.tunGoal = null;
+        br.chasePrefer = 140;
+        return br.update(dt, null);
+      }
+      // Tek masum: av adayı
+      if (crew.length === 1) {
         const t = crew[0];
+        br.prey = { o: t, x: t.x, y: t.y, t: this.time.now };
         const d = Math.hypot(t.x - b.x, t.y - b.y);
-        // DENGE: bot katil hemen saldırmaz; kurban bir süre yalnız kalmalı (masumlara kaçma / tanık gelme şansı)
-        if (d <= KILL_RANGE && br.react <= 0 && !br.aimT && !(br.restT > 0)) { br.aimT = 0.7 + Math.random() * 0.8; }
-        if (br.aimT) {
-          br.aimT -= dt;
-          if (br.aimT <= 0) {
-            br.aimT = 0;
-            // Hâlâ menzilde ve hâlâ tenha mı?
-            const still = this.botVisible(b, true).filter((o) => o.role !== 'impostor');
-            if (still.length === 1 && still[0] === t && Math.hypot(t.x - b.x, t.y - b.y) <= KILL_RANGE) {
-              this.kill(b, t);
-              br.restT = 4 + Math.random() * 6;   // DENGE: bot katil öldürdükten sonra bekleme süresine ek olarak biraz daha bekler
-              this.botEscape(b);
-              return { x: 0, y: 0 };
+        // Yeni yalnız hedef: önce 1–2.5 sn “masum gibi” izle / dolaş
+        if (br._preyId !== t.id) {
+          br._preyId = t.id;
+          br.watching = 1.1 + Math.random() * 1.6;
+          br.aimT = 0;
+        }
+        if (br.watching > 0) {
+          br.watching -= dt;
+          if (d > 300 && Math.random() < 0.25) { br.chasePrefer = 170; chase = t; }
+          if (!chase) return br.update(dt, null);
+        } else if (b.cooldown <= 0 && br.restT <= 0) {
+          // Öldürme penceresi
+          if (d <= KILL_RANGE && br.react <= 0 && !br.aimT) {
+            br.aimT = 0.55 + Math.random() * 0.9;
+          }
+          if (br.aimT) {
+            br.aimT -= dt;
+            if (br.aimT <= 0) {
+              br.aimT = 0;
+              const still = this.botVisible(b, true).filter((o) => o.role !== 'impostor');
+              if (still.length === 1 && still[0] === t && Math.hypot(t.x - b.x, t.y - b.y) <= KILL_RANGE) {
+                this.kill(b, t);
+                br.restT = 6 + Math.random() * 8;
+                br.watching = 0;
+                this.botEscape(b);
+                return { x: 0, y: 0 };
+              }
             }
           }
+          // Yaklaş: ideal menzile kadar, yapışmadan
+          if (d > KILL_RANGE * 0.85) {
+            br.chasePrefer = 75;
+            chase = t;
+          } else {
+            // menzilde bekle, sallanma
+            br.wait = Math.max(br.wait || 0, 0.2);
+          }
+        } else if (b.cooldown > 0 && b.cooldown < 4 && d > 300) {
+          // CD bitmek üzere: uzaktan yavaş takip (yapışma yok)
+          br.chasePrefer = 200;
+          if (Math.random() < 0.35) chase = t;
         }
-        if (d < this.botSight(b) * 0.85) chase = t;                  // yalnız hedefe yaklaş
       } else {
         br.aimT = 0;
-        // TAKİP: bekleme süresi bitmek üzereyse yalnız gördüğü masumun peşinden mesafeli yürür (yapışıp belli etmez)
-        if (crew.length === 1 && b.cooldown > 0 && b.cooldown < 5) {
-          const t = crew[0], d = Math.hypot(t.x - b.x, t.y - b.y);
-          if (d > 260) chase = t;
-          else if (!br.path.length) br.wait = Math.max(br.wait, 0.3);
-        } else if (!crew.length && b.cooldown <= 3 && br.prey && br.prey.o.alive && this.time.now - br.prey.t < 8000 && !br.tunGoal && !br.preyGo) {
-          // Az önce yalnız gördüğü masumun son konumuna git (sadece kendi gördüğü bilgi)
-          br.preyGo = true; br.doing = null; br.goTo(br.prey.x, br.prey.y);
+        br.watching = 0;
+        br._preyId = null;
+        // Prey son konumu — ara sıra, acele etmeden
+        if (!crew.length && b.cooldown <= 2 && br.prey && br.prey.o && br.prey.o.alive
+            && this.time.now - br.prey.t < 6000 && !br.tunGoal && !br.preyGo && Math.random() < 0.4) {
+          br.preyGo = true; br.doing = null;
+          br.goTo(br.prey.x + (Math.random() - 0.5) * 80, br.prey.y + (Math.random() - 0.5) * 80);
         }
         if (crew.length || !br.goal) br.preyGo = false;
       }
-      // Mantıklı sabotaj (ortak bekleme süresi)
+      // Sabotaj
       if (!this.sabotage && this.sabCd <= 0 && !(this.botSabWait > 0) && !this.isClient && br.react <= 0 && !b.inTunnel) this.botSabotage(b, crew);
-      // Ara sıra yer değiştirmek için tünel (kimse görmüyorsa)
+      // Tünel: daha seyrek, sadece kimse yokken
       if (br.tunGoal) {
-        if (crew.length) br.tunGoal = null;                          // görülürse vazgeç
+        if (crew.length) br.tunGoal = null;
         else if (Math.hypot(br.tunGoal.x - b.x, br.tunGoal.y - b.y) < 70) { br.tunGoal = null; this.botTunnel(b); }
-      } else if (!chase && !br.preyGo && crew.length === 0 && Math.random() < dt / 14) {
-        // Avlanmak için başka bölgeye geç: en yakın tünele yürü
+      } else if (!chase && !br.preyGo && crew.length === 0 && Math.random() < dt / 22) {
         let best = null, bd = 1400;
-        TUNNELS.forEach((t) => { const d = Math.hypot(t.x - b.x, t.y - b.y); if (d < bd) { bd = d; best = t; } });
+        TUNNELS.forEach((tn) => { const dd = Math.hypot(tn.x - b.x, tn.y - b.y); if (dd < bd) { bd = dd; best = tn; } });
         if (best) { br.tunGoal = best; br.goTo(best.x, best.y); }
       }
+      // Çoğu zaman masum gibi: görev / gezinme
+      if (!chase && !br.tunGoal && !br.preyGo) return br.update(dt, null);
     } else if (b.role === 'sheriff') {
       this.botRemember(b, dt);
       // Öldürürken / tünele girerken gördüğü kişi = şüpheli. Gördüğü anda vurmaya çalışır.
