@@ -702,7 +702,7 @@ setInterval(() => {
 
 // ---------------- Kurucu ayarları ----------------
 // imps / sheriffs: 0 = otomatik (oyuncu sayısına göre). Sınırlar burada (hile ile uç değer girilemez).
-const MAP_IDS = ['ring', 'classic'];
+const MAP_IDS = ['ring', 'classic', 'shaft'];
 const defaultCfg = () => ({ map: 'ring', speed: 1, discuss: 15, vote: 25, killCd: 15, imps: 0, sheriffs: 0 });   // istemcide RoomConfig.DEFAULT_CFG
 const clampNum = (v, lo, hi, def) => { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : def; };
 function sanitizeCfg(old, m) {

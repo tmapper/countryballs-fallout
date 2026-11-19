@@ -669,7 +669,8 @@
   },
   "maps": {
     "ring": "Crossroads",
-    "classic": "Classic Bunker"
+    "classic": "Classic Bunker",
+    "shaft": "Deep Shaft"
   },
   "pass": {
     "title": "SHELTER PASS",

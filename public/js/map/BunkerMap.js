@@ -154,7 +154,68 @@ const MAPS = {
   { id: 't12', x: 1540, y: 2180, links: ['t11'] }   // yemekhane
 ],
     doorX: 3250, button: { x: 3250, y: 1875 }, start: { x: 3290, y: 3260, radius: 210 }, lobby: { x: 3250, y: 3600 }
+  },
+  // DERİN KUYU (3. harita): 3 katlı sığınak — üstte teknik, ortada yaşam, altta lojistik + giriş
+  // Oda boyutları classic/ring ile AYNI (eşya/görev göreli koordinatları bozulmasın)
+  shaft: {
+    world: { w: 6200, h: 5000 },
+    rooms: {
+  reactor:    { x: 200,  y: 200,  w: 1000, h: 850,  floor: 'reactor' },
+  generator:  { x: 1500, y: 250,  w: 800,  h: 750,  floor: 'generator' },
+  electrical: { x: 2600, y: 200,  w: 950,  h: 800,  floor: 'electrical' },
+  cafeteria:  { x: 200,  y: 1400, w: 850,  h: 750,  floor: 'cafeteria' },
+  hall:       { x: 1400, y: 1350, w: 1200, h: 850,  floor: 'hall' },
+  security:   { x: 2900, y: 1450, w: 700,  h: 600,  floor: 'security' },
+  control:    { x: 3900, y: 1400, w: 800,  h: 650,  floor: 'control' },
+  o2:         { x: 5000, y: 1300, w: 900,  h: 850,  floor: 'o2' },
+  dorm:       { x: 250,  y: 2600, w: 650,  h: 750,  floor: 'dorm' },
+  medbay:     { x: 1300, y: 2550, w: 850,  h: 700,  floor: 'medbay' },
+  storage:    { x: 2500, y: 2500, w: 950,  h: 1000, floor: 'storage' },
+  lab:        { x: 3800, y: 2550, w: 700,  h: 800,  floor: 'lab' },
+  comms:      { x: 4900, y: 2600, w: 650,  h: 600,  floor: 'comms' },
+  entrance:   { x: 1400, y: 4000, w: 1200, h: 700,  floor: 'hall' }
+},
+    corridors: [
+  // üst -> orta
+  { id: 's1',  x: 550,  y: 1040, w: 180, h: 380 }, // reaktör -> yemekhane
+  { id: 's2',  x: 1800, y: 990,  w: 180, h: 380 }, // jeneratör -> ana salon
+  { id: 's3',  x: 3000, y: 990,  w: 180, h: 480 }, // elektrik -> güvenlik
+  // orta yatay
+  { id: 's4',  x: 1040, y: 1680, w: 380, h: 180 }, // yemekhane -> ana salon
+  { id: 's5',  x: 2580, y: 1650, w: 340, h: 180 }, // ana salon -> güvenlik
+  { id: 's6',  x: 3580, y: 1600, w: 340, h: 180 }, // güvenlik -> kontrol
+  { id: 's7',  x: 4680, y: 1600, w: 340, h: 180 }, // kontrol -> o2
+  // orta -> alt
+  { id: 's8',  x: 480,  y: 2140, w: 180, h: 480 }, // yemekhane -> yatakhane
+  { id: 's9',  x: 1600, y: 2190, w: 180, h: 380 }, // ana salon -> revir
+  { id: 's10', x: 3100, y: 2040, w: 180, h: 480 }, // güvenlik -> depo
+  { id: 's11', x: 4150, y: 2040, w: 180, h: 530 }, // kontrol -> laboratuvar
+  { id: 's12', x: 5200, y: 2140, w: 180, h: 480 }, // o2 -> iletişim
+  // alt yatay
+  { id: 's13', x: 890,  y: 2900, w: 430, h: 180 }, // yatakhane -> revir
+  { id: 's14', x: 2140, y: 2900, w: 380, h: 180 }, // revir -> depo
+  { id: 's15', x: 3430, y: 2900, w: 390, h: 180 }, // depo -> laboratuvar
+  { id: 's16', x: 4480, y: 2900, w: 440, h: 180 }, // laboratuvar -> iletişim
+  // giriş (bunker kapısı bu koridorda)
+  { id: 's17', x: 1850, y: 3240, w: 180, h: 780 }  // revir -> giriş
+],
+    tunnels: [
+  { id: 't1',  x: 700,  y: 625,  links: ['t2'] },   // reaktör
+  { id: 't2',  x: 575,  y: 2975, links: ['t1'] },   // yatakhane
+  { id: 't3',  x: 1900, y: 625,  links: ['t4'] },   // jeneratör
+  { id: 't4',  x: 2975, y: 3000, links: ['t3'] },   // depo
+  { id: 't5',  x: 3075, y: 600,  links: ['t6'] },   // elektrik
+  { id: 't6',  x: 4150, y: 2950, links: ['t5'] },   // laboratuvar
+  { id: 't7',  x: 625,  y: 1775, links: ['t8'] },   // yemekhane
+  { id: 't8',  x: 5450, y: 1725, links: ['t7'] },   // o2
+  { id: 't9',  x: 3250, y: 1750, links: ['t10'] },  // güvenlik
+  { id: 't10', x: 2000, y: 4350, links: ['t9'] },   // giriş
+  { id: 't11', x: 4300, y: 1725, links: ['t12'] },  // kontrol
+  { id: 't12', x: 1725, y: 2900, links: ['t11'] }   // revir
+],
+    doorX: 1940, button: { x: 2000, y: 1775 }, start: { x: 2000, y: 4300, radius: 210 }, lobby: { x: 2000, y: 4450 }
   }
+
 };
 export const MAP_IDS = Object.keys(MAPS);
 export const DEFAULT_MAP = 'ring';

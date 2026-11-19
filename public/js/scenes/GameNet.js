@@ -225,7 +225,7 @@ export function installNet(GameScene) {
         case 'botTask': { const b = this.ball(a[0]); if (b) b.netTasksDone = (b.netTasksDone || 0) + 1; break; }
         case 'revote': this.restartVote(); break;
         case 'emo': { const e = Number(a[1]); if (B(0) && e >= 0 && e < EMOTE_COUNT) this.showEmoteOn(B(0), e | 0); break; }
-        case 'gunTake': { const g = this.gunById(a[1]); if (g) { g.taken = false; this.takeGun(this.ball(a[0]), g); } break; }
+        case 'gunTake': { const g = this.gunById(a[1]); if (g && !g.taken) this.takeGun(this.ball(a[0]), g); else if (g) { g.taken = true; if (g.spr) { try { g.spr.destroy(); } catch (e) {} g.spr = null; } const b = this.ball(a[0]); if (b && b.alive && b.role !== 'impostor') { b.role = 'sheriff'; if (b.isMe) { this.registry.set('role', 'sheriff'); this.applyRoleTags(); } } } break; }
       }
     } finally {
       this.applyingNet = false;

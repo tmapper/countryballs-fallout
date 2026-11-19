@@ -799,8 +799,18 @@ export function installExtras(GameScene) {
   const GUN_RANGE = 70;
   P.dropGun = function (x, y) {
     this.guns = this.guns || [];
-    // Kimlik: kurucu değiştiyse eski silahlarla çakışmasın (yeni kurucunun sayacı 0'dan başlıyordu)
-    this.gunSeq = Math.max(this.gunSeq || 0, ...(this.guns.map((o) => o.id)));
+    // Aynı anda tek şerif silahı: yerdeki alınmamış silahları temizle (rastgele çoklu silah / herkes şerif bug'ı)
+    this.guns.forEach((old) => {
+      if (!old.taken) {
+        old.taken = true;
+        if (old.spr) { try { old.spr.destroy(); } catch (e) {} old.spr = null; }
+      }
+    });
+    // Yaşayan şerif varsa yeni silah düşürme
+    if (this.balls && this.balls.some((b) => b.alive && b.role === 'sheriff')) return null;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    const ids = this.guns.map((o) => o.id || 0);
+    this.gunSeq = Math.max(this.gunSeq || 0, ids.length ? Math.max(...ids) : 0);
     const g = { id: ++this.gunSeq, x, y, taken: false, spr: null };
     this.guns.push(g);
     this.showGun(g);
@@ -826,11 +836,18 @@ export function installExtras(GameScene) {
   };
 
   P.takeGun = function (ball, g) {
-    if (!g || g.taken || !ball) return;
+    if (!g || g.taken || !ball || !ball.alive) return;
+    if (ball.role === 'impostor' || ball.role === 'sheriff') return;
+    // Zaten yaşayan bir şerif varsa silahı alma (çoklu şerif engeli)
+    if (this.balls && this.balls.some((b) => b !== ball && b.alive && b.role === 'sheriff')) {
+      g.taken = true;
+      if (g.spr) { try { g.spr.destroy(); } catch (e) {} g.spr = null; }
+      return;
+    }
     g.taken = true;
     if (g.spr) { g.spr.destroy(); g.spr = null; }
     this.emitEv('gunTake', [ball.id, g.id]);
-    if (ball.alive && (!this.isClient || ball.isMe)) {
+    if (!this.isClient || ball.isMe) {
       ball.role = 'sheriff';
       ball.cooldown = Math.max(ball.cooldown || 0, 5);
       if (ball.brain) { ball.brain.doing = null; ball.gunGo = null; }

@@ -669,7 +669,8 @@
   },
   "maps": {
     "ring": "Kavşak",
-    "classic": "Klasik Sığınak"
+    "classic": "Klasik Sığınak",
+    "shaft": "Derin Kuyu"
   },
   "pass": {
     "title": "SIĞINAK BİLETİ",
