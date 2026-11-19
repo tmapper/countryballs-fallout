@@ -94,6 +94,11 @@ export class MeetingScreen {
     this.splashT = setTimeout(() => sp.classList.add('hidden'), 1500);
     const panel = r.querySelector('.mt-panel');
     panel.classList.remove('hidden', 'enter'); void panel.offsetWidth; panel.classList.add('enter');
+    // Giriş animasyonu bitince 'enter' sınıfını kaldır. Kalırsa: kart bir sınıf değiştirdiğinde (seçme, oy verme,
+    // nefes animasyonunun durması) tarayıcı cardIn animasyonunu 1.5 sn gecikmeyle BAŞTAN oynatıyor ve kartlar
+    // bu sürede görünmez oluyordu ("oy verince oyuncular bir anda yok oluyor" hatası).
+    clearTimeout(this.enterT);
+    this.enterT = setTimeout(() => panel.classList.remove('enter'), 3200);
     r.querySelector('.mt-title').textContent = opts.title;
     r.querySelector('.mt-sub').textContent = opts.sub;
     r.querySelector('.mt-reporter').src = getFlagThumb(opts.reporterFlag, 60, 40);
@@ -347,6 +352,7 @@ export class MeetingScreen {
   }
 
   close() {
+    clearTimeout(this.enterT);
     if (this.chatInput) this.chatInput.blur();
     this.opts = null;
     this.phase = null;

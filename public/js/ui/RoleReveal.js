@@ -128,13 +128,13 @@ export class RoleReveal {
   matchEdges(video) {
     if (!this.sampler) { this.sampler = document.createElement('canvas'); this.sampler.width = 4; this.sampler.height = 16; this.sctx = this.sampler.getContext('2d', { willReadFrequently: true }); }
     this.edgeTick = (this.edgeTick || 0) + 1;
-    if (this.edgeTick % 2) return;
+    if (this.edgeTick % 8) return;   // video karesini işlemciye okumak (getImageData) pahalı: 8 karede bir yeter, renk zaten yavaş geçiyor
     let d;
     try { this.sctx.drawImage(video, 0, 0, 4, 16); d = this.sctx.getImageData(0, 0, 4, 16).data; } catch (e) { return; }
     const px = (x, y) => { const i = (y * 4 + x) * 4; return [d[i], d[i + 1], d[i + 2]]; };
     const avg = (y) => { const a = px(0, y), b = px(3, y); return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2]; };
     const want = { top: avg(1), mid: avg(8), bot: avg(14) };
-    const k = 0.09;                                   // yavaş geçiş (~1 sn)
+    const k = 0.3;                                    // yavaş geçiş (~1 sn; 8 karede bir örneklendiği için daha büyük adım)
     const e = this.edge;
     ['top', 'mid', 'bot'].forEach((p) => { for (let i = 0; i < 3; i++) e[p][i] += (want[p][i] - e[p][i]) * k; });
     const c = (v) => `rgb(${v[0] | 0},${v[1] | 0},${v[2] | 0})`;

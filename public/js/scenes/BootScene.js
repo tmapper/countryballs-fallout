@@ -1,7 +1,7 @@
 // ============================================================
 // BootScene.js - Açılış sahnesi: dil dosyaları + karakter kareleri, sonra lobi
 // ============================================================
-import { i18n } from '../systems/I18n.js';
+import { i18n, I18n } from '../systems/I18n.js';
 import { loadJSON } from '../systems/Assets.js';
 import { loadCharacters } from '../systems/CharacterAtlas.js';
 import { loadRoleMeta } from '../ui/RoleReveal.js';
@@ -22,18 +22,14 @@ export class BootScene extends Phaser.Scene {
     const track = (pr, p, key) => pr.then((v) => { step(p, key); return v; });
     // Sesleri arka planda decode et (ilk tıklamada gecikme olmasın)
     try { preloadSfx(); } catch (e) { /* yoksay */ }
-    // 3D kasalar + menü ikonları: oyun içinde donmasın diye önceden ısıt
-    try {
-      const warm = [
-        'assets/crates/common.glb', 'assets/crates/rare.glb', 'assets/crates/grand.glb',
-        'assets/menu/crate_common.png', 'assets/menu/crate_rare.png', 'assets/menu/crate_grand.png',
-        'js/vendor/three.module.js', 'js/vendor/GLTFLoader.js', 'js/vendor/utils/BufferGeometryUtils.js'
-      ];
-      warm.forEach((u) => { try { fetch(u).catch(() => {}); } catch (e) {} });
-    } catch (e) {}
-    Promise.all([loadJSON('locales/tr.json'), loadJSON('locales/en.json'), loadJSON('locales/ru.json')])
-      .then(([tr, en, ru]) => {
-        i18n.init({ tr, en, ru });
+    // Türkçe + İngilizce (yedek) + seçili dil açılışta; diğer diller seçilince yüklenir
+    const want = I18n.wanted();
+    const extra = want !== 'tr' && want !== 'en' ? [want] : [];
+    Promise.all([loadJSON('locales/tr.json'), loadJSON('locales/en.json'), ...extra.map((l) => loadJSON(`locales/${l}.json`).catch(() => null))])
+      .then(([tr, en, x]) => {
+        const data = { tr, en };
+        if (extra.length && x) data[extra[0]] = x;
+        i18n.init(data, (l) => loadJSON(`locales/${l}.json`));
         const ver = document.querySelector('#cfs-loader .ld-ver');                 // sürüm tek yerden (dil dosyası)
         if (ver) ver.textContent = 'BUNKER-07 · ' + i18n.t('menu.version');
         step(15, 'loader.chars');

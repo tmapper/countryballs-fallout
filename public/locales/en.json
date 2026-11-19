@@ -93,11 +93,7 @@
     "hatSub": "{n} hats. Pick one, you keep it in the match.",
     "wardHint": "🎩 Hat wardrobe",
     "wardHintNear": "🎩 Press E to pick a hat",
-    "pickHatBtn": "PICK HAT",
-    "botDiff": "Bot Difficulty",
-    "diff_easy": "Easy",
-    "diff_normal": "Normal",
-    "diff_hard": "Hard"
+    "pickHatBtn": "PICK HAT"
   },
   "actions": {
     "kill": "KILL",
@@ -308,7 +304,8 @@
     "crankHint": "Turn clockwise",
     "plantsOver": "Too much water! Soil is mud.",
     "thermometer": "Set the temperature",
-    "battery": "Charge the batteries"
+    "battery": "Charge the batteries",
+    "correct": "Correct!"
   },
   "meeting": {
     "bodyTitle": "DEAD BODY REPORTED!",
@@ -673,8 +670,7 @@
   },
   "maps": {
     "ring": "Crossroads",
-    "classic": "Classic Bunker",
-    "shaft": "Deep Shaft"
+    "classic": "Classic Bunker"
   },
   "pass": {
     "title": "SHELTER PASS",
@@ -715,8 +711,7 @@
     "here": "You are here",
     "inspectSub": "Inspect the crate, see possible drops, then open.",
     "inspectHint": "Drag to rotate",
-    "inspectFlags": "Sample flags that can drop",
-    "inspect2d": "Preview (2D)"
+    "inspectFlags": "Sample flags that can drop"
   },
   "market": {
     "title": "MARKETPLACE",
@@ -753,18 +748,7 @@
     "placeholder": "Write your suggestion...",
     "send": "SEND",
     "short": "Write at least 3 characters",
-    "thanks": "Thanks, your suggestion was saved!",
-    "tabNew": "New",
-    "tabMine": "My suggestions",
-    "tabAdmin": "Manage",
-    "empty": "No suggestions yet",
-    "resolved": "Resolved",
-    "hasReply": "Replied",
-    "waiting": "Waiting",
-    "reply": "Send",
-    "replyPh": "Write a message...",
-    "markResolved": "Mark resolved",
-    "sent": "Sent"
+    "thanks": "Thanks, your suggestion was saved!"
   },
   "ach": {
     "title": "ACHIEVEMENTS",
@@ -927,10 +911,5 @@
       "where": "Where are you?",
       "safe": "It's safe here"
     }
-  },
-  "replays": {
-    "title": "Replays",
-    "empty": "No replays yet. Matches are saved when they end.",
-    "watch": "Watch"
   }
 }

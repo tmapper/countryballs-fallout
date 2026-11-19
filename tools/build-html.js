@@ -23,8 +23,8 @@ function walk(dir) {
   return fs.readdirSync(path.join(PUB, dir), { withFileTypes: true }).flatMap((d) =>
     d.isDirectory() ? walk(`${dir}/${d.name}`) : [`${dir}/${d.name}`]);
 }
-const ASSETS = ['locales/tr.json', 'locales/en.json', ...walk('assets')];
-const MIME = { '.png': 'image/png', '.mp4': 'video/mp4', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.mp3': 'audio/mpeg' };
+const ASSETS = [...walk('locales'), ...walk('assets')];   // tüm diller + tüm varlıklar
+const MIME = { '.png': 'image/png', '.mp4': 'video/mp4', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.mp3': 'audio/mpeg', '.glb': 'model/gltf-binary' };
 
 // ---- JS modüllerini topla ----
 const modules = new Map(); // yol -> kod

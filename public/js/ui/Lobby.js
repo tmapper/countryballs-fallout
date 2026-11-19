@@ -7,18 +7,20 @@
 // onStart(settings)  : Başlat'a basılınca  { myFlag, botFlags, playerCount, forcedRole, bots }
 // onChange(state)    : bayrak/bot değişince (LobbyScene odadaki topları günceller)
 import { i18n } from '../systems/I18n.js';
+import { openLangPicker } from './LangPicker.js';
 import { FLAG_LIST, getFlagThumb, getSavedFlag, saveFlag } from '../systems/Flags.js';
 import { ROLES, ROLE_COLORS, MIN_PLAYERS, MAX_PLAYERS, roleChances } from '../systems/Roles.js';
 import { requestSkins } from '../systems/CharacterAtlas.js';
 import { icon } from './Icons.js';
 import { gameSettings } from './GameSettings.js';
-import { MAP_IDS, DEFAULT_MAP } from '../map/BunkerMap.js';
+import { MAP_IDS, DEFAULT_MAP, useMap } from '../map/BunkerMap.js';
+import { prewarmMapTextures } from '../map/MapRenderer.js';
 
 const SETTINGS_KEY = 'cfs_lobby';
 
 // Tek kişilik maç ayarları (MAÇ AYARLARI butonu): oyuncu sayısı = sen + botlar, harita. Kaydedilir.
 function loadSettings() {
-  const def = { playerCount: 6, forcedRole: 'random', bots: true, map: DEFAULT_MAP, botDiff: 'normal' };
+  const def = { playerCount: 6, forcedRole: 'random', bots: true, map: DEFAULT_MAP };
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
     if (s && typeof s === 'object') {
@@ -26,8 +28,7 @@ function loadSettings() {
         playerCount: Math.max(MIN_PLAYERS, Math.min(MAX_PLAYERS, Number(s.playerCount) || def.playerCount)),
         forcedRole: 'random',                       // rol testi her açılışta rastgeleye döner
         bots: s.bots !== false,
-        map: MAP_IDS.includes(s.map) ? s.map : def.map,
-        botDiff: ['easy','normal','hard'].includes(s.botDiff) ? s.botDiff : def.botDiff
+        map: MAP_IDS.includes(s.map) ? s.map : def.map
       };
     }
   } catch (e) { /* yoksay */ }
@@ -52,12 +53,12 @@ export class Lobby {
 
   save() {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots, map: this.map, botDiff: this.botDiff }));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots, map: this.map }));
     } catch (e) { /* yoksay */ }
   }
 
   state() {
-    return { myFlag: this.myFlag, botFlags: this.bots ? [...this.botFlags] : [], playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots, map: this.map, botDiff: this.botDiff || 'normal' };
+    return { myFlag: this.myFlag, botFlags: this.bots ? [...this.botFlags] : [], playerCount: this.playerCount, forcedRole: this.forcedRole, bots: this.bots, map: this.map };
   }
 
   // Botlar için benimkinden farklı, birbirinden farklı rastgele bayraklar
@@ -102,12 +103,6 @@ export class Lobby {
           <section class="card">
             <h2 data-t="lobby.map"></h2>
             <div class="seg map-seg">${MAP_IDS.map((id) => `<button class="seg-btn" type="button" data-map="${id}"></button>`).join('')}</div>
-            <h2 class="mt" data-t="lobby.botDiff">Bot Zorluğu</h2>
-            <div class="seg botdiff-seg">
-              <button class="seg-btn" type="button" data-diff="easy"></button>
-              <button class="seg-btn" type="button" data-diff="normal"></button>
-              <button class="seg-btn" type="button" data-diff="hard"></button>
-            </div>
           </section>
           <section class="card">
             <h2 data-t="lobby.players"></h2>
@@ -121,15 +116,17 @@ export class Lobby {
             <div class="chips"></div>
           </section>
           <section class="card">
-            <h2 data-t="lobby.roleTest"></h2>
-            <div class="seg role-seg"></div>
+            <h2 data-t="lobby.chances"></h2>
+            <div class="chances"></div>
+            <h2 class="mt" data-t="lobby.roleTest"></h2>
+            <div class="seg"></div>
             <p class="hint" data-t="lobby.roleTestHint"></p>
           </section>
         </div>
       </div>`;
     document.body.appendChild(r);
 
-    const seg = r.querySelector('.role-seg');   // rol testi
+    const seg = r.querySelector('.seg:not(.map-seg)');   // rol testi (harita seçimi ayrı)
     ['random', ...ROLES].forEach((role) => {
       const b = document.createElement('button');
       b.className = 'seg-btn';
@@ -144,11 +141,14 @@ export class Lobby {
       this.rollBots();
       this.changed();
     }));
-    r.querySelectorAll('.map-seg [data-map]').forEach((b) => b.addEventListener('click', () => { this.map = b.dataset.map; this.changed(); }));
-    r.querySelectorAll('.botdiff-seg [data-diff]').forEach((b) => b.addEventListener('click', () => { this.botDiff = b.dataset.diff; this.changed(); }));
+    r.querySelectorAll('.map-seg [data-map]').forEach((b) => b.addEventListener('click', () => {
+      this.map = b.dataset.map; this.changed();
+      // Seçilen haritanın dokularını boş zamanda hazırla (maç başında donma olmasın)
+      try { useMap(this.map); prewarmMapTextures(); } catch (e) { /* maçta yine çizilir */ }
+    }));
     r.querySelector('.match-btn').addEventListener('click', () => this.openSheet('.settings-sheet'));
     r.querySelector('.bots-toggle').addEventListener('change', (e) => { this.bots = e.target.checked; this.changed(); });
-    r.querySelector('.lang-btn').addEventListener('click', () => i18n.toggle());
+    r.querySelector('.lang-btn').addEventListener('click', () => openLangPicker());
     r.querySelector('.gear-btn').addEventListener('click', () => gameSettings.open({}));
     r.querySelector('.menu-btn').addEventListener('click', () => this.onMenu && this.onMenu());
     r.querySelector('.flag-open').addEventListener('click', () => this.onFlag && this.onFlag());
@@ -181,7 +181,6 @@ export class Lobby {
     r.querySelector('.lh-hint').textContent = i18n.t('lobby.walkHint');
     r.querySelector('.count').textContent = this.playerCount;
     r.querySelectorAll('.map-seg [data-map]').forEach((b) => { b.textContent = i18n.t('maps.' + b.dataset.map); b.classList.toggle('on', b.dataset.map === this.map); b.style.setProperty('--c', '#7dff9a'); });
-    r.querySelectorAll('.botdiff-seg [data-diff]').forEach((b) => { b.textContent = i18n.t('lobby.diff_' + b.dataset.diff); b.classList.toggle('on', b.dataset.diff === (this.botDiff || 'normal')); b.style.setProperty('--c', '#ffd23f'); });
     r.querySelector('[data-step="-1"]').disabled = this.playerCount <= MIN_PLAYERS;
     r.querySelector('[data-step="1"]').disabled = this.playerCount >= MAX_PLAYERS;
     r.querySelector('.bots-toggle').checked = this.bots;
@@ -196,7 +195,19 @@ export class Lobby {
       chips.appendChild(c);
     });
 
-    r.querySelectorAll('.role-seg .seg-btn').forEach((b) => {
+    const ch = roleChances(this.playerCount);
+    const n = this.playerCount;
+    r.querySelector('.chances').innerHTML = ROLES.map((role) => {
+      const count = Math.round(ch[role] * n);
+      return `<div class="chance">
+        <div class="chance-top"><span class="dot" style="background:${ROLE_COLORS[role]}"></span>
+          <span class="chance-name">${i18n.t('roles.' + role)}</span>
+          <span class="chance-val">${count}/${n} · ${pct(ch[role])}</span></div>
+        <div class="bar"><i style="width:${ch[role] * 100}%;background:${ROLE_COLORS[role]}"></i></div>
+      </div>`;
+    }).join('');
+
+    r.querySelectorAll('.seg:not(.map-seg) .seg-btn').forEach((b) => {
       const role = b.dataset.role;
       b.textContent = role === 'random' ? i18n.t('lobby.random') : i18n.t('roles.' + role);
       b.classList.toggle('on', role === this.forcedRole);

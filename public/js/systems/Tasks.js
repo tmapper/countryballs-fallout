@@ -94,10 +94,10 @@ export const STATIONS = [
   { id: 'plants_hall',       type: 'plants',   ...at('hall', 146, 720) },        // saksı
   { id: 'beds_dorm',         type: 'beds',     ...at('dorm', 530, 180) },         // ranza
   // ---- v0.9.30: termometre + batarya ----
-  { id: 'thermo_lab',        type: 'thermometer', ...at('lab', 400, 200) },
-  { id: 'thermo_reactor',    type: 'thermometer', ...at('reactor', 320, 280) },
-  { id: 'battery_electrical', type: 'battery',  ...at('electrical', 200, 300) },
-  { id: 'battery_generator', type: 'battery',   ...at('generator', 400, 400) }
+  { id: 'thermo_lab',        type: 'thermometer', ...at('lab', 560, 330) },                          // iki kimya kazanının arasında
+  { id: 'thermo_reactor',    type: 'thermometer', ...at('reactor', 500, 280), alt: { ring: [547, 604] } },  // reaktör çekirdeğinin yanında
+  { id: 'battery_electrical', type: 'battery',  ...at('electrical', 900, 580) },                   // trafonun yanında
+  { id: 'battery_generator', type: 'battery',   ...at('generator', 157, 646) }                     // jeneratörün önünde
 ];
 
 // En fazla 1 iki-aşamalı görev, aynı türden en fazla 2 görev
@@ -105,31 +105,13 @@ export function pickTasks(n = TASKS_PER_PLAYER, { flat = false } = {}) {
   const pool = STATIONS.slice();
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
   const out = [], perType = {};
-  const MIN_DIST = 380; // görevler yan yana yığılmasın
   for (const s of pool) {
     if (out.length >= n) break;
     if ((perType[s.type] || 0) >= (s.type === 'download' ? 1 : 2)) continue;
-    // Aynı oda / çok yakın istasyonları atla
-    const tooClose = out.some((o) => Math.hypot(o.x - s.x, o.y - s.y) < MIN_DIST);
-    if (tooClose) continue;
     perType[s.type] = (perType[s.type] || 0) + 1;
     const t = { id: s.id, type: s.type, room: s.room, x: s.x, y: s.y, done: false };
     if (s.type === 'download' && !flat) t.next = { ...UPLOAD_STATION };
     out.push(t);
-  }
-  // Mesafe yüzünden n'e ulaşamadıysa gevşeterek doldur
-  if (out.length < n) {
-    for (const s of pool) {
-      if (out.length >= n) break;
-      if (out.some((o) => o.id === s.id)) continue;
-      if ((perType[s.type] || 0) >= 3) continue;
-      const tooClose = out.some((o) => Math.hypot(o.x - s.x, o.y - s.y) < 220);
-      if (tooClose) continue;
-      perType[s.type] = (perType[s.type] || 0) + 1;
-      const t = { id: s.id, type: s.type, room: s.room, x: s.x, y: s.y, done: false };
-      if (s.type === 'download' && !flat) t.next = { ...UPLOAD_STATION };
-      out.push(t);
-    }
   }
   return out;
 }

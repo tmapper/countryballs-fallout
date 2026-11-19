@@ -93,11 +93,7 @@
     "hatSub": "{n} şapka var. Birini seç, maçta da takılı kalır.",
     "wardHint": "🎩 Şapka dolabı",
     "wardHintNear": "🎩 Şapka seçmek için E",
-    "pickHatBtn": "ŞAPKA SEÇ",
-    "botDiff": "Bot Zorluğu",
-    "diff_easy": "Kolay",
-    "diff_normal": "Normal",
-    "diff_hard": "Zor"
+    "pickHatBtn": "ŞAPKA SEÇ"
   },
   "actions": {
     "kill": "ÖLDÜR",
@@ -308,7 +304,8 @@
     "crankHint": "Saat yönünde çevir",
     "plantsOver": "Çok su! Toprak çamur oldu.",
     "thermometer": "Sıcaklığı ayarla",
-    "battery": "Bataryaları şarj et"
+    "battery": "Bataryaları şarj et",
+    "correct": "Doğru!"
   },
   "meeting": {
     "bodyTitle": "CESET BULUNDU!",
@@ -673,8 +670,7 @@
   },
   "maps": {
     "ring": "Kavşak",
-    "classic": "Klasik Sığınak",
-    "shaft": "Derin Kuyu"
+    "classic": "Klasik Sığınak"
   },
   "pass": {
     "title": "SIĞINAK BİLETİ",
@@ -715,8 +711,7 @@
     "here": "Buradasın",
     "inspectSub": "Kasayı incele, içerikten ne çıkabileceğini gör, sonra aç.",
     "inspectHint": "Sürükleyerek döndür",
-    "inspectFlags": "Çıkabilecek bayraklardan örnekler",
-    "inspect2d": "Önizleme (2D)"
+    "inspectFlags": "Çıkabilecek bayraklardan örnekler"
   },
   "market": {
     "title": "PAZAR YERİ",
@@ -753,18 +748,7 @@
     "placeholder": "Önerini yaz...",
     "send": "GÖNDER",
     "short": "En az 3 karakter yaz",
-    "thanks": "Teşekkürler, önerin kaydedildi!",
-    "tabNew": "Yeni",
-    "tabMine": "Önerilerim",
-    "tabAdmin": "Yönet",
-    "empty": "Henüz öneri yok",
-    "resolved": "Çözüldü",
-    "hasReply": "Cevap var",
-    "waiting": "Bekliyor",
-    "reply": "Gönder",
-    "replyPh": "Mesaj yaz...",
-    "markResolved": "Çözüldü işaretle",
-    "sent": "Gönderildi"
+    "thanks": "Teşekkürler, önerin kaydedildi!"
   },
   "ach": {
     "title": "BAŞARIMLAR",
@@ -927,10 +911,5 @@
       "where": "Neredesin?",
       "safe": "Burası güvenli"
     }
-  },
-  "replays": {
-    "title": "Kayıtlar",
-    "empty": "Henüz kayıt yok. Maç bitince otomatik kaydedilir.",
-    "watch": "İzle"
   }
 }

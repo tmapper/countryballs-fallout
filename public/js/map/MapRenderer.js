@@ -16,6 +16,49 @@ import {
   paintCorridorDecor, paintWallFaceTile, setTexScale, texScale
 } from './MapPainter.js';
 
+function wantTexScale() {
+  const base = Phaser.Math.Clamp(RES.cssH / 1000, 0.5, 1.2) * RES.k;
+  return isMobile() || getQuality() === 'low' ? 1 : Math.max(1, Math.min(1.5, Math.round(base * 2) / 2));
+}
+
+// Lobide boş zamanda harita dokularını önceden çiz: maç başlarken ~0.5 sn'lik donma (rol videosu takılıyordu) olmasın.
+// Her adımda tek doku, tarayıcı boştayken. Haritayı değiştirirsen yeni haritanınkiler hazırlanır.
+let warmJob = 0, warmGame = null;
+export function prewarmMapTextures(game) {
+  if (game) warmGame = game;
+  game = warmGame;
+  if (!game) return;
+  const job = ++warmJob;
+  const T = game.textures;
+  setTexScale(wantTexScale());
+  const todo = [];
+  const add = (key, fn) => todo.push([key, fn]);
+  // En pahalılar önce (oda eşyaları, koridorlar), ucuz zemin karoları sonra
+  Object.keys(ROOMS).forEach((id) => add(`decor_${MAP.id}_${id}`, () => paintRoomDecor(id)));
+  CORRIDORS.forEach((c) => add(`cor_${MAP.id}_${c.id}`, () => paintCorridorDecor(c)));
+  FLOOR_TYPES.forEach((t) => add('floor_' + t, () => paintFloorTile(t)));
+  add('grass', paintGrassTile); add('soil', paintSoilTile); add('wallface', paintWallFaceTile);
+  const idle = window.requestIdleCallback ? window.requestIdleCallback.bind(window) : ((f) => setTimeout(() => f({ timeRemaining: () => 8 }), 60));
+  const step = (dl) => {
+    if (job !== warmJob) return;
+    // Boş süre yettikçe birkaç doku; her durumda en az bir tane
+    do {
+      const it = todo.shift();
+      if (!it) return;
+      const [key, fn] = it;
+      try {
+        if (!T.exists(key) || (T.get(key).getSourceImage()._s || 1) !== texScale()) {
+          if (T.exists(key)) T.remove(key);
+          T.addCanvas(key, fn());
+        }
+      } catch (e) { /* oyun başlarken yine çizilir */ }
+    } while (dl && dl.timeRemaining && dl.timeRemaining() > 12 && todo.length);
+    idle(step, { timeout: 250 });
+  };
+  idle(step, { timeout: 250 });
+}
+export function stopPrewarm() { warmJob++; }
+
 export class MapRenderer {
   constructor(scene) {
     this.scene = scene;
@@ -42,9 +85,7 @@ export class MapRenderer {
   build(opts = {}) {
     const s = this.scene;
     // Ekranda dünyanın 1 pikseli kaç piksel görünecek -> dokuları ona göre net üret
-    const base = Phaser.Math.Clamp(RES.cssH / 1000, 0.5, 1.2) * RES.k;
-    const mobile = isMobile();
-    setTexScale(mobile || getQuality() === 'low' ? 1 : Math.max(1, Math.min(1.5, Math.round(base * 2) / 2)));   // Düşük grafik: harita dokuları 1x (bellek)
+    setTexScale(wantTexScale());   // Düşük grafik: harita dokuları 1x (bellek)
 
     // 1) Binanın dışı: koyu boşluk (Among Us tarzı)
     // Duvarların arkası: TOPRAK (sığınak yerin altında). Bellek dostu büyük karolar (Tiled.js).
@@ -80,11 +121,13 @@ export class MapRenderer {
     Object.values(ROOMS).forEach((r) => this.floor(r, r.floor === 'grass' ? 'grass' : 'floor_' + r.floor));
     CORRIDORS.forEach((c) => this.floor(c, 'floor_corridor'));
     // Koridor süsü (kenar şeritleri, ışıklar); odaların zemininin altında kalsın diye zeminle aynı katmanda
-    CORRIDORS.forEach((c) => { const k = this.tex('cor_' + c.id, () => paintCorridorDecor(c)); this.fit(s.add.image(c.x, c.y, k).setOrigin(0).setDepth(-7.9), k); });
+    // Haritaya özel dokular anahtarda harita adını taşır: aynı oturumda harita değişince eskisinin eşyaları
+    // yeni haritada yanlış yerde çizilmesin (çarpışma yeni haritadan, resim eski haritadan geliyordu)
+    CORRIDORS.forEach((c) => { const k = this.tex(`cor_${MAP.id}_${c.id}`, () => paintCorridorDecor(c)); this.fit(s.add.image(c.x, c.y, k).setOrigin(0).setDepth(-7.9), k); });
 
     // 4) Eşyalar: her oda tek bir resim (Canvas'ta önceden çizildi)
     Object.entries(ROOMS).forEach(([id, r]) => {
-      const k = this.tex('decor_' + id, () => paintRoomDecor(id)); this.fit(s.add.image(r.x, r.y, k).setOrigin(0).setDepth(-7), k);
+      const k = this.tex(`decor_${MAP.id}_${id}`, () => paintRoomDecor(id)); this.fit(s.add.image(r.x, r.y, k).setOrigin(0).setDepth(-7), k);
     });
 
     // 5) Sığınak kapısı, BAŞLAT bölgesi, tünel kapakları

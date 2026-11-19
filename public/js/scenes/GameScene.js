@@ -26,7 +26,7 @@ import {
 import { SABOTAGES } from '../systems/Sabotage.js';
 import { WORLD, gameSpawn, TUNNELS, canStand, getRoomAt, buildGrid, world, useMap, ROOMS, EMERGENCY_BUTTON } from '../map/BunkerMap.js';
 import { DEFAULT_CFG } from '../systems/RoomConfig.js';
-import { MapRenderer } from '../map/MapRenderer.js';
+import { MapRenderer, stopPrewarm } from '../map/MapRenderer.js';
 import { TaskPanel } from '../ui/TaskPanel.js';
 import { PROP_IMG } from '../map/PropImages.js';
 import { STATIONS, TASK_ICON, TASKS_PER_PLAYER, pickTasks, nearestTask } from '../systems/Tasks.js';
@@ -54,6 +54,7 @@ export class GameScene extends Phaser.Scene {
     this.over = false;
     // Kurucu ayarları (çevrimiçi odadan gelir; tek kişilik oyunda varsayılan)
     this.cfg = { ...DEFAULT_CFG, ...((data && data.cfg) || {}) };
+    stopPrewarm();                  // lobideki doku hazırlığı bitsin; kalanları build() çizer
     useMap(this.cfg.map);           // harita: ÖNCE seçilmeli (ızgara, çizim, görev noktaları buna göre)
     // Tek başına (bot yok): serbest test, kazanma koşulu yok
     this.sandbox = players.length === 1 && mode === 'offline';
@@ -128,7 +129,6 @@ export class GameScene extends Phaser.Scene {
       b.brain.buddyUntil = this.time.now + 40000 + Math.random() * 20000;   // oyun saati sayfa açılışından sayar: şimdiye göre
     });
     this.buildTaskMarkers();
-
     this.events.once('shutdown', () => { this.taskPanel.close(true); gameSettings.close(); ghostChat.hide(); stopAllLoops(); });
 
     this.registry.set('flag', this.player.flag);
@@ -306,11 +306,11 @@ export class GameScene extends Phaser.Scene {
   nearestTunnelOk() { return !!nearestTunnel(TUNNELS, this.player.x, this.player.y); }
 
   kill(killer, victim) {
-    if (victim.isMe && this.taskOpen) return; // görev panelindeyken öldürülme (timing bug)
     if (this.meeting || this.over) return;
     if (victim.clearEmote) victim.clearEmote();
     this.emitEv('kill', [killer.id, victim.id]);
-    // Işınlanma yok: katil menzilden vurduğu yerde kalsın (teleport belli etmesin)
+    // Öldüren, ölenin tam üstüne ışınlanır (Among Us gibi); kamera kaymadan geçer
+    killer.setPosition(victim.x, victim.y);
     killer.setDepth(killer.y);
     if (killer.isMe) this.cameras.main.centerOn(killer.x, killer.y - 40);
     killer.cooldown = this.cfg.killCd;
@@ -363,14 +363,10 @@ export class GameScene extends Phaser.Scene {
         if (w.brain.lead === sheriff) w.brain.lead = null;
       });
     } else {
-      // Yanlış kişi: Şerif ölür, hedef yaşar (hedef %100 masum kanıtı)
+      // Yanlış kişi: Şerif ölür, hedef yaşar
       this.die(sheriff);
-      this._sheriffMisfire = true;
-      this._misfireTarget = target;
-      if (this.meeting) {
-        this.meeting.sheriffMisfire = true;
-        this.meeting.misfireTarget = target;
-      }
+      if (this.meeting) this.meeting.sheriffMisfire = true;
+      else this._sheriffMisfire = true; // bir sonraki toplantıya taşı
       this.toast(i18n.t(sheriff.isMe ? 'game.youMisfired' : 'game.sheriffMisfired', { name: countryName(sheriff) }), '#ffb347');
     }
     this.checkEnd();
@@ -385,11 +381,11 @@ export class GameScene extends Phaser.Scene {
     }
     // HAYALET BOT: ölen masum bot görevlerine devam eder (Among Us gibi). Sadece görev yapar: kimseyi görmez,
     // bildirmez, oy vermez, öldürülemez; yaşayanlar onu görmez, ölüler görür. Katil bot hayalet olunca durur.
-    if (ball.role !== 'impostor' && ball.tasksLeft > 0) {
-      // Hayalet bot: haritada dolaşmaz; ~20 sn'de bir görev otomatik biter
+    if (ball.brain && ball.role !== 'impostor' && ball.tasksLeft > 0) {
+      const br = ball.brain;
+      br.reset(); br.wait = 1.5; br.suspect = null; br.buddy = null; br.distrust = null; br.chasing = false;
+      ball.fixing = false; ball.gunGo = null;
       ball.ghostBot = true;
-      ball.ghostTaskT = 16 + Math.random() * 8;
-      ball.brain = null;
     } else ball.brain = null;
     if (ball.isMe && this.taskPanel) this.taskPanel.close();
     if (!opts.noBody) { this.spawnBody(ball); this.fxDeath(ball); }
@@ -442,13 +438,6 @@ export class GameScene extends Phaser.Scene {
     return list;
   }
 
-  botDiffProfile() {
-    const d = (this.cfg && this.cfg.botDiff) || 'normal';
-    if (d === 'easy') return { watch: [1.8, 2.8], aim: [0.8, 1.3], rest: [8, 12], chaseSp: 0.5, tunRate: 40, aloneApproach: 0.2 };
-    if (d === 'hard') return { watch: [0.2, 0.5], aim: [0.15, 0.35], rest: [2.5, 5], chaseSp: 0.9, tunRate: 12, aloneApproach: 0.85 };
-    return { watch: [0.6, 1.2], aim: [0.35, 0.65], rest: [4, 7], chaseSp: 0.72, tunRate: 22, aloneApproach: 0.5 };
-  }
-
   botThink(b, dt) {
     if (b.fixing && this.sabotage) return this.fixerThink(b, dt);   // sabotaj tamirine koşuyor
     const br = b.brain;
@@ -457,98 +446,65 @@ export class GameScene extends Phaser.Scene {
 
     if (b.role === 'impostor') {
       if (br.restT > 0) br.restT -= dt;
-      if (br.stalkT > 0) br.stalkT -= dt;
-      const seen = this.botVisible(b, b.cooldown <= 0);
-      const crew = seen.filter((o) => o.role !== 'impostor');
-      // KAÇIŞ: öldürdükten sonra doğal uzaklaş
+      const seen = this.botVisible(b, b.cooldown <= 0);               // öldürmeye hazırsa görüş bilgisi hep taze
+      const crew = seen.filter((o) => o.role !== 'impostor');      // katil ortaklarını tanır (insan katil de görür)
+      // KAÇIŞ: az önce öldürdü -> cesetten uzaklaş. Yakın tünel varsa ona yürür ve girer; yoksa uzak bir odaya gider.
       if (br.flee > 0) {
         br.flee -= dt;
         if (br.fleeTunnel && Math.hypot(br.fleeTunnel.x - b.x, br.fleeTunnel.y - b.y) < 70) {
           if (this.botTunnel(b)) { br.flee = 0; br.fleeTunnel = null; return { x: 0, y: 0 }; }
           br.fleeTunnel = null;
         }
-        if (!br.path.length && !br.goal) br.flee = 0;
+        if (!br.path.length && !br.goal) br.flee = 0;              // hedefe vardı
         return br.update(dt);
       }
-      // Çok kişi varken masum gibi davran; ara sıra gruba karış (ama yapışma)
-      if (crew.length >= 2) {
-        br.aimT = 0; br.watching = 0; br.preyGo = false; br.tunGoal = null; br._preyId = null;
-        // %12: gruba doğru yavaş yürü (sosyal maske)
-        if (Math.random() < 0.12 && !br.path.length) {
-          const mid = crew[Math.floor(Math.random() * crew.length)];
-          br.goTo(mid.x + (Math.random() - 0.5) * 120, mid.y + (Math.random() - 0.5) * 120);
-        }
-        return br.update(dt, null);
-      }
-      // Tek masum görünüyorsa avla (kill alınabilsin)
-      if (crew.length === 1) {
+      // AV: görüş alanında TEK masum varsa (başka tanık yok) saldır
+      if (crew.length === 1) br.prey = { o: crew[0], x: crew[0].x, y: crew[0].y, t: this.time.now };
+      if (b.cooldown <= 0 && crew.length === 1) {
         const t = crew[0];
-        br.prey = { o: t, x: t.x, y: t.y, t: this.time.now };
         const d = Math.hypot(t.x - b.x, t.y - b.y);
-        const dif = this.botDiffProfile();
-        if (br._preyId !== t.id) {
-          br._preyId = t.id;
-          br.watching = dif.watch[0] + Math.random() * (dif.watch[1] - dif.watch[0]);
-          br.aimT = 0;
-        }
-        if (br.watching > 0) {
-          br.watching -= dt;
-          // izlerken de yavaş yaklaş (menzile gir)
-          if (d > KILL_RANGE * 0.7) { br.chasePrefer = 90; chase = t; }
-          else if (!chase) return br.update(dt, null);
-        }
-        if (b.cooldown <= 0 && br.restT <= 0 && br.watching <= 0) {
-          if (d <= KILL_RANGE) {
-            if (!br.aimT) br.aimT = dif.aim[0] + Math.random() * (dif.aim[1] - dif.aim[0]);
-            br.aimT -= dt;
-            if (br.aimT <= 0) {
-              br.aimT = 0;
-              const still = this.botVisible(b, true).filter((o) => o.role !== 'impostor');
-              if (still.length <= 1 && Math.hypot(t.x - b.x, t.y - b.y) <= KILL_RANGE) {
-                this.kill(b, t);
-                br.restT = dif.rest[0] + Math.random() * (dif.rest[1] - dif.rest[0]);
-                br.watching = 0; br._preyId = null;
-                this.botEscape(b);
-                return { x: 0, y: 0 };
-              }
-              // menzilden çıktıysa tekrar nişan
-              br.aimT = 0.25;
+        // DENGE: bot katil hemen saldırmaz; kurban bir süre yalnız kalmalı (masumlara kaçma / tanık gelme şansı)
+        if (d <= KILL_RANGE && br.react <= 0 && !br.aimT && !(br.restT > 0)) { br.aimT = 0.7 + Math.random() * 0.8; }
+        if (br.aimT) {
+          br.aimT -= dt;
+          if (br.aimT <= 0) {
+            br.aimT = 0;
+            // Hâlâ menzilde ve hâlâ tenha mı?
+            const still = this.botVisible(b, true).filter((o) => o.role !== 'impostor');
+            if (still.length === 1 && still[0] === t && Math.hypot(t.x - b.x, t.y - b.y) <= KILL_RANGE) {
+              this.kill(b, t);
+              br.restT = 4 + Math.random() * 6;   // DENGE: bot katil öldürdükten sonra bekleme süresine ek olarak biraz daha bekler
+              this.botEscape(b);
+              return { x: 0, y: 0 };
             }
-            br.chasePrefer = 50;
-            chase = t;
-          } else {
-            br.chasePrefer = 60;
-            chase = t;
           }
-        } else if (b.cooldown > 0 && b.cooldown < 5 && d > 220) {
-          br.chasePrefer = 160;
-          if (Math.random() < 0.5) chase = t;
         }
+        if (d < this.botSight(b) * 0.85) chase = t;                  // yalnız hedefe yaklaş
       } else {
         br.aimT = 0;
-        br.watching = 0;
-        br._preyId = null;
-        // Prey son konumu — ara sıra, acele etmeden
-        if (!crew.length && b.cooldown <= 2 && br.prey && br.prey.o && br.prey.o.alive
-            && this.time.now - br.prey.t < 6000 && !br.tunGoal && !br.preyGo && Math.random() < 0.4) {
-          br.preyGo = true; br.doing = null;
-          br.goTo(br.prey.x + (Math.random() - 0.5) * 80, br.prey.y + (Math.random() - 0.5) * 80);
+        // TAKİP: bekleme süresi bitmek üzereyse yalnız gördüğü masumun peşinden mesafeli yürür (yapışıp belli etmez)
+        if (crew.length === 1 && b.cooldown > 0 && b.cooldown < 5) {
+          const t = crew[0], d = Math.hypot(t.x - b.x, t.y - b.y);
+          if (d > 260) chase = t;
+          else if (!br.path.length) br.wait = Math.max(br.wait, 0.3);
+        } else if (!crew.length && b.cooldown <= 3 && br.prey && br.prey.o.alive && this.time.now - br.prey.t < 8000 && !br.tunGoal && !br.preyGo) {
+          // Az önce yalnız gördüğü masumun son konumuna git (sadece kendi gördüğü bilgi)
+          br.preyGo = true; br.doing = null; br.goTo(br.prey.x, br.prey.y);
         }
         if (crew.length || !br.goal) br.preyGo = false;
       }
-      // Sabotaj
+      // Mantıklı sabotaj (ortak bekleme süresi)
       if (!this.sabotage && this.sabCd <= 0 && !(this.botSabWait > 0) && !this.isClient && br.react <= 0 && !b.inTunnel) this.botSabotage(b, crew);
-      // Tünel: daha seyrek, sadece kimse yokken
+      // Ara sıra yer değiştirmek için tünel (kimse görmüyorsa)
       if (br.tunGoal) {
-        if (crew.length) br.tunGoal = null;
+        if (crew.length) br.tunGoal = null;                          // görülürse vazgeç
         else if (Math.hypot(br.tunGoal.x - b.x, br.tunGoal.y - b.y) < 70) { br.tunGoal = null; this.botTunnel(b); }
-      } else if (!chase && !br.preyGo && crew.length === 0 && Math.random() < dt / this.botDiffProfile().tunRate) {
+      } else if (!chase && !br.preyGo && crew.length === 0 && Math.random() < dt / 14) {
+        // Avlanmak için başka bölgeye geç: en yakın tünele yürü
         let best = null, bd = 1400;
-        TUNNELS.forEach((tn) => { const dd = Math.hypot(tn.x - b.x, tn.y - b.y); if (dd < bd) { bd = dd; best = tn; } });
+        TUNNELS.forEach((t) => { const d = Math.hypot(t.x - b.x, t.y - b.y); if (d < bd) { bd = d; best = t; } });
         if (best) { br.tunGoal = best; br.goTo(best.x, best.y); }
       }
-      // Çoğu zaman masum gibi: görev / gezinme
-      if (!chase && !br.tunGoal && !br.preyGo) return br.update(dt, null);
     } else if (b.role === 'sheriff') {
       this.botRemember(b, dt);
       // Öldürürken / tünele girerken gördüğü kişi = şüpheli. Gördüğü anda vurmaya çalışır.
@@ -794,19 +750,7 @@ export class GameScene extends Phaser.Scene {
         const botDt = Math.min(this._botAcc, 0.25); this._botAcc = 0;
         navFrameStart();   // bu karede yol bulmaya ayrılan süre (~3 ms) sıfırlanır; botlar sırayla yol alır, hepsi birden dondurmaz
         // Hayalet botlar sadece görevlerine yürür (algı / karar yok)
-        this.balls.forEach((b) => {
-          if (b.alive && b.brain) b.botDir = this.botThink(b, botDt);
-          else if (!b.alive && b.ghostBot && b.tasksLeft > 0) {
-            b.ghostTaskT = (b.ghostTaskT || 20) - botDt;
-            if (b.ghostTaskT <= 0) {
-              b.tasksLeft--;
-              this.addTaskDone(1);
-              try { this.emitEv('botTask', [b.id]); } catch (e) {}
-              b.ghostTaskT = 16 + Math.random() * 10;
-              if (b.tasksLeft <= 0) b.ghostBot = false;
-            }
-          }
-        });
+        this.balls.forEach((b) => { if (b.brain) b.botDir = b.alive ? this.botThink(b, botDt) : this.ghostBotThink(b, botDt); });
         this.ghostSabotage(botDt);
       }
       this.balls.forEach((b) => {

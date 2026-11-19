@@ -53,6 +53,8 @@ test('Emoji: herkese gider, ölününki sadece ölülere, hız sınırı', async
   host.send({ t: 'create', name: 'Emo', max: 10 });
   const code = (await host.wait((m) => m.t === 'joined')).room.code;
   for (const c of [alice, bob]) { c.send({ t: 'join', code }); await c.wait((m) => m.t === 'joined'); }
+  for (const c of [host, alice, bob]) c.send({ t: 'ready', on: true });   // herkes hazır olmalı
+  await sleep(150);
   host.send({ t: 'start', setup: { players: [] } });
   for (const c of [host, alice, bob]) await c.wait((m) => m.t === 'start');
   const ids = {};

@@ -16,6 +16,7 @@ import { achievementsPanel } from './AchievementsPanel.js';
 import { questsPanel } from './QuestsPanel.js';
 import { passStatus } from '../systems/Pass.js';
 import { i18n } from '../systems/I18n.js';
+import { openLangPicker } from './LangPicker.js';
 import { net, Net } from '../systems/Net.js';
 import { isMuted, toggleMute, sfx, setSfxVolume, setMusicVolume, getVolumes } from '../systems/Sound.js';
 import { assetUrl } from '../systems/Assets.js';
@@ -129,8 +130,8 @@ export class MainMenu {
     // Kimlik kartına tıkla: girişliysen PROFİL (istatistikler), değilsen giriş
     r.querySelector('.mm-id-body').addEventListener('click', () => { if (net.account) this.openModal('profile'); else this.openAuth('login'); });
     net.on('matchReward', () => { this.renderAccount(); this.renderProfile(); });
-    r.querySelector('.mm-lang').addEventListener('click', () => i18n.toggle());
-    r.querySelector('.mm-set-lang').addEventListener('click', () => i18n.toggle());
+    r.querySelector('.mm-lang').addEventListener('click', () => openLangPicker());
+    r.querySelector('.mm-set-lang').addEventListener('click', () => openLangPicker());
     r.querySelector('.mm-set-sound').addEventListener('click', () => { toggleMute(); this.render(); });
     const loadVol = () => {
       try {
@@ -432,15 +433,6 @@ export class MainMenu {
   }
 
   show(handlers) {
-    // 3D kasa kütüphanesi arka planda
-    try {
-      if (!window.__cfs3dWarm) {
-        window.__cfs3dWarm = 1;
-        import('../vendor/three.module.js').catch(() => {});
-        import('../vendor/GLTFLoader.js').catch(() => {});
-      }
-    } catch (e) {}
-
     try { questsPanel.show(); } catch (e) { /* yoksay */ }
 
     if (!this.root) this.build();

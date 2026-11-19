@@ -4,7 +4,7 @@
 // Müzik / efekt sesi, sessiz, dil, grafik kalitesi, tam ekran, lobiye dön.
 // + Özel Teşekkürler sayfası
 import { exitGame } from '../systems/ExitGame.js';
-import { i18n } from '../systems/I18n.js';
+import { i18n, LANGS } from '../systems/I18n.js';
 import { getVolumes, setMusicVolume, setSfxVolume, isMuted, toggleMute, sfx } from '../systems/Sound.js';
 import { getQuality, setQuality } from '../systems/Resolution.js';
 import { releaseGameKeys } from './Chat.js';
@@ -25,7 +25,7 @@ class GameSettings {
       <label class="gs-row"><span data-t="ui.musicVol"></span><input class="gs-music" type="range" min="0" max="100"><b class="gs-mv"></b></label>
       <label class="gs-row"><span data-t="ui.sfxVol"></span><input class="gs-sfx" type="range" min="0" max="100"><b class="gs-sv"></b></label>
       <div class="gs-row"><span data-t="ui.mute"></span><button class="gs-tog gs-mute" type="button"></button></div>
-      <div class="gs-row"><span data-t="ui.language"></span><div class="gs-seg gs-lang"><button type="button" data-v="tr">Türkçe</button><button type="button" data-v="en">English</button><button type="button" data-v="ru">Русский</button></div></div>
+      <div class="gs-row"><span data-t="ui.language"></span><div class="gs-seg gs-lang">${LANGS.map(([c, n]) => `<button type="button" data-v="${c}" dir="auto">${n}</button>`).join('')}</div></div>
       <div class="gs-row"><span data-t="ui.quality"></span><div class="gs-seg gs-q"><button type="button" data-v="high" data-t="ui.qHigh"></button><button type="button" data-v="med" data-t="ui.qMed"></button><button type="button" data-v="low" data-t="ui.qLow"></button></div></div>
       <div class="gs-row"><span data-t="ui.perf"></span><div class="gs-seg gs-perf"><button type="button" data-v="high" data-t="ui.perfHigh"></button><button type="button" data-v="balanced" data-t="ui.perfBal"></button><button type="button" data-v="saver" data-t="ui.perfSaver"></button></div></div>
       <div class="gs-row gs-perfnote"><small data-t="ui.perfNote"></small></div>
@@ -50,7 +50,7 @@ class GameSettings {
     q('.gs-sfx').addEventListener('change', () => sfx('ui_click'));
     q('.gs-mute').addEventListener('click', () => { toggleMute(); this.render(); });
     q('.gs-fps').addEventListener('click', () => { perfHud.setEnabled(!perfHud.enabled); this.render(); });
-    r.querySelectorAll('.gs-lang button').forEach((b) => b.addEventListener('click', () => { i18n.setLanguage(b.dataset.v); this.render(); }));
+    r.querySelectorAll('.gs-lang button').forEach((b) => b.addEventListener('click', () => { i18n.setLanguage(b.dataset.v).then(() => this.render()); }));
     r.querySelectorAll('.gs-q button').forEach((b) => b.addEventListener('click', () => { setQuality(b.dataset.v); this.render(); }));
     r.querySelectorAll('.gs-perf button').forEach((b) => b.addEventListener('click', () => { setPerf(b.dataset.v); this.render(); }));
     r.querySelectorAll('.gs-dev button').forEach((b) => b.addEventListener('click', () => { setDevice(b.dataset.v); this.render(); this.msgDev = true; }));

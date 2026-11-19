@@ -59,9 +59,11 @@ function modal(html) {
   return d;
 }
 
+const TURKISH_UI = new Set(['tr', 'az', 'tk']);   // Türkçeye yakın Latin harfli diller
+
 function askDevice() {
   return new Promise((done) => {
-    const tr = i18n.lang !== 'en';
+    const tr = TURKISH_UI.has(i18n.lang);   // Türk dilleri Türkçe metni, diğerleri İngilizceyi görür
     const d = modal(`<h2>${tr ? 'Nerede oynuyorsun?' : 'Where do you play?'}</h2>
       <p>${tr ? 'Kontroller ve ekran boyutu buna göre ayarlanır. Sonra Ayarlar\'dan değiştirebilirsin.' : 'Controls and screen layout adapt to this. You can change it later in Settings.'}</p>
       <div class="sp-choices"><button type="button" data-d="mobile"><b>${icon('gamepad')}</b>${tr ? 'Mobil' : 'Mobile'}<small>${tr ? 'Dokunmatik joystick' : 'Touch joystick'}</small></button>
@@ -74,9 +76,9 @@ function showUpdate() {
   let seen = '';
   try { seen = localStorage.getItem(SEEN_KEY) || ''; } catch (e) { /* yoksay */ }
   if (seen === UPDATE.id) return;
-  const t = UPDATE[i18n.lang] || UPDATE.tr;
+  const t = UPDATE[i18n.lang] || (TURKISH_UI.has(i18n.lang) ? UPDATE.tr : UPDATE.en || UPDATE.tr);
   const d = modal(`<div class="sp-badge">v${UPDATE.id}</div><h2>${icon('rocket')} ${t.title}</h2><ul>${t.items.map((x) => `<li>${x}</li>`).join('')}</ul>
-    <button type="button" class="sp-ok">${i18n.lang === 'en' ? 'LET\'S PLAY' : 'OYNAYALIM'}</button>`);
+    <button type="button" class="sp-ok">${TURKISH_UI.has(i18n.lang) ? 'OYNAYALIM' : 'LET\'S PLAY'}</button>`);
   d.querySelector('.sp-ok').addEventListener('click', () => { try { localStorage.setItem(SEEN_KEY, UPDATE.id); } catch (e) { /* yoksay */ } d.remove(); });
 }
 

@@ -123,6 +123,8 @@ test('Admin komutları: roller, bayrak verme, yetkisiz kullanıcı, maç sonu bi
   boss.send({ t: 'chat', text: '/imposter finland', ch: 'lobby' }); await boss.wait((m) => m.t === 'chat' && m.sys);
   await sleep(700);
   boss.send({ t: 'chat', text: '/sheriff turkey', ch: 'lobby' }); await boss.wait((m) => m.t === 'chat' && m.sys);
+  for (const c of [boss, alice, bob]) c.send({ t: 'ready', on: true });   // herkes hazır olmalı
+  await sleep(150);
   boss.send({ t: 'start', setup: { players: [] } });
   const view = (await boss.wait((m) => m.t === 'start')).setup.players;
   const role = (flag) => view.find((p) => p.flag === flag).role;

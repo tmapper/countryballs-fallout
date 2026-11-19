@@ -14,7 +14,8 @@ import { InputController } from '../systems/InputController.js';
 import { Joystick } from '../systems/Joystick.js';
 import { CountryBall } from '../entities/CountryBall.js';
 import { RES } from '../systems/Resolution.js';
-import { world } from '../map/BunkerMap.js';
+import { world, useMap } from '../map/BunkerMap.js';
+import { prewarmMapTextures } from '../map/MapRenderer.js';
 import { paintGrassTile, paintBunkerDoor, paintStartPad } from '../map/MapPainter.js';
 import { PROP_IMG } from '../map/PropImages.js';
 import { startFromLobby, openLobbyFlagPicker, openLobbyHatPicker } from '../systems/GameFlow.js';
@@ -60,6 +61,12 @@ export class LobbyScene extends Phaser.Scene {
     const state = data || {};
     world.sealed = false;   // lobi bomba ÖNCESİ: dışarısı açık
     this.uiObjects = [];
+    // Maç haritasının dokularını lobide boş zamanda hazırla (maç başında donma olmasın)
+    this.time.delayedCall(2500, () => {
+      let m = null;
+      try { m = (net.room && net.room.cfg && net.room.cfg.map) || JSON.parse(localStorage.getItem('cfs_lobby') || '{}').map; } catch (e) { /* yoksay */ }
+      try { useMap(m || 'ring'); prewarmMapTextures(this.game); } catch (e) { /* maçta yine çizilir */ }
+    });
     this.drawRoom();
 
     this.lobbyStand = lobbyStand;

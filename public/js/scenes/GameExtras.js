@@ -90,6 +90,7 @@ export function installExtras(GameScene) {
     kb.on('keydown', (e) => { if (sabMenu.isOpen && /^[1-3]$/.test(e.key)) sabMenu.pickIndex(Number(e.key) - 1); });
     this.events.once('shutdown', () => {
       this.stopMeetingClock(this.meeting);
+      this.stopSabotageClock();   // sabotaj sürerken maçtan çıkılırsa arka plan sayacı çalışmaya devam ediyordu
       this.resumeMeetingGfx();
       meetingUI.close(); sabMenu.close(); minimap.hide(); this.clearAlarm();
     });
@@ -160,35 +161,9 @@ export function installExtras(GameScene) {
     stopKillCutscene();
     ghostChat.suspend(true);
     this.emitEv('meeting', [caller.id, body ? body.ball.id : null]);
-    const m = this.meeting = {
-      caller, body, votes: new Map(), accuse: new Map(), phase: 'discuss', left: this.cfg.discuss, timers: [],
-      sheriffMisfire: !!this._sheriffMisfire, sheriffSuccess: !!this._sheriffSuccess,
-      misfireTarget: this._misfireTarget || null
-    };
+    const m = this.meeting = { caller, body, votes: new Map(), accuse: new Map(), phase: 'discuss', left: this.cfg.discuss, timers: [], sheriffMisfire: !!this._sheriffMisfire, sheriffSuccess: !!this._sheriffSuccess };
     this._sheriffMisfire = false;
     this._sheriffSuccess = false;
-    this._misfireTarget = null;
-    if (m.sheriffSuccess) {
-      const sh = this.balls.find((o) => o.alive && o.role === 'sheriff');
-      if (sh) this.balls.forEach((w) => {
-        if (!w.brain) return;
-        if (!w.brain.alibi) w.brain.alibi = new Set();
-        w.brain.alibi.add(sh);
-        if (w.brain.suspect === sh) w.brain.suspect = null;
-        if (w.brain.lead === sh) w.brain.lead = null;
-        if (w.brain.distrust === sh) w.brain.distrust = null;
-      });
-    }
-    if (m.misfireTarget) {
-      const pt = m.misfireTarget;
-      this.balls.forEach((w) => {
-        if (!w.brain) return;
-        if (!w.brain.alibi) w.brain.alibi = new Set();
-        w.brain.alibi.add(pt);
-        if (w.brain.suspect === pt) w.brain.suspect = null;
-        if (w.brain.lead === pt) w.brain.lead = null;
-      });
-    }
     this.cancelSabotage();
     if (this.taskPanel) this.taskPanel.close(true);
     this.taskOpen = false;
@@ -523,41 +498,27 @@ export function installExtras(GameScene) {
     const alive = this.balls.filter((o) => o.alive);
     const imps = alive.filter((o) => o.role === 'impostor').length;
     const crisis = imps > 0 && imps + 1 >= alive.length - imps;
-    // Şerif katili vurduysa: şerif KORUNUR — asla oy verme
-    let goodSheriff = null;
-    if (m.sheriffSuccess) {
-      goodSheriff = this.balls.find((o) => o.alive && o.role === 'sheriff') || null;
-      if (goodSheriff && b.role !== 'impostor') {
+    // Şerif masum vurup öldüyse → kanıt karışık, skip eğilimi (kriz hariç)
+    if (m.sheriffMisfire && !crisis) {
+      if (b.role !== 'impostor' && Math.random() < 0.75) return 'skip';
+    }
+    // Şerif katili başarıyla vurduysa → o şerife asla oy verme (alibi + ekstra koruma)
+    if (m.sheriffSuccess && b.role !== 'impostor') {
+      const goodSheriff = this.balls.find((o) => o.alive && o.role === 'sheriff');
+      if (goodSheriff) {
         if (!br.alibi) br.alibi = new Set();
         br.alibi.add(goodSheriff);
         if (br.suspect === goodSheriff) br.suspect = null;
-        if (br.lead === goodSheriff) br.lead = null;
-        if (br.distrust === goodSheriff) br.distrust = null;
       }
     }
-    // Şerif masumu vurup öldüyse: yanlış hedef (hayatta) da korunur — %100 masum
-    let protectedCrew = null;
-    if (m.sheriffMisfire && m.misfireTarget && m.misfireTarget.alive) {
-      protectedCrew = m.misfireTarget;
-      if (b.role !== 'impostor') {
-        if (!br.alibi) br.alibi = new Set();
-        br.alibi.add(protectedCrew);
-        if (br.suspect === protectedCrew) br.suspect = null;
-        if (br.lead === protectedCrew) br.lead = null;
-      }
-      if (b.role !== 'impostor' && Math.random() < 0.7) return 'skip';
-    } else if (m.sheriffMisfire && !crisis) {
-      if (b.role !== 'impostor' && Math.random() < 0.75) return 'skip';
-    }
-    if (b.role !== 'impostor' && br.suspect && br.suspect.alive && br.suspect !== goodSheriff && br.suspect !== protectedCrew) {
-      return idOf(br.suspect);
-    }
+    if (b.role !== 'impostor' && br.suspect && br.suspect.alive) return idOf(br.suspect);   // kendi gözüyle gördü
     const score = new Map();
     m.accuse.forEach((t, who) => {
       if (!t || !t.alive || t === b || who === b || !who.alive) return;
-      if (t === goodSheriff || t === protectedCrew) return; // korunanlara oy yok
       let w = (m.weight && m.weight.get(who)) || 1;
+      // Temize çıkarıldıysa skor düşür
       if (m.clear && m.clear.get(t)) w = Math.max(0, w - m.clear.get(t));
+      // Suçlayanın kendisi bu botun gözünde şüpheliyse (cesedin yanında gördüğü) suçlamasına güvenme
       if (b.role !== 'impostor' && who === br.lead) w = Math.max(0, w - 2);
       if (w > 0) score.set(t, (score.get(t) || 0) + w);
     });
@@ -839,18 +800,8 @@ export function installExtras(GameScene) {
   const GUN_RANGE = 70;
   P.dropGun = function (x, y) {
     this.guns = this.guns || [];
-    // Aynı anda tek şerif silahı: yerdeki alınmamış silahları temizle (rastgele çoklu silah / herkes şerif bug'ı)
-    this.guns.forEach((old) => {
-      if (!old.taken) {
-        old.taken = true;
-        if (old.spr) { try { old.spr.destroy(); } catch (e) {} old.spr = null; }
-      }
-    });
-    // Yaşayan şerif varsa yeni silah düşürme
-    if (this.balls && this.balls.some((b) => b.alive && b.role === 'sheriff')) return null;
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-    const ids = this.guns.map((o) => o.id || 0);
-    this.gunSeq = Math.max(this.gunSeq || 0, ids.length ? Math.max(...ids) : 0);
+    // Kimlik: kurucu değiştiyse eski silahlarla çakışmasın (yeni kurucunun sayacı 0'dan başlıyordu)
+    this.gunSeq = Math.max(this.gunSeq || 0, ...(this.guns.map((o) => o.id)));
     const g = { id: ++this.gunSeq, x, y, taken: false, spr: null };
     this.guns.push(g);
     this.showGun(g);
@@ -876,18 +827,11 @@ export function installExtras(GameScene) {
   };
 
   P.takeGun = function (ball, g) {
-    if (!g || g.taken || !ball || !ball.alive) return;
-    if (ball.role === 'impostor' || ball.role === 'sheriff') return;
-    // Zaten yaşayan bir şerif varsa silahı alma (çoklu şerif engeli)
-    if (this.balls && this.balls.some((b) => b !== ball && b.alive && b.role === 'sheriff')) {
-      g.taken = true;
-      if (g.spr) { try { g.spr.destroy(); } catch (e) {} g.spr = null; }
-      return;
-    }
+    if (!g || g.taken || !ball) return;
     g.taken = true;
     if (g.spr) { g.spr.destroy(); g.spr = null; }
     this.emitEv('gunTake', [ball.id, g.id]);
-    if (!this.isClient || ball.isMe) {
+    if (ball.alive && (!this.isClient || ball.isMe)) {
       ball.role = 'sheriff';
       ball.cooldown = Math.max(ball.cooldown || 0, 5);
       if (ball.brain) { ball.brain.doing = null; ball.gunGo = null; }
