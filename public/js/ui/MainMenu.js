@@ -437,6 +437,15 @@ export class MainMenu {
   }
 
   show(handlers) {
+    // 3D kasa kütüphanesi arka planda
+    try {
+      if (!window.__cfs3dWarm) {
+        window.__cfs3dWarm = 1;
+        import('../vendor/three.module.js').catch(() => {});
+        import('../vendor/GLTFLoader.js').catch(() => {});
+      }
+    } catch (e) {}
+
     try { questsPanel.show(); } catch (e) { /* yoksay */ }
 
     if (!this.root) this.build();

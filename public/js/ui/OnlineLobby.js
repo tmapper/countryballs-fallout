@@ -155,7 +155,7 @@ export class RoomHud {
         <div class="rh-namebox"><div class="rh-name"></div><button class="rh-code" type="button"></button></div>
         <div class="rh-topbtns"><button class="rh-matchbtn" type="button">${icon('robot')}<span data-t="lobby.matchSettings"></span></button><button class="rh-settings" type="button" title="Ayarlar">${icon('gear')}</button><button class="rh-invite" type="button" data-t="social.inviteBtn"></button><button class="rh-leave" type="button" data-t="online.leave"></button></div>
       </div>
-      <div class="rh-panel">
+      <div class="rh-panel rh-side-hidden">
         <div class="rh-players"></div>
         <div class="rh-host">
           <label class="rh-toggle"><input type="checkbox" class="rh-bots"><span data-t="online.bots"></span></label>
@@ -395,7 +395,35 @@ export class RoomHud {
           `<div class="bar"><i style="width:${pct}%;background:${col}"></i></div></div>`;
       }).join('');
     }
-    // Yan panel body'yi boş tut (sheet kullanıyoruz)
+    // Oyuncu listesi + test botları sheet içinde
+    let pl = r.querySelector('.rh-sheet-players');
+    if (!pl) {
+      const panel = r.querySelector('.rh-match-sheet .sheet-panel');
+      if (panel) {
+        const sec = document.createElement('section');
+        sec.className = 'card';
+        sec.innerHTML = '<h2 data-t="online.players">Oyuncular</h2><div class="rh-sheet-players"></div><div class="rh-sheet-host"></div>';
+        panel.insertBefore(sec, panel.firstChild.nextSibling); // after head-ish
+        // put after head
+        const head = panel.querySelector('.sheet-head');
+        if (head && head.nextSibling) panel.insertBefore(sec, head.nextSibling);
+        else panel.appendChild(sec);
+        pl = sec.querySelector('.rh-sheet-players');
+      }
+    }
+    if (pl) {
+      pl.innerHTML = r.querySelector('.rh-players')?.innerHTML || '';
+      const hostBox = r.querySelector('.rh-sheet-host');
+      if (hostBox) {
+        hostBox.innerHTML = host ? `<label class="toggle"><input type="checkbox" class="rh-bots-sheet2" ${room.bots?'checked':''}><span>${esc(i18n.t('online.bots'))}</span></label>
+          <div class="rh-step"><span>${esc(i18n.t('online.botCount'))}</span><button type="button" data-botd="-1">−</button><b>${this.botCount}</b><button type="button" data-botd="1">+</button></div>` : '';
+        hostBox.querySelector('.rh-bots-sheet2')?.addEventListener('change', (e) => net.roomSettings({ bots: e.target.checked }));
+        hostBox.querySelectorAll('[data-botd]').forEach((b) => b.addEventListener('click', () => {
+          this.botCount = Math.max(1, Math.min(24, this.botCount + Number(b.dataset.botd)));
+          this.render();
+        }));
+      }
+    }
     const sideBody = r.querySelector('.rh-cfg-body');
     if (sideBody) { sideBody.innerHTML = ''; sideBody.classList.add('hidden'); }
   }

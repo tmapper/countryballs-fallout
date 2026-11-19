@@ -39,8 +39,8 @@ export function buildProps(R) {
   decor('hall', { type: 'stools', x: 600, y: 425, r: 190 });
   add('hall', { type: 'roundtable', shape: 'circle', x: 600, y: 425, r: 140 });
   [[300, 210], [844, 210], [300, 590], [844, 590]].forEach(([x, y]) => add('hall', { type: 'pillar', shape: 'rect', x, y, w: 56, h: 56 }));
-  add('hall', { type: 'shelf', shape: 'rect', x: 120, y: 770, w: 230, h: 60 });
-  add('hall', { type: 'shelf', shape: 'rect', x: 850, y: 770, w: 220, h: 60 });
+  add('hall', { type: 'shelf', shape: 'rect', x: 40, y: 780, w: 160, h: 50 });
+  add('hall', { type: 'shelf', shape: 'rect', x: 1000, y: 780, w: 160, h: 50 });
   add('hall', { type: 'vending', shape: 'rect', x: 1110, y: 110, w: 60, h: 80 });
   add('hall', { type: 'vending', shape: 'rect', x: 1110, y: 650, w: 60, h: 80 });
   add('hall', { type: 'plant', shape: 'circle', x: 70, y: 110, r: 26 });
@@ -64,9 +64,10 @@ export function buildProps(R) {
 
   // ---------------- GÜVENLİK 700x600 ----------------
   add('security', { type: 'monitorbank', shape: 'rect', x: 60, y: 24, w: 580, h: 70 });
-  add('security', { type: 'desk', shape: 'rect', x: 180, y: 260, w: 340, h: 64 });
-  add('security', { type: 'rack', shape: 'rect', x: 610, y: 440, w: 70, h: 100 });
-  add('security', { type: 'rack', shape: 'rect', x: 20, y: 440, w: 70, h: 100 });
+  // masa üstte; alt/yan kapı ağızları açık kalsın (geçiş bug'ı)
+  add('security', { type: 'desk', shape: 'rect', x: 200, y: 140, w: 280, h: 56 });
+  add('security', { type: 'rack', shape: 'rect', x: 620, y: 480, w: 60, h: 90 });
+  add('security', { type: 'rack', shape: 'rect', x: 20, y: 480, w: 60, h: 90 });
   decor('security', { type: 'cable', pts: [[350, 94], [350, 260]] });
   decor('security', { type: 'rug', x: 230, y: 380, w: 240, h: 80 });
 
@@ -159,8 +160,8 @@ export function buildProps(R) {
 
   // ---------------- DEPO 950x1000 ----------------
   [[40, 40], [112, 40], [40, 112], [790, 40], [790, 112], [718, 40]].forEach(([x, y]) => add('storage', { type: 'crate', shape: 'rect', x, y, w: 68, h: 68 }));
-  add('storage', { type: 'shelf', shape: 'rect', x: 280, y: 280, w: 100, h: 230 });
-  add('storage', { type: 'shelf', shape: 'rect', x: 560, y: 280, w: 100, h: 230 });
+  add('storage', { type: 'shelf', shape: 'rect', x: 40, y: 300, w: 90, h: 200 });
+  add('storage', { type: 'shelf', shape: 'rect', x: 820, y: 300, w: 90, h: 200 });
   add('storage', { type: 'crate', shape: 'rect', x: 790, y: 360, w: 80, h: 80 });
   add('storage', { type: 'crate', shape: 'rect', x: 790, y: 450, w: 80, h: 80 });
   [[720, 860], [770, 880], [820, 860]].forEach(([x, y]) => add('storage', { type: 'barrel', shape: 'circle', x, y, r: 24 }));

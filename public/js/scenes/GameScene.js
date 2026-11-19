@@ -315,12 +315,12 @@ export class GameScene extends Phaser.Scene {
   nearestTunnelOk() { return !!nearestTunnel(TUNNELS, this.player.x, this.player.y); }
 
   kill(killer, victim) {
+    if (victim.isMe && this.taskOpen) return; // görev panelindeyken öldürülme (timing bug)
     if (this.meeting || this.over) return;
     if (victim.clearEmote) victim.clearEmote();
     this.emitEv('kill', [killer.id, victim.id]);
     try { matchRecorder.event('kill', { killer: killer.id, victim: victim.id }); } catch (e) {}
-    // Öldüren, ölenin tam üstüne ışınlanır (Among Us gibi); kamera kaymadan geçer
-    killer.setPosition(victim.x, victim.y);
+    // Işınlanma yok: katil menzilden vurduğu yerde kalsın (teleport belli etmesin)
     killer.setDepth(killer.y);
     if (killer.isMe) this.cameras.main.centerOn(killer.x, killer.y - 40);
     killer.cooldown = this.cfg.killCd;

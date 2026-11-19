@@ -22,6 +22,15 @@ export class BootScene extends Phaser.Scene {
     const track = (pr, p, key) => pr.then((v) => { step(p, key); return v; });
     // Sesleri arka planda decode et (ilk tıklamada gecikme olmasın)
     try { preloadSfx(); } catch (e) { /* yoksay */ }
+    // 3D kasalar + menü ikonları: oyun içinde donmasın diye önceden ısıt
+    try {
+      const warm = [
+        'assets/crates/common.glb', 'assets/crates/rare.glb', 'assets/crates/grand.glb',
+        'assets/menu/crate_common.png', 'assets/menu/crate_rare.png', 'assets/menu/crate_grand.png',
+        'js/vendor/three.module.js', 'js/vendor/GLTFLoader.js', 'js/vendor/utils/BufferGeometryUtils.js'
+      ];
+      warm.forEach((u) => { try { fetch(u).catch(() => {}); } catch (e) {} });
+    } catch (e) {}
     Promise.all([loadJSON('locales/tr.json'), loadJSON('locales/en.json'), loadJSON('locales/ru.json')])
       .then(([tr, en, ru]) => {
         i18n.init({ tr, en, ru });
