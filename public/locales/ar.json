@@ -97,7 +97,12 @@
     "hatSub": "{n} قبعة. اختر واحدة وستبقى معك في المباراة.",
     "wardHint": "🎩 خزانة القبعات",
     "wardHintNear": "🎩 اضغط E لاختيار قبعة",
-    "pickHatBtn": "اختر قبعة"
+    "pickHatBtn": "اختر قبعة",
+    "botDiff": "Bot Difficulty",
+    "diff_easy": "Easy",
+    "diff_normal": "Normal",
+    "diff_hard": "Hard",
+    "botsHint": "Bots do tasks, impostor bots kill and everyone votes in meetings."
   },
   "actions": {
     "kill": "اقتل",
@@ -674,7 +679,8 @@
   },
   "maps": {
     "ring": "مفترق الطرق",
-    "classic": "الملجأ الكلاسيكي"
+    "classic": "الملجأ الكلاسيكي",
+    "shaft": "Shaft"
   },
   "pass": {
     "title": "تذكرة الملجأ",

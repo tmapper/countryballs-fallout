@@ -97,7 +97,12 @@
     "hatSub": "{n} hats. Pick one, you keep it in the match.",
     "wardHint": "🎩 Hat wardrobe",
     "wardHintNear": "🎩 Press E to pick a hat",
-    "pickHatBtn": "PICK HAT"
+    "pickHatBtn": "PICK HAT",
+    "botDiff": "Bot Difficulty",
+    "diff_easy": "Easy",
+    "diff_normal": "Normal",
+    "diff_hard": "Hard",
+    "botsHint": "Bots do tasks, impostor bots kill and everyone votes in meetings."
   },
   "actions": {
     "kill": "KILL",
@@ -674,7 +679,8 @@
   },
   "maps": {
     "ring": "Crossroads",
-    "classic": "Classic Bunker"
+    "classic": "Classic Bunker",
+    "shaft": "Shaft"
   },
   "pass": {
     "title": "SHELTER PASS",

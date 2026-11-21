@@ -97,7 +97,12 @@
     "hatSub": "{n} ta shlyapa. Birini tanla, oʻyinda senda qoladi.",
     "wardHint": "🎩 Shlyapa shkafi",
     "wardHintNear": "🎩 Shlyapa tanlash uchun E bos",
-    "pickHatBtn": "SHLYAPA TANLASH"
+    "pickHatBtn": "SHLYAPA TANLASH",
+    "botDiff": "Bot Difficulty",
+    "diff_easy": "Easy",
+    "diff_normal": "Normal",
+    "diff_hard": "Hard",
+    "botsHint": "Bots do tasks, impostor bots kill and everyone votes in meetings."
   },
   "actions": {
     "kill": "OʻLDIRISH",
@@ -674,7 +679,8 @@
   },
   "maps": {
     "ring": "Chorraha",
-    "classic": "Klassik bunker"
+    "classic": "Klassik bunker",
+    "shaft": "Shaft"
   },
   "pass": {
     "title": "BUNKER CHIPTASI",

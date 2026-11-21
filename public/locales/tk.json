@@ -97,7 +97,12 @@
     "hatSub": "{n} şlýapa. Birini saýla, oýunda sende galýar.",
     "wardHint": "🎩 Şlýapa şkafy",
     "wardHintNear": "🎩 Şlýapa saýlamak üçin E bas",
-    "pickHatBtn": "ŞLÝAPA SAÝLA"
+    "pickHatBtn": "ŞLÝAPA SAÝLA",
+    "botDiff": "Bot Difficulty",
+    "diff_easy": "Easy",
+    "diff_normal": "Normal",
+    "diff_hard": "Hard",
+    "botsHint": "Bots do tasks, impostor bots kill and everyone votes in meetings."
   },
   "actions": {
     "kill": "ÖLDÜR",
@@ -674,7 +679,8 @@
   },
   "maps": {
     "ring": "Çatryk",
-    "classic": "Nusgawy gaçybatalga"
+    "classic": "Nusgawy gaçybatalga",
+    "shaft": "Shaft"
   },
   "pass": {
     "title": "GAÇYBATALGA PETEGI",

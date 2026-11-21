@@ -97,7 +97,12 @@
     "hatSub": "共 {n} 顶帽子。选一顶，对局中会一直戴着。",
     "wardHint": "🎩 帽子衣柜",
     "wardHintNear": "🎩 按 E 选择帽子",
-    "pickHatBtn": "选择帽子"
+    "pickHatBtn": "选择帽子",
+    "botDiff": "Bot Difficulty",
+    "diff_easy": "Easy",
+    "diff_normal": "Normal",
+    "diff_hard": "Hard",
+    "botsHint": "Bots do tasks, impostor bots kill and everyone votes in meetings."
   },
   "actions": {
     "kill": "击杀",
@@ -674,7 +679,8 @@
   },
   "maps": {
     "ring": "十字路口",
-    "classic": "经典避难所"
+    "classic": "经典避难所",
+    "shaft": "Shaft"
   },
   "pass": {
     "title": "避难所通行证",

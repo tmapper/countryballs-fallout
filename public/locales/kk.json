@@ -97,7 +97,12 @@
     "hatSub": "{n} бас киім. Біреуін таңда, ойында сенде қалады.",
     "wardHint": "🎩 Бас киім шкафы",
     "wardHintNear": "🎩 Бас киім таңдау үшін E бас",
-    "pickHatBtn": "БАС КИІМ ТАҢДАУ"
+    "pickHatBtn": "БАС КИІМ ТАҢДАУ",
+    "botDiff": "Bot Difficulty",
+    "diff_easy": "Easy",
+    "diff_normal": "Normal",
+    "diff_hard": "Hard",
+    "botsHint": "Bots do tasks, impostor bots kill and everyone votes in meetings."
   },
   "actions": {
     "kill": "ӨЛТІРУ",
@@ -674,7 +679,8 @@
   },
   "maps": {
     "ring": "Қиылыс",
-    "classic": "Классикалық бункер"
+    "classic": "Классикалық бункер",
+    "shaft": "Shaft"
   },
   "pass": {
     "title": "БУНКЕР БИЛЕТІ",

@@ -97,7 +97,12 @@
     "hatSub": "{n} şapka var. Birini seç, maçta da takılı kalır.",
     "wardHint": "🎩 Şapka dolabı",
     "wardHintNear": "🎩 Şapka seçmek için E",
-    "pickHatBtn": "ŞAPKA SEÇ"
+    "pickHatBtn": "ŞAPKA SEÇ",
+    "botDiff": "Bot Zorluğu",
+    "diff_easy": "Kolay",
+    "diff_normal": "Normal",
+    "diff_hard": "Zor",
+    "botsHint": "Botlar görev yapar, katil botlar öldürür, toplantıda oy verir."
   },
   "actions": {
     "kill": "ÖLDÜR",
@@ -674,7 +679,8 @@
   },
   "maps": {
     "ring": "Kavşak",
-    "classic": "Klasik Sığınak"
+    "classic": "Klasik Sığınak",
+    "shaft": "Şaft"
   },
   "pass": {
     "title": "SIĞINAK BİLETİ",

@@ -323,8 +323,9 @@ export class RoomHud {
     // Harita
     const mapSeg = r.querySelector('.rh-map-seg');
     if (mapSeg) {
+      const mapFallback = { ring: 'Kavşak', classic: 'Klasik Sığınak', shaft: 'Şaft' };
       mapSeg.innerHTML = MAP_IDS.map((id) =>
-        `<button class="seg-btn ${cfg.map === id ? 'on' : ''}" type="button" data-cfg="map" data-v="${id}" ${dis}>${esc(i18n.t('maps.' + id))}</button>`
+        `<button class="seg-btn ${cfg.map === id ? 'on' : ''}" type="button" data-cfg="map" data-v="${id}" ${dis}>${esc(i18n.tf('maps.' + id, mapFallback[id] || id))}</button>`
       ).join('');
     }
     // Bot zorluğu
@@ -341,9 +342,10 @@ export class RoomHud {
     }
     if (diffRow) {
       const bd = cfg.botDiff || 'normal';
-      diffRow.innerHTML = `<span style="width:100%;font-weight:800;color:#c9d0d8">${esc(i18n.t('lobby.botDiff'))}</span>` +
+      const diffLabels = { easy: 'Kolay', normal: 'Normal', hard: 'Zor' };
+      diffRow.innerHTML = `<span style="width:100%;font-weight:800;color:#c9d0d8">${esc(i18n.tf('lobby.botDiff', 'Bot Zorluğu'))}</span>` +
         ['easy','normal','hard'].map((d) =>
-          `<button class="seg-btn ${bd===d?'on':''}" type="button" data-cfg="botDiff" data-v="${d}" ${dis}>${esc(i18n.t('lobby.diff_'+d))}</button>`
+          `<button class="seg-btn ${bd===d?'on':''}" type="button" data-cfg="botDiff" data-v="${d}" ${dis}>${esc(i18n.tf('lobby.diff_'+d, diffLabels[d] || d))}</button>`
         ).join('');
     }
     // Max oyuncu

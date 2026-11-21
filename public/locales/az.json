@@ -97,7 +97,12 @@
     "hatSub": "{n} papaq. Birini seç, oyunda səndə qalır.",
     "wardHint": "🎩 Papaq qarderobu",
     "wardHintNear": "🎩 Papaq seçmək üçün E bas",
-    "pickHatBtn": "PAPAQ SEÇ"
+    "pickHatBtn": "PAPAQ SEÇ",
+    "botDiff": "Bot çətinliyi",
+    "diff_easy": "Asan",
+    "diff_normal": "Normal",
+    "diff_hard": "Çətin",
+    "botsHint": "Botlar tapşırıq görür, katil botlar öldürür, yığıncaqda səs verir."
   },
   "actions": {
     "kill": "ÖLDÜR",
@@ -674,7 +679,8 @@
   },
   "maps": {
     "ring": "Kəsişmə",
-    "classic": "Klassik Sığınacaq"
+    "classic": "Klassik Sığınacaq",
+    "shaft": "Şaxta"
   },
   "pass": {
     "title": "SIĞINACAQ BİLETİ",
