@@ -178,7 +178,7 @@ export class Lobby {
     r.querySelector('.menu-btn').textContent = '‹ ' + i18n.t('menu.back');
     r.querySelector('.lh-hint').textContent = i18n.t('lobby.walkHint');
     r.querySelector('.count').textContent = this.playerCount;
-    r.querySelectorAll('.map-seg [data-map]').forEach((b) => { b.textContent = i18n.t('maps.' + b.dataset.map); b.classList.toggle('on', b.dataset.map === this.map); b.style.setProperty('--c', '#7dff9a'); });
+    r.querySelectorAll('.map-seg [data-map]').forEach((b) => { const fb = { ring: 'Kavşak', classic: 'Klasik Sığınak', shaft: 'Şaft' }; b.textContent = i18n.tf('maps.' + b.dataset.map, fb[b.dataset.map] || b.dataset.map); b.classList.toggle('on', b.dataset.map === this.map); b.style.setProperty('--c', '#7dff9a'); });
     r.querySelector('[data-step="-1"]').disabled = this.playerCount <= MIN_PLAYERS;
     r.querySelector('[data-step="1"]').disabled = this.playerCount >= MAX_PLAYERS;
     r.querySelector('.bots-toggle').checked = this.bots;

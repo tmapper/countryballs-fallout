@@ -702,12 +702,14 @@ setInterval(() => {
 
 // ---------------- Kurucu ayarları ----------------
 // imps / sheriffs: 0 = otomatik (oyuncu sayısına göre). Sınırlar burada (hile ile uç değer girilemez).
-const MAP_IDS = ['ring', 'classic'];
-const defaultCfg = () => ({ map: 'ring', speed: 1, discuss: 15, vote: 25, killCd: 15, imps: 0, sheriffs: 0 });   // istemcide RoomConfig.DEFAULT_CFG
+const MAP_IDS = ['ring', 'classic', 'shaft'];
+const BOT_DIFFS = ['easy', 'normal', 'hard'];
+const defaultCfg = () => ({ map: 'ring', speed: 1, discuss: 15, vote: 25, killCd: 15, imps: 0, sheriffs: 0, botDiff: 'normal' });   // istemcide RoomConfig.DEFAULT_CFG
 const clampNum = (v, lo, hi, def) => { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : def; };
 function sanitizeCfg(old, m) {
   const c = { ...old };
   if (MAP_IDS.includes(m.map)) c.map = m.map;
+  if (m.botDiff !== undefined && BOT_DIFFS.includes(m.botDiff)) c.botDiff = m.botDiff;
   if (m.speed !== undefined) c.speed = Math.round(clampNum(m.speed, 0.5, 2, 1) * 4) / 4;          // 0.5x .. 2x
   if (m.discuss !== undefined) c.discuss = Math.round(clampNum(m.discuss, 0, 180, 15) / 5) * 5;   // 0..180 sn
   if (m.vote !== undefined) c.vote = Math.round(clampNum(m.vote, 10, 120, 25) / 5) * 5;
