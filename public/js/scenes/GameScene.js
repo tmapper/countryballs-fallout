@@ -52,6 +52,9 @@ export class GameScene extends Phaser.Scene {
     const players = (data && data.players) || [{ flag: 'TR', role: 'crewmate', me: true }];
     const mode = (data && data.net) || 'offline';     // 'offline' | 'host' | 'client'
     this.over = false;
+    // Önceki maçtan kalan şerif silahlarını temizle (haritada random silah bug'ı)
+    this.guns = [];
+    this.gunSeq = 0;
     // Kurucu ayarları (çevrimiçi odadan gelir; tek kişilik oyunda varsayılan)
     this.cfg = { ...DEFAULT_CFG, ...((data && data.cfg) || {}) };
     stopPrewarm();                  // lobideki doku hazırlığı bitsin; kalanları build() çizer

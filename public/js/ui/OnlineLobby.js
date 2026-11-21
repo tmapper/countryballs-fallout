@@ -161,8 +161,6 @@ export class RoomHud {
           <label class="rh-toggle"><input type="checkbox" class="rh-bots"><span data-t="online.bots"></span></label>
           <div class="rh-step"><span data-t="online.botCount"></span><button type="button" data-d="-1">−</button><b class="rh-botn"></b><button type="button" data-d="1">+</button></div>
         </div>
-        <div class="rh-cfg"><button class="rh-cfg-toggle" type="button"></button><div class="rh-cfg-body hidden"></div></div>
-
       </div>
       <div class="rh-bottom">
         <div class="rh-note"></div>
@@ -195,10 +193,6 @@ export class RoomHud {
             <h2 data-t="online.roomSettings"></h2>
             <div class="rh-match-steps"></div>
           </section>
-          <section class="card">
-            <h2 data-t="lobby.chances"></h2>
-            <div class="chances rh-chances"></div>
-          </section>
         </div>
       </div>`;
     document.body.appendChild(r);
@@ -230,7 +224,6 @@ export class RoomHud {
       this.render();
     }));
     r.querySelector('.rh-flagbtn:not(.rh-hatbtn)').addEventListener('click', () => this.onFlag && this.onFlag());
-    r.querySelector('.rh-cfg-toggle')?.addEventListener('click', () => { this.cfgOpen = !this.cfgOpen; this.render(); });
     r.querySelector('.rh-matchbtn')?.addEventListener('click', () => { this.cfgOpen = true; this.render(); });
     r.querySelector('.rh-bots-sheet')?.addEventListener('change', (e) => { if (net.isHost) net.roomSettings({ bots: e.target.checked }); });
     r.querySelector('.rh-cfg-x')?.addEventListener('click', () => { this.cfgOpen = false; this.render(); });

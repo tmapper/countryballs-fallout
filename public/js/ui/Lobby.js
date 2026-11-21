@@ -116,8 +116,6 @@ export class Lobby {
             <div class="chips"></div>
           </section>
           <section class="card">
-            <h2 data-t="lobby.chances"></h2>
-            <div class="chances"></div>
             <h2 class="mt" data-t="lobby.roleTest"></h2>
             <div class="seg"></div>
             <p class="hint" data-t="lobby.roleTestHint"></p>
@@ -194,18 +192,6 @@ export class Lobby {
       c.innerHTML = `<img alt="" src="${getFlagThumb(f, 30, 20)}"><span>${i === 0 ? i18n.t('ui.you') : i18n.t('countries.' + f)}</span>`;
       chips.appendChild(c);
     });
-
-    const ch = roleChances(this.playerCount);
-    const n = this.playerCount;
-    r.querySelector('.chances').innerHTML = ROLES.map((role) => {
-      const count = Math.round(ch[role] * n);
-      return `<div class="chance">
-        <div class="chance-top"><span class="dot" style="background:${ROLE_COLORS[role]}"></span>
-          <span class="chance-name">${i18n.t('roles.' + role)}</span>
-          <span class="chance-val">${count}/${n} · ${pct(ch[role])}</span></div>
-        <div class="bar"><i style="width:${ch[role] * 100}%;background:${ROLE_COLORS[role]}"></i></div>
-      </div>`;
-    }).join('');
 
     r.querySelectorAll('.seg:not(.map-seg) .seg-btn').forEach((b) => {
       const role = b.dataset.role;

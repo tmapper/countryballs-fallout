@@ -223,10 +223,12 @@ canvas { display: block; }
   display: flex; align-items: flex-end; justify-content: center; touch-action: pan-y;
 }
 .sheet-panel {
-  width: 100%; max-width: 640px; max-height: 82vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  width: 100%; max-width: 720px; max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
   background: var(--panel); border: 1px solid var(--line); border-bottom: 0; border-radius: 18px 18px 0 0;
-  padding: 14px 14px max(16px, env(safe-area-inset-bottom)); box-sizing: border-box; display: grid; gap: 12px;
+  padding: 16px 16px max(18px, env(safe-area-inset-bottom)); box-sizing: border-box; display: grid; gap: 14px;
 }
+.sheet-panel .card { pointer-events: auto; }
+.sheet-panel .seg-btn, .sheet-panel .btn-step, .sheet-panel .toggle, .sheet-panel input { pointer-events: auto; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; }
 .sheet-head h2 { margin: 0; font-size: 15px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
 .sheet-close { width: 40px; height: 40px; padding: 0; }
@@ -234,7 +236,7 @@ canvas { display: block; }
 .toggle input { width: 22px; height: 22px; accent-color: var(--accent); }
 @media (orientation: landscape) and (max-height: 500px) {
   .sheet { align-items: stretch; justify-content: flex-end; }
-  .sheet-panel { max-width: 460px; max-height: none; height: 100%; border-radius: 18px 0 0 18px; border-bottom: 1px solid var(--line); }
+  .sheet-panel { max-width: 520px; max-height: none; height: 100%; border-radius: 18px 0 0 18px; border-bottom: 1px solid var(--line); }
 }
 
 /* ---------------- Görev mini oyunları ---------------- */
@@ -900,6 +902,8 @@ canvas { display: block; }
 .so-invite { position: fixed; z-index: 60; right: 14px; top: 14px; max-width: 340px; padding: 12px 14px; border-radius: 12px; background: #0f2a18; border: 2px solid #7dff9a; color: #d6ffe0; font: 600 14px system-ui; box-shadow: 0 12px 30px rgba(0,0,0,.5); animation: rise .25s ease; }
 .so-inv-btns { display: flex; gap: 8px; margin-top: 10px; } .so-inv-btns .so-btn { flex: 1; padding: 9px; }
 .rh-topbtns { display: flex; gap: 8px; }
+.rh-matchbtn { padding: 10px 14px; border-radius: 10px; border: 1px solid #2f8f4a; background: rgba(15,42,24,.9); color: #7dff9a; font: inherit; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.rh-matchbtn:hover { border-color: #7dff9a; box-shadow: 0 0 12px rgba(125,255,154,.35); }
 .rh-invite { padding: 10px 14px; border-radius: 10px; border: 1px solid #2f8f4a; background: rgba(15,42,24,.9); color: #7dff9a; font: inherit; font-weight: 800; cursor: pointer; }
 .mm-item .mm-txt[data-badge]:not([data-badge=""])::after { content: attr(data-badge); margin-left: 8px; padding: 0 7px; border-radius: 9px; background: #e04a3f; color: #fff; font: 800 12px/18px system-ui; text-shadow: none; }
 .mainmenu.intro .mm-item:nth-child(6) { animation-delay: 2s; }
